@@ -43,6 +43,7 @@
     </section>
 
     <section class="table-section">
+      <div id="updateTime" class="update-time" style="display:none;"></div>
       <div class="table-container" id="tableContainer">
         <div id="loadingState" class="loading-state">
           <div class="loading-spinner"></div>
@@ -64,8 +65,13 @@
               <th data-sort="vendor" class="sortable">厂商 <span class="sort-arrow"></span></th>
               <th data-sort="type" class="sortable">类型 <span class="sort-arrow"></span></th>
               <th data-sort="languages" class="sortable">语言能力 <span class="sort-arrow"></span></th>
-              <th data-sort="score" class="sortable">评分 <span class="sort-arrow"></span></th>
-              <th data-sort="special" class="sortable">特殊能力 <span class="sort-arrow"></span></th>
+              <th data-sort="score" class="sortable">总分 <span class="sort-arrow"></span></th>
+              <th data-sort="math_reasoning" class="sortable">数学推理 <span class="sort-arrow"></span></th>
+              <th data-sort="hallucination_control" class="sortable">幻觉控制 <span class="sort-arrow"></span></th>
+              <th data-sort="science_reasoning" class="sortable">科学推理 <span class="sort-arrow"></span></th>
+              <th data-sort="instruction_following" class="sortable">指令遵循 <span class="sort-arrow"></span></th>
+              <th data-sort="code_generation" class="sortable">代码生成 <span class="sort-arrow"></span></th>
+              <th data-sort="agent_planning" class="sortable">智能体 <span class="sort-arrow"></span></th>
             </tr>
           </thead>
           <tbody id="rankBody">

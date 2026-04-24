@@ -1,0 +1,27 @@
+﻿2026-04-24T17:25:52.6078175Z ##[group]Run cd scraper
+2026-04-24T17:25:52.6078466Z [36;1mcd scraper[0m
+2026-04-24T17:25:52.6078664Z [36;1mpython scrape.py[0m
+2026-04-24T17:25:52.6100534Z shell: /usr/bin/bash -e {0}
+2026-04-24T17:25:52.6100771Z env:
+2026-04-24T17:25:52.6101020Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-24T17:25:52.6101457Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+2026-04-24T17:25:52.6101898Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-24T17:25:52.6102270Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-24T17:25:52.6102652Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-24T17:25:52.6103030Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+2026-04-24T17:25:52.6103806Z ##[endgroup]
+2026-04-24T17:26:03.9811985Z AIX未来视野 - 数据抓取脚本
+2026-04-24T17:26:03.9812552Z 工作目录: /home/runner/work/aixfuture/aixfuture
+2026-04-24T17:26:03.9813222Z 数据文件: /home/runner/work/aixfuture/aixfuture/data/models.json
+2026-04-24T17:26:03.9814436Z [OK] 已备份旧数据 -> /home/runner/work/aixfuture/aixfuture/data/models_backup.json
+2026-04-24T17:26:03.9814905Z 
+2026-04-24T17:26:03.9815019Z ============================================================
+2026-04-24T17:26:03.9815380Z 抓取: SuperCLUE通用榜
+2026-04-24T17:26:03.9815644Z URL: https://www.superclueai.com/generalpage
+2026-04-24T17:26:03.9815957Z ============================================================
+2026-04-24T17:26:03.9816254Z   尝试 1/3...
+2026-04-24T17:26:03.9816473Z [WARN] SuperCLUE通用榜: 无数据
+2026-04-24T17:26:03.9816736Z [INFO] 本次抓取无新数据，保留上次数据
+2026-04-24T17:26:03.9816967Z [OK] 数据已保存: 25 条模型
+2026-04-24T17:26:03.9817082Z 
+2026-04-24T17:26:03.9817168Z 抓取完成!

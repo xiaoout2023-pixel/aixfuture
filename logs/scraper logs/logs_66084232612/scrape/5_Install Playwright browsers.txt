@@ -1,0 +1,258 @@
+﻿2026-04-24T17:08:38.6579060Z ##[group]Run playwright install --with-deps chromium
+2026-04-24T17:08:38.6579702Z [36;1mplaywright install --with-deps chromium[0m
+2026-04-24T17:08:38.6605272Z shell: /usr/bin/bash -e {0}
+2026-04-24T17:08:38.6605502Z env:
+2026-04-24T17:08:38.6605737Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-24T17:08:38.6606341Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+2026-04-24T17:08:38.6606853Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-24T17:08:38.6607308Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-24T17:08:38.6607926Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-24T17:08:38.6608850Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+2026-04-24T17:08:38.6609376Z ##[endgroup]
+2026-04-24T17:08:39.1065982Z Installing dependencies...
+2026-04-24T17:08:39.2134716Z Switching to root user to install dependencies...
+2026-04-24T17:08:39.4638015Z Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+2026-04-24T17:08:39.5045351Z Hit:2 http://azure.archive.ubuntu.com/ubuntu noble InRelease
+2026-04-24T17:08:39.5069190Z Hit:6 https://packages.microsoft.com/repos/azure-cli noble InRelease
+2026-04-24T17:08:39.5074948Z Get:7 https://packages.microsoft.com/ubuntu/24.04/prod noble InRelease [3600 B]
+2026-04-24T17:08:39.5119284Z Get:3 http://azure.archive.ubuntu.com/ubuntu noble-updates InRelease [126 kB]
+2026-04-24T17:08:39.5144729Z Get:4 http://azure.archive.ubuntu.com/ubuntu noble-backports InRelease [126 kB]
+2026-04-24T17:08:39.5171465Z Get:5 http://azure.archive.ubuntu.com/ubuntu noble-security InRelease [126 kB]
+2026-04-24T17:08:39.6907269Z Get:8 https://dl.google.com/linux/chrome-stable/deb stable InRelease [1825 B]
+2026-04-24T17:08:39.7303123Z Get:9 https://packages.microsoft.com/ubuntu/24.04/prod noble/main arm64 Packages [100 kB]
+2026-04-24T17:08:39.7410290Z Get:10 https://packages.microsoft.com/ubuntu/24.04/prod noble/main amd64 Packages [125 kB]
+2026-04-24T17:08:39.7453052Z Get:11 https://packages.microsoft.com/ubuntu/24.04/prod noble/main armhf Packages [11.6 kB]
+2026-04-24T17:08:39.7852312Z Get:12 http://azure.archive.ubuntu.com/ubuntu noble-updates/main amd64 Packages [1919 kB]
+2026-04-24T17:08:39.7959599Z Get:13 http://azure.archive.ubuntu.com/ubuntu noble-updates/main Translation-en [345 kB]
+2026-04-24T17:08:39.7982210Z Get:14 http://azure.archive.ubuntu.com/ubuntu noble-updates/main amd64 Components [177 kB]
+2026-04-24T17:08:39.7999546Z Get:15 http://azure.archive.ubuntu.com/ubuntu noble-updates/main amd64 c-n-f Metadata [17.1 kB]
+2026-04-24T17:08:39.8040630Z Get:16 http://azure.archive.ubuntu.com/ubuntu noble-updates/universe amd64 Packages [1685 kB]
+2026-04-24T17:08:39.8151274Z Get:17 http://azure.archive.ubuntu.com/ubuntu noble-updates/universe Translation-en [324 kB]
+2026-04-24T17:08:39.8223827Z Get:18 http://azure.archive.ubuntu.com/ubuntu noble-updates/universe amd64 Components [386 kB]
+2026-04-24T17:08:39.8259993Z Get:19 http://azure.archive.ubuntu.com/ubuntu noble-updates/universe amd64 c-n-f Metadata [34.5 kB]
+2026-04-24T17:08:39.8280115Z Get:20 http://azure.archive.ubuntu.com/ubuntu noble-updates/restricted amd64 Packages [2981 kB]
+2026-04-24T17:08:39.8459173Z Get:21 http://azure.archive.ubuntu.com/ubuntu noble-updates/restricted Translation-en [697 kB]
+2026-04-24T17:08:39.8925555Z Get:22 http://azure.archive.ubuntu.com/ubuntu noble-updates/restricted amd64 Components [212 B]
+2026-04-24T17:08:39.8967344Z Get:23 http://azure.archive.ubuntu.com/ubuntu noble-updates/multiverse amd64 Packages [32.5 kB]
+2026-04-24T17:08:39.8981397Z Get:24 http://azure.archive.ubuntu.com/ubuntu noble-updates/multiverse Translation-en [8180 B]
+2026-04-24T17:08:39.8995536Z Get:25 http://azure.archive.ubuntu.com/ubuntu noble-updates/multiverse amd64 Components [940 B]
+2026-04-24T17:08:39.9003796Z Get:26 http://azure.archive.ubuntu.com/ubuntu noble-updates/multiverse amd64 c-n-f Metadata [512 B]
+2026-04-24T17:08:39.9026200Z Get:27 http://azure.archive.ubuntu.com/ubuntu noble-backports/main amd64 Packages [40.6 kB]
+2026-04-24T17:08:39.9095263Z Get:28 http://azure.archive.ubuntu.com/ubuntu noble-backports/main Translation-en [9172 B]
+2026-04-24T17:08:39.9096789Z Get:29 http://azure.archive.ubuntu.com/ubuntu noble-backports/main amd64 Components [7356 B]
+2026-04-24T17:08:39.9098924Z Get:30 http://azure.archive.ubuntu.com/ubuntu noble-backports/universe amd64 Packages [30.6 kB]
+2026-04-24T17:08:39.9100347Z Get:31 http://azure.archive.ubuntu.com/ubuntu noble-backports/universe Translation-en [18.2 kB]
+2026-04-24T17:08:39.9101791Z Get:32 http://azure.archive.ubuntu.com/ubuntu noble-backports/universe amd64 Components [10.5 kB]
+2026-04-24T17:08:39.9103469Z Get:33 http://azure.archive.ubuntu.com/ubuntu noble-backports/universe amd64 c-n-f Metadata [1484 B]
+2026-04-24T17:08:39.9105117Z Get:34 http://azure.archive.ubuntu.com/ubuntu noble-backports/restricted amd64 Components [212 B]
+2026-04-24T17:08:39.9106594Z Get:35 http://azure.archive.ubuntu.com/ubuntu noble-backports/multiverse amd64 Packages [748 B]
+2026-04-24T17:08:39.9532689Z Get:36 http://azure.archive.ubuntu.com/ubuntu noble-backports/multiverse amd64 Components [212 B]
+2026-04-24T17:08:39.9556138Z Get:37 http://azure.archive.ubuntu.com/ubuntu noble-security/main amd64 Packages [1620 kB]
+2026-04-24T17:08:39.9648575Z Get:38 http://azure.archive.ubuntu.com/ubuntu noble-security/main Translation-en [259 kB]
+2026-04-24T17:08:39.9682271Z Get:39 http://azure.archive.ubuntu.com/ubuntu noble-security/main amd64 Components [21.9 kB]
+2026-04-24T17:08:39.9691899Z Get:40 http://azure.archive.ubuntu.com/ubuntu noble-security/main amd64 c-n-f Metadata [11.0 kB]
+2026-04-24T17:08:39.9702158Z Get:41 http://azure.archive.ubuntu.com/ubuntu noble-security/universe amd64 Packages [1182 kB]
+2026-04-24T17:08:39.9773524Z Get:42 http://azure.archive.ubuntu.com/ubuntu noble-security/universe Translation-en [227 kB]
+2026-04-24T17:08:39.9799873Z Get:43 http://azure.archive.ubuntu.com/ubuntu noble-security/universe amd64 Components [74.2 kB]
+2026-04-24T17:08:39.9812727Z Get:44 http://azure.archive.ubuntu.com/ubuntu noble-security/universe amd64 c-n-f Metadata [23.1 kB]
+2026-04-24T17:08:39.9826531Z Get:45 http://azure.archive.ubuntu.com/ubuntu noble-security/restricted amd64 Packages [2833 kB]
+2026-04-24T17:08:40.0001964Z Get:46 http://azure.archive.ubuntu.com/ubuntu noble-security/restricted Translation-en [666 kB]
+2026-04-24T17:08:40.0042746Z Get:47 http://azure.archive.ubuntu.com/ubuntu noble-security/restricted amd64 Components [212 B]
+2026-04-24T17:08:40.0052645Z Get:48 http://azure.archive.ubuntu.com/ubuntu noble-security/multiverse amd64 Packages [28.8 kB]
+2026-04-24T17:08:40.0062326Z Get:49 http://azure.archive.ubuntu.com/ubuntu noble-security/multiverse Translation-en [7172 B]
+2026-04-24T17:08:40.0079234Z Get:50 http://azure.archive.ubuntu.com/ubuntu noble-security/multiverse amd64 Components [208 B]
+2026-04-24T17:08:40.0502203Z Get:51 https://dl.google.com/linux/chrome-stable/deb stable/main amd64 Packages [1216 B]
+2026-04-24T17:08:49.5953311Z Fetched 16.3 MB in 2s (8395 kB/s)
+2026-04-24T17:08:50.3611886Z Reading package lists...
+2026-04-24T17:08:50.3861508Z Reading package lists...
+2026-04-24T17:08:50.5738255Z Building dependency tree...
+2026-04-24T17:08:50.5746029Z Reading state information...
+2026-04-24T17:08:50.7291010Z libasound2t64 is already the newest version (1.2.11-1ubuntu0.2).
+2026-04-24T17:08:50.7291879Z libasound2t64 set to manually installed.
+2026-04-24T17:08:50.7292572Z libatk-bridge2.0-0t64 is already the newest version (2.52.0-1build1).
+2026-04-24T17:08:50.7293228Z libatk-bridge2.0-0t64 set to manually installed.
+2026-04-24T17:08:50.7293805Z libatk1.0-0t64 is already the newest version (2.52.0-1build1).
+2026-04-24T17:08:50.7294441Z libatk1.0-0t64 set to manually installed.
+2026-04-24T17:08:50.7295080Z libatspi2.0-0t64 is already the newest version (2.52.0-1build1).
+2026-04-24T17:08:50.7295718Z libatspi2.0-0t64 set to manually installed.
+2026-04-24T17:08:50.7296130Z libcairo2 is already the newest version (1.18.0-3build1).
+2026-04-24T17:08:50.7296502Z libcairo2 set to manually installed.
+2026-04-24T17:08:50.7297296Z libcups2t64 is already the newest version (2.4.7-1.2ubuntu7.9).
+2026-04-24T17:08:50.7297696Z libcups2t64 set to manually installed.
+2026-04-24T17:08:50.7298435Z libdbus-1-3 is already the newest version (1.14.10-4ubuntu4.1).
+2026-04-24T17:08:50.7298851Z libdbus-1-3 set to manually installed.
+2026-04-24T17:08:50.7299244Z libdrm2 is already the newest version (2.4.125-1ubuntu0.1~24.04.1).
+2026-04-24T17:08:50.7299654Z libdrm2 set to manually installed.
+2026-04-24T17:08:50.7300019Z libgbm1 is already the newest version (25.2.8-0ubuntu0.24.04.1).
+2026-04-24T17:08:50.7300417Z libgbm1 set to manually installed.
+2026-04-24T17:08:50.7300783Z libglib2.0-0t64 is already the newest version (2.80.0-6ubuntu3.8).
+2026-04-24T17:08:50.7301199Z libglib2.0-0t64 set to manually installed.
+2026-04-24T17:08:50.7301572Z libnspr4 is already the newest version (2:4.35-1.1build1).
+2026-04-24T17:08:50.7301949Z libnspr4 set to manually installed.
+2026-04-24T17:08:50.7302307Z libnss3 is already the newest version (2:3.98-1ubuntu0.1).
+2026-04-24T17:08:50.7302676Z libnss3 set to manually installed.
+2026-04-24T17:08:50.7302995Z libpango-1.0-0 is already the newest version (1.52.1+ds-1build1).
+2026-04-24T17:08:50.7303347Z libpango-1.0-0 set to manually installed.
+2026-04-24T17:08:50.7303668Z libx11-6 is already the newest version (2:1.8.7-1build1).
+2026-04-24T17:08:50.7303966Z libx11-6 set to manually installed.
+2026-04-24T17:08:50.7304250Z libxcb1 is already the newest version (1.15-1ubuntu2).
+2026-04-24T17:08:50.7304545Z libxcb1 set to manually installed.
+2026-04-24T17:08:50.7304849Z libxcomposite1 is already the newest version (1:0.4.5-1build3).
+2026-04-24T17:08:50.7305193Z libxcomposite1 set to manually installed.
+2026-04-24T17:08:50.7305506Z libxdamage1 is already the newest version (1:1.1.6-1build1).
+2026-04-24T17:08:50.7305836Z libxdamage1 set to manually installed.
+2026-04-24T17:08:50.7306125Z libxext6 is already the newest version (2:1.3.4-1build2).
+2026-04-24T17:08:50.7306423Z libxext6 set to manually installed.
+2026-04-24T17:08:50.7306719Z libxfixes3 is already the newest version (1:6.0.0-2build1).
+2026-04-24T17:08:50.7307031Z libxfixes3 set to manually installed.
+2026-04-24T17:08:50.7307340Z libxkbcommon0 is already the newest version (1.6.0-1build1).
+2026-04-24T17:08:50.7307658Z libxkbcommon0 set to manually installed.
+2026-04-24T17:08:50.7308199Z libxrandr2 is already the newest version (2:1.5.2-2build1).
+2026-04-24T17:08:50.7308560Z libxrandr2 set to manually installed.
+2026-04-24T17:08:50.7308868Z xvfb is already the newest version (2:21.1.12-1ubuntu1.5).
+2026-04-24T17:08:50.7309473Z fonts-noto-color-emoji is already the newest version (2.047-0ubuntu0.24.04.1).
+2026-04-24T17:08:50.7309937Z libfontconfig1 is already the newest version (2.15.0-1.1ubuntu2).
+2026-04-24T17:08:50.7310288Z libfontconfig1 set to manually installed.
+2026-04-24T17:08:50.7310623Z libfreetype6 is already the newest version (2.13.2+dfsg-1ubuntu0.1).
+2026-04-24T17:08:50.7310977Z libfreetype6 set to manually installed.
+2026-04-24T17:08:50.7311297Z fonts-liberation is already the newest version (1:2.1.5-3).
+2026-04-24T17:08:50.7311635Z fonts-liberation set to manually installed.
+2026-04-24T17:08:50.7311951Z The following additional packages will be installed:
+2026-04-24T17:08:50.7312282Z   xfonts-encodings xfonts-utils
+2026-04-24T17:08:50.7312642Z Recommended packages:
+2026-04-24T17:08:50.7312861Z   fonts-ipafont-mincho fonts-tlwg-loma
+2026-04-24T17:08:50.7784252Z The following NEW packages will be installed:
+2026-04-24T17:08:50.7784906Z   fonts-freefont-ttf fonts-ipafont-gothic fonts-tlwg-loma-otf fonts-unifont
+2026-04-24T17:08:50.7790827Z   fonts-wqy-zenhei xfonts-cyrillic xfonts-encodings xfonts-scalable
+2026-04-24T17:08:50.7791358Z   xfonts-utils
+2026-04-24T17:08:50.7962253Z 0 upgraded, 9 newly installed, 0 to remove and 40 not upgraded.
+2026-04-24T17:08:50.7962786Z Need to get 21.1 MB of archives.
+2026-04-24T17:08:50.7963120Z After this operation, 79.5 MB of additional disk space will be used.
+2026-04-24T17:08:50.7963519Z Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+2026-04-24T17:08:50.8739399Z Get:2 http://azure.archive.ubuntu.com/ubuntu noble/universe amd64 fonts-ipafont-gothic all 00303-21ubuntu1 [3513 kB]
+2026-04-24T17:08:50.9714166Z Get:3 http://azure.archive.ubuntu.com/ubuntu noble/main amd64 fonts-freefont-ttf all 20211204+svn4273-2 [5641 kB]
+2026-04-24T17:08:51.0998874Z Get:4 http://azure.archive.ubuntu.com/ubuntu noble/universe amd64 fonts-tlwg-loma-otf all 1:0.7.3-1 [107 kB]
+2026-04-24T17:08:51.1486237Z Get:5 http://azure.archive.ubuntu.com/ubuntu noble/universe amd64 fonts-unifont all 1:15.1.01-1build1 [2993 kB]
+2026-04-24T17:08:51.4134361Z Get:6 http://azure.archive.ubuntu.com/ubuntu noble/universe amd64 fonts-wqy-zenhei all 0.9.45-8 [7472 kB]
+2026-04-24T17:08:51.5850704Z Get:7 http://azure.archive.ubuntu.com/ubuntu noble/main amd64 xfonts-encodings all 1:1.0.5-0ubuntu2 [578 kB]
+2026-04-24T17:08:51.7113956Z Get:8 http://azure.archive.ubuntu.com/ubuntu noble/main amd64 xfonts-utils amd64 1:7.7+6build3 [94.4 kB]
+2026-04-24T17:08:51.8976712Z Get:9 http://azure.archive.ubuntu.com/ubuntu noble/universe amd64 xfonts-cyrillic all 1:1.0.5+nmu1 [384 kB]
+2026-04-24T17:08:52.0532278Z Get:10 http://azure.archive.ubuntu.com/ubuntu noble/main amd64 xfonts-scalable all 1:1.0.3-1.3 [304 kB]
+2026-04-24T17:08:52.3347754Z Fetched 21.1 MB in 1s (16.4 MB/s)
+2026-04-24T17:08:52.3748645Z Selecting previously unselected package fonts-ipafont-gothic.
+2026-04-24T17:08:52.4946071Z (Reading database ... 
+2026-04-24T17:08:52.4946605Z (Reading database ... 5%
+2026-04-24T17:08:52.4946898Z (Reading database ... 10%
+2026-04-24T17:08:52.4947202Z (Reading database ... 15%
+2026-04-24T17:08:52.4947461Z (Reading database ... 20%
+2026-04-24T17:08:52.4947727Z (Reading database ... 25%
+2026-04-24T17:08:52.4948257Z (Reading database ... 30%
+2026-04-24T17:08:52.4948552Z (Reading database ... 35%
+2026-04-24T17:08:52.4948808Z (Reading database ... 40%
+2026-04-24T17:08:52.4949073Z (Reading database ... 45%
+2026-04-24T17:08:52.4949333Z (Reading database ... 50%
+2026-04-24T17:08:52.5403539Z (Reading database ... 55%
+2026-04-24T17:08:52.9087801Z (Reading database ... 60%
+2026-04-24T17:08:53.1740967Z (Reading database ... 65%
+2026-04-24T17:08:53.4820045Z (Reading database ... 70%
+2026-04-24T17:08:53.7854566Z (Reading database ... 75%
+2026-04-24T17:08:54.2792914Z (Reading database ... 80%
+2026-04-24T17:08:54.9371467Z (Reading database ... 85%
+2026-04-24T17:08:55.7107964Z (Reading database ... 90%
+2026-04-24T17:08:56.4487215Z (Reading database ... 95%
+2026-04-24T17:08:56.4487775Z (Reading database ... 100%
+2026-04-24T17:08:56.4488983Z (Reading database ... 220764 files and directories currently installed.)
+2026-04-24T17:08:56.4598862Z Preparing to unpack .../0-fonts-ipafont-gothic_00303-21ubuntu1_all.deb ...
+2026-04-24T17:08:56.4709391Z Unpacking fonts-ipafont-gothic (00303-21ubuntu1) ...
+2026-04-24T17:08:56.7099184Z Selecting previously unselected package fonts-freefont-ttf.
+2026-04-24T17:08:56.7234408Z Preparing to unpack .../1-fonts-freefont-ttf_20211204+svn4273-2_all.deb ...
+2026-04-24T17:08:56.7244398Z Unpacking fonts-freefont-ttf (20211204+svn4273-2) ...
+2026-04-24T17:08:56.8120225Z Selecting previously unselected package fonts-tlwg-loma-otf.
+2026-04-24T17:08:56.8257370Z Preparing to unpack .../2-fonts-tlwg-loma-otf_1%3a0.7.3-1_all.deb ...
+2026-04-24T17:08:56.8267912Z Unpacking fonts-tlwg-loma-otf (1:0.7.3-1) ...
+2026-04-24T17:08:56.8573741Z Selecting previously unselected package fonts-unifont.
+2026-04-24T17:08:56.8708574Z Preparing to unpack .../3-fonts-unifont_1%3a15.1.01-1build1_all.deb ...
+2026-04-24T17:08:56.8721343Z Unpacking fonts-unifont (1:15.1.01-1build1) ...
+2026-04-24T17:08:56.9837076Z Selecting previously unselected package fonts-wqy-zenhei.
+2026-04-24T17:08:56.9972093Z Preparing to unpack .../4-fonts-wqy-zenhei_0.9.45-8_all.deb ...
+2026-04-24T17:08:57.0121905Z Unpacking fonts-wqy-zenhei (0.9.45-8) ...
+2026-04-24T17:08:57.4788301Z Selecting previously unselected package xfonts-encodings.
+2026-04-24T17:08:57.4923647Z Preparing to unpack .../5-xfonts-encodings_1%3a1.0.5-0ubuntu2_all.deb ...
+2026-04-24T17:08:57.4933437Z Unpacking xfonts-encodings (1:1.0.5-0ubuntu2) ...
+2026-04-24T17:08:57.5236279Z Selecting previously unselected package xfonts-utils.
+2026-04-24T17:08:57.5372175Z Preparing to unpack .../6-xfonts-utils_1%3a7.7+6build3_amd64.deb ...
+2026-04-24T17:08:57.5382443Z Unpacking xfonts-utils (1:7.7+6build3) ...
+2026-04-24T17:08:57.6316926Z Selecting previously unselected package xfonts-cyrillic.
+2026-04-24T17:08:57.6453149Z Preparing to unpack .../7-xfonts-cyrillic_1%3a1.0.5+nmu1_all.deb ...
+2026-04-24T17:08:57.6464169Z Unpacking xfonts-cyrillic (1:1.0.5+nmu1) ...
+2026-04-24T17:08:57.6823800Z Selecting previously unselected package xfonts-scalable.
+2026-04-24T17:08:57.6957431Z Preparing to unpack .../8-xfonts-scalable_1%3a1.0.3-1.3_all.deb ...
+2026-04-24T17:08:57.6968447Z Unpacking xfonts-scalable (1:1.0.3-1.3) ...
+2026-04-24T17:08:57.7389995Z Setting up fonts-wqy-zenhei (0.9.45-8) ...
+2026-04-24T17:08:57.7520267Z Setting up fonts-freefont-ttf (20211204+svn4273-2) ...
+2026-04-24T17:08:57.7548354Z Setting up fonts-tlwg-loma-otf (1:0.7.3-1) ...
+2026-04-24T17:08:57.7578844Z Setting up xfonts-encodings (1:1.0.5-0ubuntu2) ...
+2026-04-24T17:08:57.7608782Z Setting up fonts-ipafont-gothic (00303-21ubuntu1) ...
+2026-04-24T17:08:57.7685505Z update-alternatives: using /usr/share/fonts/opentype/ipafont-gothic/ipag.ttf to provide /usr/share/fonts/truetype/fonts-japanese-gothic.ttf (fonts-japanese-gothic.ttf) in auto mode
+2026-04-24T17:08:57.7706638Z Setting up fonts-unifont (1:15.1.01-1build1) ...
+2026-04-24T17:08:57.7734445Z Setting up xfonts-utils (1:7.7+6build3) ...
+2026-04-24T17:08:57.7781596Z Setting up xfonts-cyrillic (1:1.0.5+nmu1) ...
+2026-04-24T17:08:57.8070229Z Setting up xfonts-scalable (1:1.0.3-1.3) ...
+2026-04-24T17:08:57.8441940Z Processing triggers for man-db (2.12.0-4build2) ...
+2026-04-24T17:08:57.8465915Z Not building database; man-db/auto-update is not 'true'.
+2026-04-24T17:08:57.8482358Z Processing triggers for fontconfig (2.15.0-1.1ubuntu2) ...
+2026-04-24T17:08:59.1202219Z 
+2026-04-24T17:08:59.1204138Z Running kernel seems to be up-to-date.
+2026-04-24T17:08:59.1204563Z 
+2026-04-24T17:08:59.1204725Z No services need to be restarted.
+2026-04-24T17:08:59.1205021Z 
+2026-04-24T17:08:59.1205210Z No containers need to be restarted.
+2026-04-24T17:08:59.1205528Z 
+2026-04-24T17:08:59.1205714Z No user sessions are running outdated binaries.
+2026-04-24T17:08:59.1206046Z 
+2026-04-24T17:08:59.1206345Z No VM guests are running outdated hypervisor (qemu) binaries on this host.
+2026-04-24T17:08:59.9208886Z Downloading Chrome for Testing 145.0.7632.6 (playwright chromium v1208) from https://cdn.playwright.dev/chrome-for-testing-public/145.0.7632.6/linux64/chrome-linux64.zip
+2026-04-24T17:09:00.0160100Z (node:3026) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-04-24T17:09:00.0162430Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-04-24T17:09:00.2248010Z |                                                                                |   0% of 167.3 MiB
+2026-04-24T17:09:00.8289462Z |■■■■■■■■                                                                        |  10% of 167.3 MiB
+2026-04-24T17:09:00.9172586Z |■■■■■■■■■■■■■■■■                                                                |  20% of 167.3 MiB
+2026-04-24T17:09:00.9907853Z |■■■■■■■■■■■■■■■■■■■■■■■■                                                        |  30% of 167.3 MiB
+2026-04-24T17:09:01.0523717Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                                |  40% of 167.3 MiB
+2026-04-24T17:09:01.1115758Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                        |  50% of 167.3 MiB
+2026-04-24T17:09:01.1869887Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                |  60% of 167.3 MiB
+2026-04-24T17:09:01.2446375Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                        |  70% of 167.3 MiB
+2026-04-24T17:09:01.3052933Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                |  80% of 167.3 MiB
+2026-04-24T17:09:01.3680341Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■        |  90% of 167.3 MiB
+2026-04-24T17:09:01.4334817Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■| 100% of 167.3 MiB
+2026-04-24T17:09:04.0503234Z Chrome for Testing 145.0.7632.6 (playwright chromium v1208) downloaded to /home/runner/.cache/ms-playwright/chromium-1208
+2026-04-24T17:09:04.0507678Z Downloading FFmpeg (playwright ffmpeg v1011) from https://cdn.playwright.dev/dbazure/download/playwright/builds/ffmpeg/1011/ffmpeg-linux.zip
+2026-04-24T17:09:04.1479791Z (node:3099) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-04-24T17:09:04.1481561Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-04-24T17:09:04.2489113Z |                                                                                |   0% of 2.3 MiB
+2026-04-24T17:09:04.2971916Z |■■■■■■■■                                                                        |  10% of 2.3 MiB
+2026-04-24T17:09:04.3201953Z |■■■■■■■■■■■■■■■■                                                                |  20% of 2.3 MiB
+2026-04-24T17:09:04.3344202Z |■■■■■■■■■■■■■■■■■■■■■■■■                                                        |  30% of 2.3 MiB
+2026-04-24T17:09:04.3507454Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                                |  40% of 2.3 MiB
+2026-04-24T17:09:04.3643635Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                        |  50% of 2.3 MiB
+2026-04-24T17:09:04.3680981Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                |  60% of 2.3 MiB
+2026-04-24T17:09:04.3727365Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                        |  70% of 2.3 MiB
+2026-04-24T17:09:04.3835664Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                |  80% of 2.3 MiB
+2026-04-24T17:09:04.3862958Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■        |  90% of 2.3 MiB
+2026-04-24T17:09:04.3987614Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■| 100% of 2.3 MiB
+2026-04-24T17:09:04.4585214Z FFmpeg (playwright ffmpeg v1011) downloaded to /home/runner/.cache/ms-playwright/ffmpeg-1011
+2026-04-24T17:09:04.4589401Z Downloading Chrome Headless Shell 145.0.7632.6 (playwright chromium-headless-shell v1208) from https://cdn.playwright.dev/chrome-for-testing-public/145.0.7632.6/linux64/chrome-headless-shell-linux64.zip
+2026-04-24T17:09:04.5540268Z (node:3110) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-04-24T17:09:04.5542716Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-04-24T17:09:04.7713005Z |                                                                                |   0% of 110.9 MiB
+2026-04-24T17:09:05.3190781Z |■■■■■■■■                                                                        |  10% of 110.9 MiB
+2026-04-24T17:09:05.3996183Z |■■■■■■■■■■■■■■■■                                                                |  20% of 110.9 MiB
+2026-04-24T17:09:05.4542752Z |■■■■■■■■■■■■■■■■■■■■■■■■                                                        |  30% of 110.9 MiB
+2026-04-24T17:09:05.5073212Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                                |  40% of 110.9 MiB
+2026-04-24T17:09:05.5483338Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                        |  50% of 110.9 MiB
+2026-04-24T17:09:05.5941409Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                |  60% of 110.9 MiB
+2026-04-24T17:09:05.6339925Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                        |  70% of 110.9 MiB
+2026-04-24T17:09:05.6734343Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                |  80% of 110.9 MiB
+2026-04-24T17:09:05.7159907Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■        |  90% of 110.9 MiB
+2026-04-24T17:09:05.7588981Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■| 100% of 110.9 MiB
+2026-04-24T17:09:07.6963827Z Chrome Headless Shell 145.0.7632.6 (playwright chromium-headless-shell v1208) downloaded to /home/runner/.cache/ms-playwright/chromium_headless_shell-1208

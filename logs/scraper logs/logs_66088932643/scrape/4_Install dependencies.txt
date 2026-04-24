@@ -1,0 +1,51 @@
+﻿2026-04-24T17:42:52.2471578Z ##[group]Run python -m pip install --upgrade pip
+2026-04-24T17:42:52.2473252Z [36;1mpython -m pip install --upgrade pip[0m
+2026-04-24T17:42:52.2474607Z [36;1mpip install -r scraper/requirements.txt[0m
+2026-04-24T17:42:52.2589031Z shell: /usr/bin/bash -e {0}
+2026-04-24T17:42:52.2590014Z env:
+2026-04-24T17:42:52.2590997Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-24T17:42:52.2593008Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+2026-04-24T17:42:52.2594798Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-24T17:42:52.2596374Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-24T17:42:52.2597950Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-24T17:42:52.2599531Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+2026-04-24T17:42:52.2600837Z ##[endgroup]
+2026-04-24T17:42:54.6858870Z Requirement already satisfied: pip in /opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages (26.0.1)
+2026-04-24T17:42:55.9632355Z Collecting playwright>=1.40 (from -r scraper/requirements.txt (line 1))
+2026-04-24T17:42:56.0624087Z   Downloading playwright-1.58.0-py3-none-manylinux1_x86_64.whl.metadata (3.5 kB)
+2026-04-24T17:42:56.1063428Z Collecting requests>=2.31 (from -r scraper/requirements.txt (line 2))
+2026-04-24T17:42:56.1250332Z   Downloading requests-2.33.1-py3-none-any.whl.metadata (4.8 kB)
+2026-04-24T17:42:56.1585854Z Collecting beautifulsoup4>=4.12 (from -r scraper/requirements.txt (line 3))
+2026-04-24T17:42:56.1772417Z   Downloading beautifulsoup4-4.14.3-py3-none-any.whl.metadata (3.8 kB)
+2026-04-24T17:42:56.2080554Z Collecting pyee<14,>=13 (from playwright>=1.40->-r scraper/requirements.txt (line 1))
+2026-04-24T17:42:56.2271568Z   Downloading pyee-13.0.1-py3-none-any.whl.metadata (3.0 kB)
+2026-04-24T17:42:56.4251573Z Collecting greenlet<4.0.0,>=3.1.1 (from playwright>=1.40->-r scraper/requirements.txt (line 1))
+2026-04-24T17:42:56.4443658Z   Downloading greenlet-3.4.0-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (3.7 kB)
+2026-04-24T17:42:56.4808357Z Collecting typing-extensions (from pyee<14,>=13->playwright>=1.40->-r scraper/requirements.txt (line 1))
+2026-04-24T17:42:56.5000357Z   Downloading typing_extensions-4.15.0-py3-none-any.whl.metadata (3.3 kB)
+2026-04-24T17:42:56.6351047Z Collecting charset_normalizer<4,>=2 (from requests>=2.31->-r scraper/requirements.txt (line 2))
+2026-04-24T17:42:56.6542452Z   Downloading charset_normalizer-3.4.7-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (40 kB)
+2026-04-24T17:42:56.6989236Z Collecting idna<4,>=2.5 (from requests>=2.31->-r scraper/requirements.txt (line 2))
+2026-04-24T17:42:56.7176742Z   Downloading idna-3.13-py3-none-any.whl.metadata (8.0 kB)
+2026-04-24T17:42:56.7574485Z Collecting urllib3<3,>=1.26 (from requests>=2.31->-r scraper/requirements.txt (line 2))
+2026-04-24T17:42:56.7762791Z   Downloading urllib3-2.6.3-py3-none-any.whl.metadata (6.9 kB)
+2026-04-24T17:42:56.8108423Z Collecting certifi>=2023.5.7 (from requests>=2.31->-r scraper/requirements.txt (line 2))
+2026-04-24T17:42:56.8297612Z   Downloading certifi-2026.4.22-py3-none-any.whl.metadata (2.5 kB)
+2026-04-24T17:42:56.8628393Z Collecting soupsieve>=1.6.1 (from beautifulsoup4>=4.12->-r scraper/requirements.txt (line 3))
+2026-04-24T17:42:56.8816148Z   Downloading soupsieve-2.8.3-py3-none-any.whl.metadata (4.6 kB)
+2026-04-24T17:42:56.9066215Z Downloading playwright-1.58.0-py3-none-manylinux1_x86_64.whl (46.2 MB)
+2026-04-24T17:42:57.2387575Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 46.2/46.2 MB 156.7 MB/s  0:00:00
+2026-04-24T17:42:57.2580046Z Downloading greenlet-3.4.0-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (615 kB)
+2026-04-24T17:42:57.2633636Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 615.1/615.1 kB 115.7 MB/s  0:00:00
+2026-04-24T17:42:57.2826478Z Downloading pyee-13.0.1-py3-none-any.whl (15 kB)
+2026-04-24T17:42:57.3034700Z Downloading requests-2.33.1-py3-none-any.whl (64 kB)
+2026-04-24T17:42:57.3255081Z Downloading charset_normalizer-3.4.7-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (216 kB)
+2026-04-24T17:42:57.3470237Z Downloading idna-3.13-py3-none-any.whl (68 kB)
+2026-04-24T17:42:57.3681889Z Downloading urllib3-2.6.3-py3-none-any.whl (131 kB)
+2026-04-24T17:42:57.3893430Z Downloading beautifulsoup4-4.14.3-py3-none-any.whl (107 kB)
+2026-04-24T17:42:57.4103775Z Downloading certifi-2026.4.22-py3-none-any.whl (135 kB)
+2026-04-24T17:42:57.4315069Z Downloading soupsieve-2.8.3-py3-none-any.whl (37 kB)
+2026-04-24T17:42:57.4527485Z Downloading typing_extensions-4.15.0-py3-none-any.whl (44 kB)
+2026-04-24T17:42:57.5361540Z Installing collected packages: urllib3, typing-extensions, soupsieve, idna, greenlet, charset_normalizer, certifi, requests, pyee, beautifulsoup4, playwright
+2026-04-24T17:42:58.7154173Z 
+2026-04-24T17:42:58.7172417Z Successfully installed beautifulsoup4-4.14.3 certifi-2026.4.22 charset_normalizer-3.4.7 greenlet-3.4.0 idna-3.13 playwright-1.58.0 pyee-13.0.1 requests-2.33.1 soupsieve-2.8.3 typing-extensions-4.15.0 urllib3-2.6.3

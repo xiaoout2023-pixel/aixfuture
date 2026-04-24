@@ -5,6 +5,7 @@
   var filteredModels = [];
   var sortColumn = 'rank';
   var sortDirection = 'asc';
+  var updateTime = '';
 
   var tableEl = document.getElementById('rankTable');
   var bodyEl = document.getElementById('rankBody');
@@ -13,6 +14,7 @@
   var searchInput = document.getElementById('searchInput');
   var clearBtn = document.getElementById('clearSearch');
   var tableContainer = document.getElementById('tableContainer');
+  var updateTimeEl = document.getElementById('updateTime');
 
   function init() {
     fetchData();
@@ -24,6 +26,7 @@
     loadingEl.style.display = '';
     tableEl.style.display = 'none';
     emptyEl.style.display = 'none';
+    updateTimeEl.style.display = 'none';
 
     fetch('data/models.json')
       .then(function (res) {
@@ -31,8 +34,18 @@
         return res.json();
       })
       .then(function (data) {
-        models = data || [];
+        if (data.models) {
+          models = data.models || [];
+          updateTime = data.update_time || '';
+        } else {
+          models = data || [];
+          updateTime = '';
+        }
         filteredModels = models.slice();
+        if (updateTime) {
+          updateTimeEl.textContent = '榜单更新时间：' + updateTime;
+          updateTimeEl.style.display = 'block';
+        }
         sortAndRender();
         loadingEl.style.display = 'none';
         tableEl.style.display = '';
@@ -147,10 +160,20 @@
       html += '<td class="cell-type ' + typeClass + '">' + escapeHtml(m.type) + '</td>';
       html += '<td class="cell-languages">' + escapeHtml(m.languages) + '</td>';
       html += '<td class="cell-score ' + scoreClass + '">' + escapeHtml(m.score) + '</td>';
-      html += '<td class="cell-special" title="' + escapeHtml(m.special) + '">' + escapeHtml(m.special) + '</td>';
+      html += '<td class="cell-dim">' + formatDim(m.math_reasoning) + '</td>';
+      html += '<td class="cell-dim">' + formatDim(m.hallucination_control) + '</td>';
+      html += '<td class="cell-dim">' + formatDim(m.science_reasoning) + '</td>';
+      html += '<td class="cell-dim">' + formatDim(m.instruction_following) + '</td>';
+      html += '<td class="cell-dim">' + formatDim(m.code_generation) + '</td>';
+      html += '<td class="cell-dim">' + formatDim(m.agent_planning) + '</td>';
       html += '</tr>';
     }
     bodyEl.innerHTML = html;
+  }
+
+  function formatDim(val) {
+    if (val === '-' || val == null || val === '') return '-';
+    return escapeHtml(val);
   }
 
   function escapeHtml(str) {
