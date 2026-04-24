@@ -3,6 +3,7 @@
 AIX未来视野 - 主数据抓取脚本
 数据源: superclueai.com (SPA动态渲染页面)
 使用 Playwright 无头浏览器抓取
+支持多榜单: 通用排行榜、推理模型总排行榜、开源排行榜
 """
 
 import json
@@ -21,8 +22,19 @@ BACKUP_FILE = DATA_DIR / "models_backup.json"
 
 SOURCES = [
     {
-        "name": "SuperCLUE通用榜",
+        "board_type": "general",
+        "name": "通用排行榜",
         "url": "https://www.superclueai.com/generalpage",
+    },
+    {
+        "board_type": "reasoning",
+        "name": "推理模型总排行榜",
+        "url": "https://www.superclueai.com/reasoningpage",
+    },
+    {
+        "board_type": "open",
+        "name": "开源排行榜",
+        "url": "https://www.superclueai.com/openpage",
     },
 ]
 
@@ -34,7 +46,7 @@ def load_existing_data():
     if MODELS_FILE.exists():
         with open(MODELS_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
-    return []
+    return {"update_time": "", "leaderboards": {}}
 
 
 def backup_existing_data():
@@ -43,15 +55,16 @@ def backup_existing_data():
         print(f"[OK] 已备份旧数据 -> {BACKUP_FILE}")
 
 
-def save_data(models, update_time):
+def save_data(leaderboards, update_time):
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     output = {
         "update_time": update_time,
-        "models": models,
+        "leaderboards": leaderboards,
     }
     with open(MODELS_FILE, "w", encoding="utf-8") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
-    print(f"[OK] 数据已保存: {len(models)} 条模型")
+    total_models = sum(len(lb.get("models", [])) for lb in leaderboards.values())
+    print(f"[OK] 数据已保存: {len(leaderboards)} 个榜单, 共 {total_models} 条模型")
 
 
 def safe_float(text):
@@ -199,7 +212,6 @@ def parse_superclue_table(page):
                 "instruction_following": instruction_following,
                 "code_generation": code_generation,
                 "agent_planning": agent_planning,
-                "special": "-",
             })
 
             print(f"  [OK] #{rank} {name} ({vendor}) - {model_type} - {score}")
@@ -256,45 +268,42 @@ def main():
 
     backup_existing_data()
 
-    all_models = []
+    existing = load_existing_data()
+    leaderboards = existing.get("leaderboards", {}) if isinstance(existing, dict) else {}
 
     for source in SOURCES:
+        board_type = source["board_type"]
         models = scrape_source(source)
+
         if models:
-            all_models.extend(models)
+            models.sort(key=lambda x: x.get("score", 0), reverse=True)
+            for i, m in enumerate(models):
+                m["rank"] = i + 1
+
+            leaderboards[board_type] = {
+                "name": source["name"],
+                "models": models,
+            }
             print(f"[OK] {source['name']}: 抓取 {len(models)} 条")
+
+            top3 = models[:3]
+            print(f"  排名前3:")
+            for m in top3:
+                print(f"    #{m['rank']} {m['name']} ({m['vendor']}) - {m['score']}")
         else:
-            print(f"[WARN] {source['name']}: 无数据")
-
-    seen = {}
-    for m in all_models:
-        key = m.get("name", "").strip()
-        if key and key not in seen:
-            seen[key] = m
-    unique_models = list(seen.values())
-
-    unique_models.sort(key=lambda x: x.get("score", 0), reverse=True)
-
-    for i, m in enumerate(unique_models):
-        m["rank"] = i + 1
+            print(f"[WARN] {source['name']}: 无数据，保留上次数据")
+            if board_type not in leaderboards:
+                print(f"  [ERROR] {source['name']} 无历史数据可保留")
 
     now = datetime.now()
     update_time = f"{now.year}年{now.month}月"
 
-    if unique_models:
-        save_data(unique_models, update_time)
-        print(f"\n排名前5:")
-        for m in unique_models[:5]:
-            print(f"  #{m['rank']} {m['name']} ({m['vendor']}) - 评分: {m['score']}")
+    if any(lb.get("models") for lb in leaderboards.values()):
+        save_data(leaderboards, update_time)
         print(f"\n榜单更新时间: {update_time}")
     else:
-        existing = load_existing_data()
-        if existing:
-            print("[INFO] 本次抓取无新数据，保留上次数据")
-            save_data(existing, existing.get("update_time", update_time))
-        else:
-            print("[ERROR] 无数据可保存")
-            sys.exit(1)
+        print("[ERROR] 所有榜单均无数据可保存")
+        sys.exit(1)
 
     print("\n抓取完成!")
 

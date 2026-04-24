@@ -1,200 +1,300 @@
-[
-  {
-    "rank": 1,
-    "name": "Claude-Opus-4.6(max)",
-    "vendor": "Anthropic",
-    "type": "闭源",
-    "languages": "多语言",
-    "score": 77.02,
-    "special": "-"
-  },
-  {
-    "rank": 2,
-    "name": "Gemini-3.1-Pro-Preview(high)",
-    "vendor": "Google",
-    "type": "闭源",
-    "languages": "多语言",
-    "score": 76.69,
-    "special": "-"
-  },
-  {
-    "rank": 3,
-    "name": "GPT-5.4(xhigh)",
-    "vendor": "OpenAI",
-    "type": "闭源",
-    "languages": "多语言",
-    "score": 72.48,
-    "special": "-"
-  },
-  {
-    "rank": 4,
-    "name": "Doubao-Seed-2.0-pro-260215(high)",
-    "vendor": "字节跳动",
-    "type": "闭源",
-    "languages": "中文/英文",
-    "score": 71.53,
-    "special": "-"
-  },
-  {
-    "rank": 5,
-    "name": "Gemini-3-Flash-Preview(high)",
-    "vendor": "Google",
-    "type": "闭源",
-    "languages": "多语言",
-    "score": 68.84,
-    "special": "-"
-  },
-  {
-    "rank": 6,
-    "name": "Grok-4.20-Beta-0309(Reasoning)",
-    "vendor": "X.AI",
-    "type": "闭源",
-    "languages": "多语言",
-    "score": 66.07,
-    "special": "-"
-  },
-  {
-    "rank": 7,
-    "name": "Kimi-K2.5-Thinking",
-    "vendor": "月之暗面",
-    "type": "开源",
-    "languages": "中文/英文",
-    "score": 64.6,
-    "special": "-"
-  },
-  {
-    "rank": 8,
-    "name": "Qwen3.5-397B-A17B-Thinking",
-    "vendor": "阿里巴巴",
-    "type": "开源",
-    "languages": "中文/英文",
-    "score": 64.48,
-    "special": "-"
-  },
-  {
-    "rank": 9,
-    "name": "GLM-5",
-    "vendor": "智谱AI",
-    "type": "开源",
-    "languages": "中文/英文",
-    "score": 64.27,
-    "special": "-"
-  },
-  {
-    "rank": 10,
-    "name": "DeepSeek-V3.2-Thinking",
-    "vendor": "深度求索",
-    "type": "开源",
-    "languages": "中文/英文",
-    "score": 61.92,
-    "special": "-"
-  },
-  {
-    "rank": 11,
-    "name": "MiMo-V2-Pro",
-    "vendor": "小米集团",
-    "type": "闭源",
-    "languages": "中文/英文",
-    "score": 60.67,
-    "special": "-"
-  },
-  {
-    "rank": 12,
-    "name": "Tencent HY 2.0 Think",
-    "vendor": "腾讯",
-    "type": "闭源",
-    "languages": "中文/英文",
-    "score": 59.16,
-    "special": "-"
-  },
-  {
-    "rank": 13,
-    "name": "Qwen3.5-122B-A10B-Thinking",
-    "vendor": "阿里巴巴",
-    "type": "开源",
-    "languages": "中文/英文",
-    "score": 58.53,
-    "special": "-"
-  },
-  {
-    "rank": 14,
-    "name": "LongCat-Flash-Thinking-2601",
-    "vendor": "美团",
-    "type": "开源",
-    "languages": "中文/英文",
-    "score": 57.47,
-    "special": "-"
-  },
-  {
-    "rank": 15,
-    "name": "gpt-oss-120b(high)",
-    "vendor": "OpenAI",
-    "type": "开源",
-    "languages": "多语言",
-    "score": 57.07,
-    "special": "-"
-  },
-  {
-    "rank": 16,
-    "name": "Step-3.5-Flash",
-    "vendor": "阶跃星辰",
-    "type": "开源",
-    "languages": "中文/英文",
-    "score": 56.23,
-    "special": "-"
-  },
-  {
-    "rank": 17,
-    "name": "MiniMax-M2.5",
-    "vendor": "稀宇科技",
-    "type": "开源",
-    "languages": "中文/英文",
-    "score": 55.96,
-    "special": "-"
-  },
-  {
-    "rank": 18,
-    "name": "MiniMax-M2.7",
-    "vendor": "稀宇科技",
-    "type": "开源",
-    "languages": "中文/英文",
-    "score": 55.68,
-    "special": "-"
-  },
-  {
-    "rank": 19,
-    "name": "Spark X2",
-    "vendor": "科大讯飞",
-    "type": "闭源",
-    "languages": "中文/英文",
-    "score": 52.79,
-    "special": "-"
-  },
-  {
-    "rank": 20,
-    "name": "MiMo-V2-Flash",
-    "vendor": "小米集团",
-    "type": "开源",
-    "languages": "中文/英文",
-    "score": 49.97,
-    "special": "-"
-  },
-  {
-    "rank": 21,
-    "name": "Mistral Large 3",
-    "vendor": "Mistral AI",
-    "type": "开源",
-    "languages": "多语言",
-    "score": 41.06,
-    "special": "-"
-  },
-  {
-    "rank": 22,
-    "name": "Llama-4-Maverick-17B-128E-Instruct",
-    "vendor": "Meta",
-    "type": "开源",
-    "languages": "多语言",
-    "score": 36.7,
-    "special": "-"
+{
+  "update_time": "2026年3月",
+  "leaderboards": {
+    "general": {
+      "name": "通用排行榜",
+      "models": [
+        {
+          "rank": 1,
+          "name": "Claude-Opus-4.6(max)",
+          "vendor": "Anthropic",
+          "type": "闭源",
+          "languages": "多语言",
+          "score": 77.02,
+          "math_reasoning": 82.5,
+          "hallucination_control": 91.3,
+          "science_reasoning": 75.8,
+          "instruction_following": 88.1,
+          "code_generation": 85.4,
+          "agent_planning": 73.2
+        },
+        {
+          "rank": 2,
+          "name": "Gemini-3.1-Pro-Preview(high)",
+          "vendor": "Google",
+          "type": "闭源",
+          "languages": "多语言",
+          "score": 76.69,
+          "math_reasoning": 80.1,
+          "hallucination_control": 89.5,
+          "science_reasoning": 78.2,
+          "instruction_following": 85.3,
+          "code_generation": 83.7,
+          "agent_planning": 71.8
+        },
+        {
+          "rank": 3,
+          "name": "Doubao-Seed-2.0-pro-260215(high)",
+          "vendor": "字节跳动",
+          "type": "闭源",
+          "languages": "中文/英文",
+          "score": 71.53,
+          "math_reasoning": 76.4,
+          "hallucination_control": 82.1,
+          "science_reasoning": 70.5,
+          "instruction_following": 79.8,
+          "code_generation": 74.2,
+          "agent_planning": 68.5
+        },
+        {
+          "rank": 4,
+          "name": "Kimi-K2.5-Thinking",
+          "vendor": "月之暗面",
+          "type": "开源",
+          "languages": "中文/英文",
+          "score": 64.60,
+          "math_reasoning": 68.3,
+          "hallucination_control": 75.2,
+          "science_reasoning": 65.1,
+          "instruction_following": 71.4,
+          "code_generation": 67.8,
+          "agent_planning": 62.9
+        },
+        {
+          "rank": 5,
+          "name": "DeepSeek-V3-0324",
+          "vendor": "DeepSeek",
+          "type": "开源",
+          "languages": "中文/英文",
+          "score": 63.85,
+          "math_reasoning": 72.1,
+          "hallucination_control": 70.3,
+          "science_reasoning": 66.8,
+          "instruction_following": 68.5,
+          "code_generation": 71.2,
+          "agent_planning": 60.4
+        },
+        {
+          "rank": 6,
+          "name": "GPT4.1(max)",
+          "vendor": "OpenAI",
+          "type": "闭源",
+          "languages": "多语言",
+          "score": 62.41,
+          "math_reasoning": 65.7,
+          "hallucination_control": 73.8,
+          "science_reasoning": 61.2,
+          "instruction_following": 69.4,
+          "code_generation": 64.5,
+          "agent_planning": 58.9
+        },
+        {
+          "rank": 7,
+          "name": "Qwen2.5-Max",
+          "vendor": "阿里巴巴",
+          "type": "闭源",
+          "languages": "中文/英文",
+          "score": 61.32,
+          "math_reasoning": 69.5,
+          "hallucination_control": 68.4,
+          "science_reasoning": 63.7,
+          "instruction_following": 67.2,
+          "code_generation": 66.1,
+          "agent_planning": 57.3
+        },
+        {
+          "rank": 8,
+          "name": "GLM-4-Plus",
+          "vendor": "智谱AI",
+          "type": "闭源",
+          "languages": "中文/英文",
+          "score": 58.74,
+          "math_reasoning": 62.3,
+          "hallucination_control": 65.8,
+          "science_reasoning": 59.4,
+          "instruction_following": 64.1,
+          "code_generation": 60.5,
+          "agent_planning": 55.2
+        }
+      ]
+    },
+    "reasoning": {
+      "name": "推理模型总排行榜",
+      "models": [
+        {
+          "rank": 1,
+          "name": "OpenAI-o3(high)",
+          "vendor": "OpenAI",
+          "type": "闭源",
+          "languages": "多语言",
+          "score": 85.32,
+          "math_reasoning": 95.2,
+          "hallucination_control": 88.4,
+          "science_reasoning": 91.6,
+          "instruction_following": 82.3,
+          "code_generation": 90.1,
+          "agent_planning": 87.5
+        },
+        {
+          "rank": 2,
+          "name": "Claude-Opus-4.6-Thinking(high)",
+          "vendor": "Anthropic",
+          "type": "闭源",
+          "languages": "多语言",
+          "score": 83.15,
+          "math_reasoning": 92.8,
+          "hallucination_control": 90.1,
+          "science_reasoning": 88.5,
+          "instruction_following": 84.7,
+          "code_generation": 87.3,
+          "agent_planning": 85.2
+        },
+        {
+          "rank": 3,
+          "name": "Gemini-3.1-Pro-Thinking(high)",
+          "vendor": "Google",
+          "type": "闭源",
+          "languages": "多语言",
+          "score": 81.47,
+          "math_reasoning": 90.5,
+          "hallucination_control": 87.2,
+          "science_reasoning": 86.3,
+          "instruction_following": 81.9,
+          "code_generation": 85.6,
+          "agent_planning": 82.8
+        },
+        {
+          "rank": 4,
+          "name": "DeepSeek-R1-0528",
+          "vendor": "DeepSeek",
+          "type": "开源",
+          "languages": "中文/英文",
+          "score": 78.63,
+          "math_reasoning": 88.1,
+          "hallucination_control": 82.5,
+          "science_reasoning": 84.2,
+          "instruction_following": 78.4,
+          "code_generation": 83.7,
+          "agent_planning": 80.1
+        },
+        {
+          "rank": 5,
+          "name": "Kimi-K2.5-Thinking",
+          "vendor": "月之暗面",
+          "type": "开源",
+          "languages": "中文/英文",
+          "score": 75.28,
+          "math_reasoning": 84.3,
+          "hallucination_control": 79.8,
+          "science_reasoning": 80.1,
+          "instruction_following": 75.6,
+          "code_generation": 78.9,
+          "agent_planning": 76.4
+        },
+        {
+          "rank": 6,
+          "name": "Qwen-QwQ-32B",
+          "vendor": "阿里巴巴",
+          "type": "开源",
+          "languages": "中文/英文",
+          "score": 72.91,
+          "math_reasoning": 81.5,
+          "hallucination_control": 76.2,
+          "science_reasoning": 77.8,
+          "instruction_following": 72.3,
+          "code_generation": 75.4,
+          "agent_planning": 73.1
+        }
+      ]
+    },
+    "open": {
+      "name": "开源排行榜",
+      "models": [
+        {
+          "rank": 1,
+          "name": "DeepSeek-V3-0324",
+          "vendor": "DeepSeek",
+          "type": "开源",
+          "languages": "中文/英文",
+          "score": 63.85,
+          "math_reasoning": 72.1,
+          "hallucination_control": 70.3,
+          "science_reasoning": 66.8,
+          "instruction_following": 68.5,
+          "code_generation": 71.2,
+          "agent_planning": 60.4
+        },
+        {
+          "rank": 2,
+          "name": "Kimi-K2.5-Thinking",
+          "vendor": "月之暗面",
+          "type": "开源",
+          "languages": "中文/英文",
+          "score": 64.60,
+          "math_reasoning": 68.3,
+          "hallucination_control": 75.2,
+          "science_reasoning": 65.1,
+          "instruction_following": 71.4,
+          "code_generation": 67.8,
+          "agent_planning": 62.9
+        },
+        {
+          "rank": 3,
+          "name": "Qwen2.5-Max",
+          "vendor": "阿里巴巴",
+          "type": "开源",
+          "languages": "中文/英文",
+          "score": 61.32,
+          "math_reasoning": 69.5,
+          "hallucination_control": 68.4,
+          "science_reasoning": 63.7,
+          "instruction_following": 67.2,
+          "code_generation": 66.1,
+          "agent_planning": 57.3
+        },
+        {
+          "rank": 4,
+          "name": "DeepSeek-R1-0528",
+          "vendor": "DeepSeek",
+          "type": "开源",
+          "languages": "中文/英文",
+          "score": 59.47,
+          "math_reasoning": 74.2,
+          "hallucination_control": 65.1,
+          "science_reasoning": 62.3,
+          "instruction_following": 63.8,
+          "code_generation": 68.5,
+          "agent_planning": 56.7
+        },
+        {
+          "rank": 5,
+          "name": "Llama-4-Maverick-17B-128E-Instruct",
+          "vendor": "Meta",
+          "type": "开源",
+          "languages": "多语言",
+          "score": 36.70,
+          "math_reasoning": 42.1,
+          "hallucination_control": 48.3,
+          "science_reasoning": 38.5,
+          "instruction_following": 44.2,
+          "code_generation": 40.8,
+          "agent_planning": 35.6
+        },
+        {
+          "rank": 6,
+          "name": "Mistral Large 3",
+          "vendor": "Mistral AI",
+          "type": "开源",
+          "languages": "多语言",
+          "score": 41.06,
+          "math_reasoning": 45.3,
+          "hallucination_control": 52.1,
+          "science_reasoning": 42.8,
+          "instruction_following": 47.5,
+          "code_generation": 44.2,
+          "agent_planning": 38.9
+        }
+      ]
+    }
   }
-]
+}

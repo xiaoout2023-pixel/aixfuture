@@ -1,7 +1,9 @@
 (function () {
   'use strict';
 
-  var models = [];
+  var allData = {};
+  var leaderboards = {};
+  var currentBoard = 'general';
   var filteredModels = [];
   var sortColumn = 'rank';
   var sortDirection = 'asc';
@@ -15,11 +17,15 @@
   var clearBtn = document.getElementById('clearSearch');
   var tableContainer = document.getElementById('tableContainer');
   var updateTimeEl = document.getElementById('updateTime');
+  var rankingsNav = document.getElementById('rankingsNav');
+  var rankingsMenu = document.getElementById('rankingsMenu');
 
   function init() {
     fetchData();
     bindSearch();
     bindSortHeaders();
+    bindDropdownNav();
+    handleHashChange();
   }
 
   function fetchData() {
@@ -34,19 +40,20 @@
         return res.json();
       })
       .then(function (data) {
-        if (data.models) {
-          models = data.models || [];
-          updateTime = data.update_time || '';
-        } else {
-          models = data || [];
-          updateTime = '';
+        allData = data || {};
+        updateTime = allData.update_time || '';
+        leaderboards = allData.leaderboards || {};
+
+        if (!leaderboards[currentBoard]) {
+          currentBoard = 'general';
         }
-        filteredModels = models.slice();
+
         if (updateTime) {
           updateTimeEl.textContent = '榜单更新时间：' + updateTime;
           updateTimeEl.style.display = 'block';
         }
-        sortAndRender();
+
+        switchBoard(currentBoard, false);
         loadingEl.style.display = 'none';
         tableEl.style.display = '';
       })
@@ -57,6 +64,65 @@
       });
   }
 
+  function switchBoard(board, saveHash) {
+    if (!leaderboards[board]) return;
+    currentBoard = board;
+    filteredModels = (leaderboards[board].models || []).slice();
+    sortColumn = 'rank';
+    sortDirection = 'asc';
+
+    updateDropdownItems();
+    updateSortIndicators();
+    sortAndRender();
+
+    if (saveHash) {
+      window.location.hash = board;
+    }
+  }
+
+  function updateDropdownItems() {
+    var items = rankingsMenu.querySelectorAll('.dropdown-item');
+    for (var j = 0; j < items.length; j++) {
+      var item = items[j];
+      item.classList.toggle('active', item.getAttribute('data-board') === currentBoard);
+    }
+  }
+
+  function bindDropdownNav() {
+    var items = rankingsMenu.querySelectorAll('.dropdown-item');
+    for (var i = 0; i < items.length; i++) {
+      items[i].addEventListener('click', function (e) {
+        e.preventDefault();
+        switchBoard(this.getAttribute('data-board'), true);
+        rankingsMenu.classList.remove('show');
+      });
+    }
+
+    rankingsNav.addEventListener('click', function (e) {
+      e.preventDefault();
+      rankingsMenu.classList.toggle('show');
+    });
+
+    document.addEventListener('click', function (e) {
+      if (!rankingsNav.contains(e.target) && !rankingsMenu.contains(e.target)) {
+        rankingsMenu.classList.remove('show');
+      }
+    });
+  }
+
+  function handleHashChange() {
+    var hash = window.location.hash.replace('#', '');
+    if (hash && leaderboards[hash]) {
+      switchBoard(hash, false);
+    }
+    window.addEventListener('hashchange', function () {
+      var h = window.location.hash.replace('#', '');
+      if (h && leaderboards[h] && h !== currentBoard) {
+        switchBoard(h, false);
+      }
+    });
+  }
+
   function bindSearch() {
     var timeout;
     searchInput.addEventListener('input', function () {
@@ -65,10 +131,11 @@
       clearBtn.style.display = val ? '' : 'none';
       timeout = setTimeout(function () {
         if (!val) {
-          filteredModels = models.slice();
+          filteredModels = (leaderboards[currentBoard].models || []).slice();
         } else {
           var lower = val.toLowerCase();
-          filteredModels = models.filter(function (m) {
+          var source = leaderboards[currentBoard].models || [];
+          filteredModels = source.filter(function (m) {
             return (
               m.name.toLowerCase().indexOf(lower) !== -1 ||
               m.vendor.toLowerCase().indexOf(lower) !== -1
@@ -82,7 +149,7 @@
     clearBtn.addEventListener('click', function () {
       searchInput.value = '';
       clearBtn.style.display = 'none';
-      filteredModels = models.slice();
+      filteredModels = (leaderboards[currentBoard].models || []).slice();
       sortAndRender();
       searchInput.focus();
     });
