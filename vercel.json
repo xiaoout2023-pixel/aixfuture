@@ -1,5 +1,10 @@
 {
+  "framework": null,
   "buildCommand": null,
   "outputDirectory": ".",
-  "devCommand": "npx serve"
+  "devCommand": "npx serve",
+  "installCommand": null,
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
