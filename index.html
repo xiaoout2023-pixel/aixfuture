@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIX未来视野 - 多维度大模型排名</title>
+  <link rel="icon" href="assets/AIX.jpg" type="image/jpeg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <a href="/" class="logo-link">
+        <img src="assets/AIX.jpg" alt="AIX" class="logo">
+        <span class="brand-name">AIX未来视野</span>
+      </a>
+      <nav class="nav">
+        <a href="/" class="nav-link active">Rankings</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="hero">
+      <h1 class="hero-title">多维度大模型排名</h1>
+      <p class="hero-subtitle">聚合全球主流 AI 模型榜单，一图看清谁更强</p>
+    </section>
+
+    <section class="search-section">
+      <div class="search-container">
+        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="searchInput" class="search-input" placeholder="搜索模型名称或厂商...">
+        <button id="clearSearch" class="clear-btn" style="display:none;" aria-label="清除搜索">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </section>
+
+    <section class="table-section">
+      <div class="table-container" id="tableContainer">
+        <div id="loadingState" class="loading-state">
+          <div class="loading-spinner"></div>
+          <p>加载数据中...</p>
+        </div>
+        <div id="emptyState" class="empty-state" style="display:none;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            <line x1="8" y1="11" x2="14" y2="11"></line>
+          </svg>
+          <p>未找到匹配的模型</p>
+        </div>
+        <table id="rankTable" class="rank-table" style="display:none;">
+          <thead>
+            <tr>
+              <th data-sort="rank" class="sortable">排名 <span class="sort-arrow"></span></th>
+              <th data-sort="name" class="sortable">模型名称 <span class="sort-arrow"></span></th>
+              <th data-sort="vendor" class="sortable">厂商 <span class="sort-arrow"></span></th>
+              <th data-sort="type" class="sortable">类型 <span class="sort-arrow"></span></th>
+              <th data-sort="languages" class="sortable">语言能力 <span class="sort-arrow"></span></th>
+              <th data-sort="score" class="sortable">评分 <span class="sort-arrow"></span></th>
+              <th data-sort="special" class="sortable">特殊能力 <span class="sort-arrow"></span></th>
+            </tr>
+          </thead>
+          <tbody id="rankBody">
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="source-note">
+      <p>数据来源：SuperCLUE 等公开榜单 · 每 15 天更新</p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>&copy; 2026 AIX未来视野. All rights reserved.</p>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,227 @@
+[
+  {
+    "rank": 1,
+    "name": "GPT4-Turbo",
+    "vendor": "OpenAI",
+    "type": "闭源",
+    "languages": "多语言",
+    "score": 90.63,
+    "special": "-"
+  },
+  {
+    "rank": 2,
+    "name": "GPT4(网页)",
+    "vendor": "OpenAI",
+    "type": "闭源",
+    "languages": "多语言",
+    "score": 83.92,
+    "special": "-"
+  },
+  {
+    "rank": 3,
+    "name": "GPT4(API)",
+    "vendor": "OpenAI",
+    "type": "闭源",
+    "languages": "多语言",
+    "score": 79.84,
+    "special": "-"
+  },
+  {
+    "rank": 4,
+    "name": "文心一言4.0(API)",
+    "vendor": "百度",
+    "type": "闭源",
+    "languages": "中文/英文",
+    "score": 79.02,
+    "special": "-"
+  },
+  {
+    "rank": 5,
+    "name": "通义千问2.0",
+    "vendor": "阿里巴巴",
+    "type": "闭源",
+    "languages": "中文/英文",
+    "score": 76.54,
+    "special": "-"
+  },
+  {
+    "rank": 6,
+    "name": "AndesGPT",
+    "vendor": "OPPO",
+    "type": "闭源",
+    "languages": "中文/英文",
+    "score": 75.04,
+    "special": "-"
+  },
+  {
+    "rank": 7,
+    "name": "智谱清言",
+    "vendor": "清华&智谱",
+    "type": "闭源",
+    "languages": "中文/英文",
+    "score": 74.11,
+    "special": "-"
+  },
+  {
+    "rank": 8,
+    "name": "Moonshot(KimiChat)",
+    "vendor": "月之暗面",
+    "type": "闭源",
+    "languages": "中文/英文",
+    "score": 71.92,
+    "special": "-"
+  },
+  {
+    "rank": 9,
+    "name": "Qwen-72B-Chat",
+    "vendor": "阿里巴巴",
+    "type": "开源",
+    "languages": "中文/英文",
+    "score": 69.69,
+    "special": "-"
+  },
+  {
+    "rank": 10,
+    "name": "序列猴子",
+    "vendor": "出门问问",
+    "type": "闭源",
+    "languages": "中文/英文",
+    "score": 68.98,
+    "special": "-"
+  },
+  {
+    "rank": 11,
+    "name": "Yi-34B-Chat",
+    "vendor": "零一万物",
+    "type": "开源",
+    "languages": "中文/英文",
+    "score": 68.46,
+    "special": "-"
+  },
+  {
+    "rank": 12,
+    "name": "PCI-TransGPT",
+    "vendor": "佳都科技",
+    "type": "开源",
+    "languages": "中文/英文",
+    "score": 68.33,
+    "special": "-"
+  },
+  {
+    "rank": 13,
+    "name": "360GPT_Pro",
+    "vendor": "360",
+    "type": "闭源",
+    "languages": "中文/英文",
+    "score": 68.32,
+    "special": "-"
+  },
+  {
+    "rank": 14,
+    "name": "Claude2",
+    "vendor": "Anthropic",
+    "type": "闭源",
+    "languages": "多语言",
+    "score": 67.43,
+    "special": "-"
+  },
+  {
+    "rank": 15,
+    "name": "云雀大模型(豆包)",
+    "vendor": "字节跳动",
+    "type": "闭源",
+    "languages": "中文/英文",
+    "score": 66.35,
+    "special": "-"
+  },
+  {
+    "rank": 16,
+    "name": "Gemini-pro",
+    "vendor": "Google",
+    "type": "闭源",
+    "languages": "多语言",
+    "score": 65.29,
+    "special": "-"
+  },
+  {
+    "rank": 17,
+    "name": "GPT3.5-Turbo",
+    "vendor": "OpenAI",
+    "type": "闭源",
+    "languages": "多语言",
+    "score": 61.44,
+    "special": "-"
+  },
+  {
+    "rank": 18,
+    "name": "Qwen-14B-Chat",
+    "vendor": "阿里巴巴",
+    "type": "开源",
+    "languages": "中文/英文",
+    "score": 61.27,
+    "special": "-"
+  },
+  {
+    "rank": 19,
+    "name": "Baichuan2-13B-Chat",
+    "vendor": "百川智能",
+    "type": "开源",
+    "languages": "中文/英文",
+    "score": 61.12,
+    "special": "-"
+  },
+  {
+    "rank": 20,
+    "name": "XVERSE-13B-2-Chat",
+    "vendor": "元象科技",
+    "type": "开源",
+    "languages": "中文/英文",
+    "score": 60.46,
+    "special": "-"
+  },
+  {
+    "rank": 21,
+    "name": "讯飞星火V3.0",
+    "vendor": "科大讯飞",
+    "type": "闭源",
+    "languages": "中文/英文",
+    "score": 59.33,
+    "special": "-"
+  },
+  {
+    "rank": 22,
+    "name": "Minimax(应事)",
+    "vendor": "稀宇科技",
+    "type": "闭源",
+    "languages": "中文/英文",
+    "score": 58.91,
+    "special": "-"
+  },
+  {
+    "rank": 23,
+    "name": "ChatGLM3-6B",
+    "vendor": "清华&智谱",
+    "type": "开源",
+    "languages": "中文/英文",
+    "score": 49.5,
+    "special": "-"
+  },
+  {
+    "rank": 24,
+    "name": "Chinese-Alpaca-2-13B",
+    "vendor": "yiming cui",
+    "type": "开源",
+    "languages": "中文/英文",
+    "score": 45.36,
+    "special": "-"
+  },
+  {
+    "rank": 25,
+    "name": "Llama_2_13B_Chat",
+    "vendor": "Meta",
+    "type": "开源",
+    "languages": "多语言",
+    "score": 37.36,
+    "special": "-"
+  }
+]
