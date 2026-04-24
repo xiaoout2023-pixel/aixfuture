@@ -6,7 +6,7 @@ AIX未来视野 - 主数据抓取脚本
 """
 
 import json
-import os
+import re
 import shutil
 import sys
 import time
@@ -30,7 +30,6 @@ PAGE_LOAD_TIMEOUT = 30000
 
 
 def load_existing_data():
-    """加载已有数据作为fallback"""
     if MODELS_FILE.exists():
         with open(MODELS_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -38,14 +37,12 @@ def load_existing_data():
 
 
 def backup_existing_data():
-    """备份当前数据"""
     if MODELS_FILE.exists():
         shutil.copy2(MODELS_FILE, BACKUP_FILE)
         print(f"[OK] 已备份旧数据 -> {BACKUP_FILE}")
 
 
 def save_data(models):
-    """保存数据到JSON文件"""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     with open(MODELS_FILE, "w", encoding="utf-8") as f:
         json.dump(models, f, ensure_ascii=False, indent=2)
@@ -53,94 +50,101 @@ def save_data(models):
 
 
 def infer_languages(vendor):
-    """根据厂商推断语言能力"""
-    chinese_vendors = ["智谱", "百度", "阿里", "阿里巴巴", "字节跳动", "月之暗面", "商汤", "科大讯飞",
-                       "零一", "清华", "智谱AI", "DeepSeek", "出门问问", "OPPO", "佳都科技", "360", "百川", "稀宇", "稀宇科技", "元象"]
+    chinese_vendors = [
+        "智谱", "百度", "阿里", "阿里巴巴", "字节跳动", "月之暗面",
+        "商汤", "科大讯飞", "零一", "清华", "智谱AI", "DeepSeek",
+        "深度求索", "出门问问", "OPPO", "佳都科技", "360", "百川",
+        "稀宇", "稀宇科技", "元象", "腾讯", "小米", "美团", "阶跃",
+    ]
     if any(v in vendor for v in chinese_vendors):
         return "中文/英文"
     return "多语言"
 
 
 def parse_superclue_table(page):
-    """
-    从 superclueai.com 页面提取表格数据
-    尝试多种选择器策略
-    """
     models = []
+    seen_names = set()
 
     try:
         page.wait_for_load_state("domcontentloaded", timeout=PAGE_LOAD_TIMEOUT)
     except PlaywrightTimeoutError:
         print(f"[WARN] 页面加载超时，尝试继续...")
 
-    time.sleep(3)
+    time.sleep(5)
 
-    # 策略1: 查找表格中的行数据
-    # 尝试多种可能的选择器
-    selectors_to_try = [
-        "table tr",
-        ".ant-table-row",
-        "[class*='table'] tr",
-        ".table tr",
-        "tbody tr",
-        "[class*='row'] [class*='cell']",
-    ]
-
-    rows = []
-    for selector in selectors_to_try:
-        try:
-            elements = page.query_selector_all(selector)
-            if len(elements) > 5:
-                rows = elements
-                print(f"[INFO] 使用选择器 '{selector}' 找到 {len(elements)} 行")
-                break
-        except Exception:
-            continue
-
-    if not rows:
-        # 策略2: 尝试从页面文本中提取结构化数据
-        print("[INFO] 尝试从页面文本提取...")
-        try:
-            body_text = page.inner_text("body")
-            # 如果找到了排名相关的文本，尝试解析
-            if "排名" in body_text or "模型" in body_text:
-                print("[INFO] 找到排名相关文本，但需要进一步解析")
-        except Exception:
-            pass
-
-    # 策略3: 尝试提取所有表格数据
     tables = page.query_selector_all("table")
     for table in tables:
         table_rows = table.query_selector_all("tr")
-        if len(table_rows) > 2:
-            for row in table_rows:
-                cells = row.query_selector_all("td, th")
-                if len(cells) >= 4:
-                    cell_texts = [cell.inner_text().strip() for cell in cells]
-                    if any(text.isdigit() or text.startswith("#") for text in cell_texts[:2]):
-                        print(f"[DEBUG] 行数据: {cell_texts[:6]}")
+        if len(table_rows) < 3:
+            continue
 
-    # 策略4: 尝试提取页面中的数字排行榜数据
-    try:
-        # 尝试查找包含模型排名信息的DOM元素
-        all_elements = page.query_selector_all("*")
-        for el in all_elements:
-            try:
-                text = el.inner_text().strip()
-                # 查找包含排名和模型名称的模式
-                if len(text) > 5 and len(text) < 100:
-                    if any(keyword in text for keyword in ["GPT", "Claude", "Gemini", "文心", "通义", "GLM", "豆包", "DeepSeek"]):
-                        print(f"[FOUND] {text}")
-            except Exception:
+        for row in table_rows:
+            cells = row.query_selector_all("td, th")
+            if len(cells) < 5:
                 continue
-    except Exception:
-        pass
+
+            cell_texts = [cell.inner_text().strip() for cell in cells]
+
+            # 表格行格式: ['', '1', 'Doubao-Seed-2.0-pro...', '字节跳动', '闭源', '71.53']
+            # 或者: ['1', 'Doubao-Seed-2.0-pro...', '字节跳动', '闭源', '71.53']
+            rank_idx = None
+            for ci in range(min(2, len(cell_texts))):
+                ct = re.sub(r'[^0-9]', '', cell_texts[ci])
+                if ct and ct.isdigit():
+                    rank_idx = ci
+                    break
+
+            if rank_idx is None:
+                continue
+
+            try:
+                rank = int(cell_texts[rank_idx])
+                name = cell_texts[rank_idx + 1].strip() if rank_idx + 1 < len(cell_texts) else ""
+                vendor = cell_texts[rank_idx + 2].strip() if rank_idx + 2 < len(cell_texts) else ""
+                score_text = cell_texts[rank_idx + 3].strip() if rank_idx + 3 < len(cell_texts) else ""
+
+                if not name or not vendor:
+                    continue
+
+                # 检查是否已有 score 字段（避免把其他数字当分数）
+                try:
+                    score = float(score_text)
+                except ValueError:
+                    continue
+
+                if score > 100 or score < 0:
+                    continue
+
+                if name in seen_names:
+                    continue
+                seen_names.add(name)
+
+                # 推断类型
+                model_type = "闭源"
+                for ci in range(rank_idx + 2, min(rank_idx + 5, len(cell_texts))):
+                    if "开源" in cell_texts[ci]:
+                        model_type = "开源"
+                        break
+
+                models.append({
+                    "rank": rank,
+                    "name": name,
+                    "vendor": vendor,
+                    "type": model_type,
+                    "languages": infer_languages(vendor),
+                    "score": round(score, 2),
+                    "special": "-",
+                })
+
+                print(f"  [OK] #{rank} {name} ({vendor}) - {model_type} - {score}")
+
+            except (ValueError, IndexError):
+                continue
 
     return models
 
 
 def scrape_source(source):
-    """抓取单个数据源"""
     name = source["name"]
     url = source["url"]
     print(f"\n{'='*60}")
@@ -183,7 +187,6 @@ def main():
     print(f"工作目录: {BASE_DIR}")
     print(f"数据文件: {MODELS_FILE}")
 
-    # 备份旧数据
     backup_existing_data()
 
     all_models = []
@@ -196,7 +199,7 @@ def main():
         else:
             print(f"[WARN] {source['name']}: 无数据")
 
-    # 去重 (按模型名称)
+    # 去重
     seen = {}
     for m in all_models:
         key = m.get("name", "").strip()
@@ -213,8 +216,10 @@ def main():
 
     if unique_models:
         save_data(unique_models)
+        print(f"\n排名前5:")
+        for m in unique_models[:5]:
+            print(f"  #{m['rank']} {m['name']} ({m['vendor']}) - 评分: {m['score']}")
     else:
-        # 使用上一次数据
         existing = load_existing_data()
         if existing:
             print("[INFO] 本次抓取无新数据，保留上次数据")
