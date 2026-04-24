@@ -65,18 +65,47 @@ def parse_superclue_table(page):
     models = []
     seen_names = set()
 
+    print(f"  [DEBUG] 等待页面加载...")
     try:
         page.wait_for_load_state("domcontentloaded", timeout=PAGE_LOAD_TIMEOUT)
+        print(f"  [DEBUG] 页面加载完成")
     except PlaywrightTimeoutError:
-        print(f"[WARN] 页面加载超时，尝试继续...")
+        print(f"  [WARN] 页面加载超时，尝试继续...")
 
+    print(f"  [DEBUG] 等待 5 秒让 JavaScript 渲染...")
     time.sleep(5)
 
+    # 获取页面标题和 URL 用于调试
+    page_title = page.title()
+    page_url = page.url
+    print(f"  [DEBUG] 页面标题: {page_title}")
+    print(f"  [DEBUG] 页面 URL: {page_url}")
+
+    # 尝试等待表格元素出现
+    try:
+        print(f"  [DEBUG] 等待 table 元素出现（最多 10 秒）...")
+        page.wait_for_selector("table", timeout=10000)
+        print(f"  [DEBUG] 找到 table 元素")
+    except PlaywrightTimeoutError:
+        print(f"  [WARN] 未找到 table 元素")
+
     tables = page.query_selector_all("table")
-    for table in tables:
+    print(f"  [DEBUG] 总共找到 {len(tables)} 个表格")
+
+    for table_idx, table in enumerate(tables):
         table_rows = table.query_selector_all("tr")
+        print(f"  [DEBUG] 表格 {table_idx} 有 {len(table_rows)} 行")
+
         if len(table_rows) < 3:
+            print(f"  [DEBUG] 跳过表格 {table_idx}（行数 < 3）")
             continue
+
+        # 打印前 3 行用于调试
+        for debug_idx in range(min(3, len(table_rows))):
+            debug_row = table_rows[debug_idx]
+            debug_cells = debug_row.query_selector_all("td, th")
+            debug_texts = [cell.inner_text().strip() for cell in debug_cells]
+            print(f"  [DEBUG] 表格 {table_idx} 行 {debug_idx} ({len(debug_cells)} 列): {debug_texts}")
 
         for row in table_rows:
             cells = row.query_selector_all("td, th")
@@ -141,6 +170,7 @@ def parse_superclue_table(page):
             except (ValueError, IndexError):
                 continue
 
+    print(f"  [DEBUG] 总共提取 {len(models)} 个模型")
     return models
 
 
@@ -156,6 +186,7 @@ def scrape_source(source):
         print(f"  尝试 {attempt}/{MAX_RETRIES}...")
         try:
             with sync_playwright() as p:
+                print(f"  [DEBUG] 启动 Playwright...")
                 browser = p.chromium.launch(
                     headless=True,
                     args=[
@@ -165,18 +196,25 @@ def scrape_source(source):
                         "--disable-dev-shm-usage",
                     ]
                 )
+                print(f"  [DEBUG] 浏览器启动成功")
                 context = browser.new_context(
                     user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
                 )
                 page = context.new_page()
+                print(f"  [DEBUG] 正在访问: {url}")
                 page.goto(url, timeout=PAGE_LOAD_TIMEOUT)
+                print(f"  [DEBUG] 页面导航完成")
                 models = parse_superclue_table(page)
                 browser.close()
+                print(f"  [DEBUG] 浏览器关闭")
                 return models
         except PlaywrightTimeoutError:
             print(f"  [WARN] 页面加载超时")
         except Exception as e:
-            print(f"  [ERROR] {e}")
+            import traceback
+            print(f"  [ERROR] 异常: {e}")
+            print(f"  [ERROR] 详细堆栈:")
+            traceback.print_exc()
 
     print(f"  [FAIL] 无法从 {name} 抓取数据")
     return []
