@@ -107,35 +107,67 @@ def parse_superclue_table(page):
             debug_texts = [cell.inner_text().strip() for cell in debug_cells]
             print(f"  [DEBUG] 表格 {table_idx} 行 {debug_idx} ({len(debug_cells)} 列): {debug_texts}")
 
-        for row in table_rows:
+        # 判断表格格式：检查第一行是否为表头
+        first_row = table_rows[0]
+        first_cells = first_row.query_selector_all("td, th")
+        first_texts = [cell.inner_text().strip() for cell in first_cells]
+        
+        # 新格式：排名列在索引 1，但显示为 '-'
+        # 格式: ['', '排名', '模型名称', '机构', '开/闭源', '总分', ...]
+        # 数据行: ['', '-', '模型名', '机构', '开/闭源', '分数', ...]
+        is_new_format = len(first_texts) >= 6 and (
+            '模型名称' in first_texts or 
+            (len(first_texts) > 1 and first_texts[1] == '排名')
+        )
+
+        start_row = 1  # 跳过表头
+        extracted_count = 0
+
+        for row in table_rows[start_row:]:
             cells = row.query_selector_all("td, th")
-            if len(cells) < 5:
+            if len(cells) < 6:
                 continue
 
             cell_texts = [cell.inner_text().strip() for cell in cells]
 
-            # 表格行格式: ['', '1', 'Doubao-Seed-2.0-pro...', '字节跳动', '闭源', '71.53']
-            # 或者: ['1', 'Doubao-Seed-2.0-pro...', '字节跳动', '闭源', '71.53']
-            rank_idx = None
-            for ci in range(min(2, len(cell_texts))):
-                ct = re.sub(r'[^0-9]', '', cell_texts[ci])
-                if ct and ct.isdigit():
-                    rank_idx = ci
-                    break
+            if is_new_format:
+                # 新格式: ['', '-', '模型名', '机构', '开/闭源', '总分', ...]
+                # 索引: 0    1     2        3      4        5
+                name = cell_texts[2] if len(cell_texts) > 2 else ""
+                vendor = cell_texts[3] if len(cell_texts) > 3 else ""
+                model_type_text = cell_texts[4] if len(cell_texts) > 4 else ""
+                score_text = cell_texts[5] if len(cell_texts) > 5 else ""
 
-            if rank_idx is None:
-                continue
+                if not name or not vendor:
+                    continue
 
-            try:
-                rank = int(cell_texts[rank_idx])
+                try:
+                    score = float(score_text)
+                except ValueError:
+                    continue
+
+                if score > 100 or score < 0:
+                    continue
+            else:
+                # 旧格式：查找排名列
+                rank_idx = None
+                for ci in range(min(2, len(cell_texts))):
+                    ct = re.sub(r'[^0-9]', '', cell_texts[ci])
+                    if ct and ct.isdigit():
+                        rank_idx = ci
+                        break
+
+                if rank_idx is None:
+                    continue
+
                 name = cell_texts[rank_idx + 1].strip() if rank_idx + 1 < len(cell_texts) else ""
                 vendor = cell_texts[rank_idx + 2].strip() if rank_idx + 2 < len(cell_texts) else ""
+                model_type_text = ""
                 score_text = cell_texts[rank_idx + 3].strip() if rank_idx + 3 < len(cell_texts) else ""
 
                 if not name or not vendor:
                     continue
 
-                # 检查是否已有 score 字段（避免把其他数字当分数）
                 try:
                     score = float(score_text)
                 except ValueError:
@@ -144,31 +176,33 @@ def parse_superclue_table(page):
                 if score > 100 or score < 0:
                     continue
 
-                if name in seen_names:
-                    continue
-                seen_names.add(name)
-
-                # 推断类型
-                model_type = "闭源"
-                for ci in range(rank_idx + 2, min(rank_idx + 5, len(cell_texts))):
-                    if "开源" in cell_texts[ci]:
-                        model_type = "开源"
-                        break
-
-                models.append({
-                    "rank": rank,
-                    "name": name,
-                    "vendor": vendor,
-                    "type": model_type,
-                    "languages": infer_languages(vendor),
-                    "score": round(score, 2),
-                    "special": "-",
-                })
-
-                print(f"  [OK] #{rank} {name} ({vendor}) - {model_type} - {score}")
-
-            except (ValueError, IndexError):
+            if name in seen_names:
                 continue
+            seen_names.add(name)
+
+            # 从表格中提取模型类型
+            model_type = "闭源"
+            if "开源" in model_type_text:
+                model_type = "开源"
+
+            # 分配排名（按当前顺序）
+            rank = len(models) + 1
+
+            models.append({
+                "rank": rank,
+                "name": name,
+                "vendor": vendor,
+                "type": model_type,
+                "languages": infer_languages(vendor),
+                "score": round(score, 2),
+                "special": "-",
+            })
+
+            print(f"  [OK] #{rank} {name} ({vendor}) - {model_type} - {score}")
+            extracted_count += 1
+
+        if extracted_count > 0:
+            print(f"  [DEBUG] 表格 {table_idx} 提取了 {extracted_count} 个模型")
 
     print(f"  [DEBUG] 总共提取 {len(models)} 个模型")
     return models
