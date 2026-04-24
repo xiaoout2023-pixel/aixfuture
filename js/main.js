@@ -9,26 +9,55 @@
   var sortDirection = 'asc';
   var updateTime = '';
 
-  var tableEl = document.getElementById('rankTable');
-  var bodyEl = document.getElementById('rankBody');
-  var loadingEl = document.getElementById('loadingState');
-  var emptyEl = document.getElementById('emptyState');
-  var searchInput = document.getElementById('searchInput');
-  var clearBtn = document.getElementById('clearSearch');
-  var tableContainer = document.getElementById('tableContainer');
-  var updateTimeEl = document.getElementById('updateTime');
-  var rankingsNav = document.getElementById('rankingsNav');
-  var rankingsMenu = document.getElementById('rankingsMenu');
+  var tableEl, bodyEl, loadingEl, emptyEl, searchInput, clearBtn, tableContainer, updateTimeEl, rankingsNav, rankingsMenu;
+
+  function log(tag, message) {
+    var timestamp = new Date().toISOString().substring(11, 23);
+    console.log('[AIX][' + tag + '][' + timestamp + '] ' + message);
+  }
 
   function init() {
+    log('INIT', 'Initializing application');
+    
+    tableEl = document.getElementById('rankTable');
+    bodyEl = document.getElementById('rankBody');
+    loadingEl = document.getElementById('loadingState');
+    emptyEl = document.getElementById('emptyState');
+    searchInput = document.getElementById('searchInput');
+    clearBtn = document.getElementById('clearSearch');
+    tableContainer = document.getElementById('tableContainer');
+    updateTimeEl = document.getElementById('updateTime');
+    rankingsNav = document.getElementById('rankingsNav');
+    rankingsMenu = document.getElementById('rankingsMenu');
+
+    var missingElements = [];
+    if (!tableEl) missingElements.push('rankTable');
+    if (!bodyEl) missingElements.push('rankBody');
+    if (!loadingEl) missingElements.push('loadingState');
+    if (!emptyEl) missingElements.push('emptyState');
+    if (!searchInput) missingElements.push('searchInput');
+    if (!clearBtn) missingElements.push('clearSearch');
+    if (!tableContainer) missingElements.push('tableContainer');
+    if (!updateTimeEl) missingElements.push('updateTime');
+    if (!rankingsNav) missingElements.push('rankingsNav');
+    if (!rankingsMenu) missingElements.push('rankingsMenu');
+    
+    if (missingElements.length > 0) {
+      log('ERROR', 'Missing DOM elements: ' + missingElements.join(', '));
+    } else {
+      log('INIT', 'All DOM elements found');
+    }
+    
     fetchData();
     bindSearch();
     bindSortHeaders();
     bindDropdownNav();
     handleHashChange();
+    log('INIT', 'Initialization complete');
   }
 
   function fetchData() {
+    log('FETCH', 'Starting data fetch');
     loadingEl.style.display = '';
     tableEl.style.display = 'none';
     emptyEl.style.display = 'none';
@@ -36,7 +65,11 @@
 
     fetch('data/models.json')
       .then(function (res) {
-        if (!res.ok) throw new Error('Failed to load data');
+        if (!res.ok) {
+          log('ERROR', 'Fetch failed with status ' + res.status);
+          throw new Error('Failed to load data');
+        }
+        log('FETCH', 'Response received, parsing JSON');
         return res.json();
       })
       .then(function (data) {
@@ -44,7 +77,10 @@
         updateTime = allData.update_time || '';
         leaderboards = allData.leaderboards || {};
 
+        log('FETCH', 'Data loaded: update_time=' + updateTime + ', leaderboards=' + Object.keys(leaderboards).join(','));
+
         if (!leaderboards[currentBoard]) {
+          log('WARN', 'Current board "' + currentBoard + '" not found, switching to general');
           currentBoard = 'general';
         }
 
@@ -56,8 +92,10 @@
         switchBoard(currentBoard, false);
         loadingEl.style.display = 'none';
         tableEl.style.display = '';
+        log('FETCH', 'Data load complete, board=' + currentBoard);
       })
-      .catch(function () {
+      .catch(function (err) {
+        log('ERROR', 'Data fetch failed: ' + (err.message || err));
         loadingEl.style.display = 'none';
         emptyEl.style.display = '';
         emptyEl.querySelector('p').textContent = '数据加载失败，请稍后重试';
@@ -65,17 +103,27 @@
   }
 
   function switchBoard(board, saveHash) {
-    if (!leaderboards[board]) return;
+    log('BOARD', 'Attempting to switch board: ' + board + ' (saveHash=' + saveHash + ')');
+    log('BOARD', 'Available leaderboards: ' + Object.keys(leaderboards).join(','));
+    
+    if (!leaderboards[board]) {
+      log('ERROR', 'Board "' + board + '" not found in leaderboards');
+      return;
+    }
+    
     currentBoard = board;
     filteredModels = (leaderboards[board].models || []).slice();
     sortColumn = 'rank';
     sortDirection = 'asc';
+
+    log('BOARD', 'Switched to board "' + board + '" with ' + filteredModels.length + ' models');
 
     updateDropdownItems();
     updateSortIndicators();
     sortAndRender();
 
     if (saveHash) {
+      log('BOARD', 'Saving hash to URL: #' + board);
       window.location.hash = board;
     }
   }
@@ -89,17 +137,33 @@
   }
 
   function bindDropdownNav() {
+    log('EVENT', 'Binding dropdown navigation');
     var items = rankingsMenu.querySelectorAll('.dropdown-item');
+    log('EVENT', 'Found ' + items.length + ' dropdown items');
+    
     for (var i = 0; i < items.length; i++) {
-      items[i].addEventListener('click', function (e) {
-        e.preventDefault();
-        switchBoard(this.getAttribute('data-board'), true);
-        rankingsMenu.classList.remove('show');
-      });
+      (function(item, index) {
+        item.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var board = item.getAttribute('data-board');
+          log('EVENT', 'Dropdown item clicked (index=' + index + '): ' + board);
+          log('EVENT', 'This element: ' + this.tagName + ', data-board=' + this.getAttribute('data-board'));
+          log('EVENT', 'Leaderboards before switchBoard: ' + Object.keys(leaderboards).join(','));
+          try {
+            switchBoard(board, true);
+            log('EVENT', 'switchBoard completed successfully');
+          } catch (err) {
+            log('ERROR', 'switchBoard threw error: ' + err.message);
+          }
+          rankingsMenu.classList.remove('show');
+        });
+      })(items[i], i);
     }
 
     rankingsNav.addEventListener('click', function (e) {
       e.preventDefault();
+      log('EVENT', 'Rankings nav clicked, toggling menu');
       rankingsMenu.classList.toggle('show');
     });
 
@@ -112,12 +176,22 @@
 
   function handleHashChange() {
     var hash = window.location.hash.replace('#', '');
+    log('HASH', 'Initial hash check: "' + hash + '"');
+    log('HASH', 'Leaderboards available at this time: ' + Object.keys(leaderboards).join(','));
+    
     if (hash && leaderboards[hash]) {
+      log('HASH', 'Hash matches a board, switching to "' + hash + '"');
       switchBoard(hash, false);
+    } else if (hash) {
+      log('HASH', 'Hash "' + hash + '" does not match any board');
     }
+    
     window.addEventListener('hashchange', function () {
       var h = window.location.hash.replace('#', '');
+      log('HASH', 'Hash changed to: "' + h + '"');
+      log('HASH', 'Leaderboards at hashchange: ' + Object.keys(leaderboards).join(','));
       if (h && leaderboards[h] && h !== currentBoard) {
+        log('HASH', 'Switching board from hashchange: ' + h);
         switchBoard(h, false);
       }
     });
