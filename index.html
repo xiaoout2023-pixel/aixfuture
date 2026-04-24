@@ -15,7 +15,14 @@
         <span class="brand-name">AIX未来视野</span>
       </a>
       <nav class="nav">
-        <a href="/" class="nav-link active">Rankings</a>
+        <div class="nav-dropdown">
+          <a href="#" class="nav-link active" id="rankingsNav">Rankings ▾</a>
+          <div class="nav-dropdown-menu" id="rankingsMenu">
+            <a href="#general" class="dropdown-item" data-board="general">通用排行榜</a>
+            <a href="#reasoning" class="dropdown-item" data-board="reasoning">推理模型总排行榜</a>
+            <a href="#open" class="dropdown-item" data-board="open">开源排行榜</a>
+          </div>
+        </div>
       </nav>
     </div>
   </header>
