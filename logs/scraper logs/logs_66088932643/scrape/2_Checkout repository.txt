@@ -1,0 +1,76 @@
+﻿2026-04-24T17:42:51.1985184Z ##[group]Run actions/checkout@v4
+2026-04-24T17:42:51.1986018Z with:
+2026-04-24T17:42:51.1986393Z   fetch-depth: 0
+2026-04-24T17:42:51.1986988Z   token: ***
+2026-04-24T17:42:51.1987392Z   repository: xiaoout2023-pixel/aixfuture
+2026-04-24T17:42:51.1987900Z   ssh-strict: true
+2026-04-24T17:42:51.1988276Z   ssh-user: git
+2026-04-24T17:42:51.1988670Z   persist-credentials: true
+2026-04-24T17:42:51.1989092Z   clean: true
+2026-04-24T17:42:51.1989478Z   sparse-checkout-cone-mode: true
+2026-04-24T17:42:51.1989940Z   fetch-tags: false
+2026-04-24T17:42:51.1990334Z   show-progress: true
+2026-04-24T17:42:51.1990720Z   lfs: false
+2026-04-24T17:42:51.1991068Z   submodules: false
+2026-04-24T17:42:51.1991467Z   set-safe-directory: true
+2026-04-24T17:42:51.1992339Z ##[endgroup]
+2026-04-24T17:42:51.3194226Z Syncing repository: xiaoout2023-pixel/aixfuture
+2026-04-24T17:42:51.3196725Z ##[group]Getting Git version info
+2026-04-24T17:42:51.3197930Z Working directory is '/home/runner/work/aixfuture/aixfuture'
+2026-04-24T17:42:51.3199716Z [command]/usr/bin/git version
+2026-04-24T17:42:51.3210151Z git version 2.53.0
+2026-04-24T17:42:51.3237584Z ##[endgroup]
+2026-04-24T17:42:51.3251697Z Temporarily overriding HOME='/home/runner/work/_temp/3e608966-0966-4f70-8846-1de6438607da' before making global git config changes
+2026-04-24T17:42:51.3254396Z Adding repository directory to the temporary git global config as a safe directory
+2026-04-24T17:42:51.3268373Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/aixfuture/aixfuture
+2026-04-24T17:42:51.3305608Z Deleting the contents of '/home/runner/work/aixfuture/aixfuture'
+2026-04-24T17:42:51.3309818Z ##[group]Initializing the repository
+2026-04-24T17:42:51.3316100Z [command]/usr/bin/git init /home/runner/work/aixfuture/aixfuture
+2026-04-24T17:42:51.3405285Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-04-24T17:42:51.3407846Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-04-24T17:42:51.3409716Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-04-24T17:42:51.3410908Z hint: call:
+2026-04-24T17:42:51.3411315Z hint:
+2026-04-24T17:42:51.3412106Z hint: 	git config --global init.defaultBranch <name>
+2026-04-24T17:42:51.3412817Z hint:
+2026-04-24T17:42:51.3413755Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-04-24T17:42:51.3414900Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-04-24T17:42:51.3415697Z hint:
+2026-04-24T17:42:51.3416108Z hint: 	git branch -m <name>
+2026-04-24T17:42:51.3416566Z hint:
+2026-04-24T17:42:51.3417136Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-04-24T17:42:51.3418105Z Initialized empty Git repository in /home/runner/work/aixfuture/aixfuture/.git/
+2026-04-24T17:42:51.3421286Z [command]/usr/bin/git remote add origin https://github.com/xiaoout2023-pixel/aixfuture
+2026-04-24T17:42:51.3454380Z ##[endgroup]
+2026-04-24T17:42:51.3455315Z ##[group]Disabling automatic garbage collection
+2026-04-24T17:42:51.3460297Z [command]/usr/bin/git config --local gc.auto 0
+2026-04-24T17:42:51.3492248Z ##[endgroup]
+2026-04-24T17:42:51.3493062Z ##[group]Setting up auth
+2026-04-24T17:42:51.3502828Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-04-24T17:42:51.3536292Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-04-24T17:42:51.3822034Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-04-24T17:42:51.3850358Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-04-24T17:42:51.4065324Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-04-24T17:42:51.4095138Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-04-24T17:42:51.4320741Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-04-24T17:42:51.4354262Z ##[endgroup]
+2026-04-24T17:42:51.4355681Z ##[group]Fetching the repository
+2026-04-24T17:42:51.4364211Z [command]/usr/bin/git -c protocol.version=2 fetch --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/*
+2026-04-24T17:42:51.9584627Z From https://github.com/xiaoout2023-pixel/aixfuture
+2026-04-24T17:42:51.9586398Z  * [new branch]      main       -> origin/main
+2026-04-24T17:42:51.9619552Z [command]/usr/bin/git branch --list --remote origin/main
+2026-04-24T17:42:51.9645369Z   origin/main
+2026-04-24T17:42:51.9656758Z [command]/usr/bin/git rev-parse refs/remotes/origin/main
+2026-04-24T17:42:51.9677937Z 08781134fe817127a7f4f2a3051f26b2bced065a
+2026-04-24T17:42:51.9691594Z ##[endgroup]
+2026-04-24T17:42:51.9693029Z ##[group]Determining the checkout info
+2026-04-24T17:42:51.9693912Z ##[endgroup]
+2026-04-24T17:42:51.9694431Z [command]/usr/bin/git sparse-checkout disable
+2026-04-24T17:42:51.9729331Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-04-24T17:42:51.9758964Z ##[group]Checking out the ref
+2026-04-24T17:42:51.9763635Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+2026-04-24T17:42:51.9820960Z Switched to a new branch 'main'
+2026-04-24T17:42:51.9824030Z branch 'main' set up to track 'origin/main'.
+2026-04-24T17:42:51.9830810Z ##[endgroup]
+2026-04-24T17:42:51.9867997Z [command]/usr/bin/git log -1 --format=%H
+2026-04-24T17:42:51.9890130Z 08781134fe817127a7f4f2a3051f26b2bced065a

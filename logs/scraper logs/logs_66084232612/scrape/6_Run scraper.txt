@@ -1,0 +1,68 @@
+﻿2026-04-24T17:09:07.7212292Z ##[group]Run cd scraper
+2026-04-24T17:09:07.7212579Z [36;1mcd scraper[0m
+2026-04-24T17:09:07.7212785Z [36;1mpython scrape.py[0m
+2026-04-24T17:09:07.7234465Z shell: /usr/bin/bash -e {0}
+2026-04-24T17:09:07.7234694Z env:
+2026-04-24T17:09:07.7234929Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-24T17:09:07.7235337Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+2026-04-24T17:09:07.7235735Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-24T17:09:07.7236082Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-24T17:09:07.7236449Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-24T17:09:07.7236806Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+2026-04-24T17:09:07.7237105Z ##[endgroup]
+2026-04-24T17:09:51.2896347Z AIX未来视野 - 数据抓取脚本
+2026-04-24T17:09:51.2896935Z 工作目录: /home/runner/work/aixfuture/aixfuture
+2026-04-24T17:09:51.2897630Z 数据文件: /home/runner/work/aixfuture/aixfuture/data/models.json
+2026-04-24T17:09:51.2898930Z [OK] 已备份旧数据 -> /home/runner/work/aixfuture/aixfuture/data/models_backup.json
+2026-04-24T17:09:51.2899426Z 
+2026-04-24T17:09:51.2899594Z ============================================================
+2026-04-24T17:09:51.2900098Z 抓取: SuperCLUE通用榜
+2026-04-24T17:09:51.2900489Z URL: https://www.superclueai.com/generalpage
+2026-04-24T17:09:51.2900986Z ============================================================
+2026-04-24T17:09:51.2901312Z   尝试 1/3...
+2026-04-24T17:09:51.2901512Z   [WARN] 页面加载超时
+2026-04-24T17:09:51.2901703Z   尝试 2/3...
+2026-04-24T17:09:51.2901936Z [INFO] 使用选择器 'table tr' 找到 23 行
+2026-04-24T17:09:51.2902369Z [DEBUG] 行数据: ['', '1', 'Doubao-Seed-2.0-pro-260215(high)', '字节跳动', '闭源', '71.53']
+2026-04-24T17:09:51.2902879Z [DEBUG] 行数据: ['', '2', 'Kimi-K2.5-Thinking', '月之暗面', '开源', '64.60']
+2026-04-24T17:09:51.2903359Z [DEBUG] 行数据: ['', '2', 'Qwen3.5-397B-A17B-Thinking', '阿里巴巴', '开源', '64.48']
+2026-04-24T17:09:51.2903779Z [DEBUG] 行数据: ['', '2', 'GLM-5', '智谱AI', '开源', '64.27']
+2026-04-24T17:09:51.2904207Z [DEBUG] 行数据: ['', '3', 'DeepSeek-V3.2-Thinking', '深度求索', '开源', '61.92']
+2026-04-24T17:09:51.2904634Z [DEBUG] 行数据: ['', '4', 'MiMo-V2-Pro', '小米集团', '闭源', '60.67']
+2026-04-24T17:09:51.2905030Z [DEBUG] 行数据: ['', '5', 'Tencent HY 2.0 Think', '腾讯', '闭源', '59.16']
+2026-04-24T17:09:51.2905466Z [DEBUG] 行数据: ['', '5', 'Qwen3.5-122B-A10B-Thinking', '阿里巴巴', '开源', '58.53']
+2026-04-24T17:09:51.2905927Z [DEBUG] 行数据: ['', '6', 'LongCat-Flash-Thinking-2601', '美团', '开源', '57.47']
+2026-04-24T17:09:51.2906393Z [DEBUG] 行数据: ['', '7', 'Step-3.5-Flash', '阶跃星辰', '开源', '56.23']
+2026-04-24T17:09:51.2906792Z [DEBUG] 行数据: ['', '7', 'MiniMax-M2.5', '稀宇科技', '开源', '55.96']
+2026-04-24T17:09:51.2907164Z [DEBUG] 行数据: ['', '7', 'MiniMax-M2.7', '稀宇科技', '开源', '55.68']
+2026-04-24T17:09:51.2907536Z [DEBUG] 行数据: ['', '8', 'Spark X2', '科大讯飞', '闭源', '52.79']
+2026-04-24T17:09:51.2908468Z [DEBUG] 行数据: ['', '9', 'MiMo-V2-Flash', '小米集团', '开源', '49.97']
+2026-04-24T17:09:51.2908775Z [FOUND] Claude-Opus-4.6(max)
+2026-04-24T17:09:51.2909032Z [FOUND] Claude-Opus-4.6(max)
+2026-04-24T17:09:51.2909259Z [FOUND] Gemini-3.1-Pro-Preview(high)
+2026-04-24T17:09:51.2909519Z [FOUND] Gemini-3.1-Pro-Preview(high)
+2026-04-24T17:09:51.2909755Z [FOUND] GPT-5.4(xhigh)
+2026-04-24T17:09:51.2909950Z [FOUND] GPT-5.4(xhigh)
+2026-04-24T17:09:51.2910149Z [FOUND] Gemini-3-Flash-Preview(high)
+2026-04-24T17:09:51.2910406Z [FOUND] Gemini-3-Flash-Preview(high)
+2026-04-24T17:09:51.2910657Z [FOUND] DeepSeek-V3.2-Thinking
+2026-04-24T17:09:51.2910880Z [FOUND] DeepSeek-V3.2-Thinking
+2026-04-24T17:09:51.2911435Z [FOUND] -	Claude-Opus-4.6(max)	Anthropic	闭源	77.02	85.71	82.95	85.37	47.57	71.15	89.35	海外	API	是	2026.3.30
+2026-04-24T17:09:51.2911876Z [FOUND] Claude-Opus-4.6(max)
+2026-04-24T17:09:51.2912099Z [FOUND] Claude-Opus-4.6(max)
+2026-04-24T17:09:51.2912325Z [FOUND] Gemini-3.1-Pro-Preview(high)
+2026-04-24T17:09:51.2912595Z [FOUND] Gemini-3.1-Pro-Preview(high)
+2026-04-24T17:09:51.2913051Z [FOUND] -	GPT-5.4(xhigh)	OpenAI	闭源	72.48	88.89	85.43	84.15	44.32	52.05	80.04	海外	API	是	2026.3.30
+2026-04-24T17:09:51.2913668Z [FOUND] GPT-5.4(xhigh)
+2026-04-24T17:09:51.2913867Z [FOUND] GPT-5.4(xhigh)
+2026-04-24T17:09:51.2914076Z [FOUND] Gemini-3-Flash-Preview(high)
+2026-04-24T17:09:51.2914338Z [FOUND] Gemini-3-Flash-Preview(high)
+2026-04-24T17:09:51.2914756Z [FOUND] 2	GLM-5	智谱AI	开源	64.27	73.95	86.85	75.00	24.86	58.32	66.64	国内	API	是	2026.3.30
+2026-04-24T17:09:51.2915360Z [FOUND] 3	DeepSeek-V3.2-Thinking	深度求索	开源	61.92	78.15	77.23	73.17	25.95	60.43	56.62	国内	API	是	2026.3.30
+2026-04-24T17:09:51.2915776Z [FOUND] DeepSeek-V3.2-Thinking
+2026-04-24T17:09:51.2916009Z [FOUND] DeepSeek-V3.2-Thinking
+2026-04-24T17:09:51.2916281Z [WARN] SuperCLUE通用榜: 无数据
+2026-04-24T17:09:51.2916535Z [INFO] 本次抓取无新数据，保留上次数据
+2026-04-24T17:09:51.2916760Z [OK] 数据已保存: 25 条模型
+2026-04-24T17:09:51.2916869Z 
+2026-04-24T17:09:51.2916974Z 抓取完成!

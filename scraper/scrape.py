@@ -10,6 +10,7 @@ import re
 import shutil
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
@@ -42,11 +43,24 @@ def backup_existing_data():
         print(f"[OK] 已备份旧数据 -> {BACKUP_FILE}")
 
 
-def save_data(models):
+def save_data(models, update_time):
     DATA_DIR.mkdir(parents=True, exist_ok=True)
+    output = {
+        "update_time": update_time,
+        "models": models,
+    }
     with open(MODELS_FILE, "w", encoding="utf-8") as f:
-        json.dump(models, f, ensure_ascii=False, indent=2)
+        json.dump(output, f, ensure_ascii=False, indent=2)
     print(f"[OK] 数据已保存: {len(models)} 条模型")
+
+
+def safe_float(text):
+    if text == "-" or text == "":
+        return "-"
+    try:
+        return round(float(text), 2)
+    except ValueError:
+        return "-"
 
 
 def infer_languages(vendor):
@@ -65,62 +79,37 @@ def parse_superclue_table(page):
     models = []
     seen_names = set()
 
-    print(f"  [DEBUG] 等待页面加载...")
     try:
         page.wait_for_load_state("domcontentloaded", timeout=PAGE_LOAD_TIMEOUT)
-        print(f"  [DEBUG] 页面加载完成")
     except PlaywrightTimeoutError:
         print(f"  [WARN] 页面加载超时，尝试继续...")
 
-    print(f"  [DEBUG] 等待 5 秒让 JavaScript 渲染...")
     time.sleep(5)
 
-    # 获取页面标题和 URL 用于调试
-    page_title = page.title()
-    page_url = page.url
-    print(f"  [DEBUG] 页面标题: {page_title}")
-    print(f"  [DEBUG] 页面 URL: {page_url}")
-
-    # 尝试等待表格元素出现
     try:
-        print(f"  [DEBUG] 等待 table 元素出现（最多 10 秒）...")
         page.wait_for_selector("table", timeout=10000)
-        print(f"  [DEBUG] 找到 table 元素")
     except PlaywrightTimeoutError:
         print(f"  [WARN] 未找到 table 元素")
+        return models
 
     tables = page.query_selector_all("table")
-    print(f"  [DEBUG] 总共找到 {len(tables)} 个表格")
 
     for table_idx, table in enumerate(tables):
         table_rows = table.query_selector_all("tr")
-        print(f"  [DEBUG] 表格 {table_idx} 有 {len(table_rows)} 行")
 
         if len(table_rows) < 3:
-            print(f"  [DEBUG] 跳过表格 {table_idx}（行数 < 3）")
             continue
 
-        # 打印前 3 行用于调试
-        for debug_idx in range(min(3, len(table_rows))):
-            debug_row = table_rows[debug_idx]
-            debug_cells = debug_row.query_selector_all("td, th")
-            debug_texts = [cell.inner_text().strip() for cell in debug_cells]
-            print(f"  [DEBUG] 表格 {table_idx} 行 {debug_idx} ({len(debug_cells)} 列): {debug_texts}")
-
-        # 判断表格格式：检查第一行是否为表头
         first_row = table_rows[0]
         first_cells = first_row.query_selector_all("td, th")
         first_texts = [cell.inner_text().strip() for cell in first_cells]
-        
-        # 新格式：排名列在索引 1，但显示为 '-'
-        # 格式: ['', '排名', '模型名称', '机构', '开/闭源', '总分', ...]
-        # 数据行: ['', '-', '模型名', '机构', '开/闭源', '分数', ...]
+
         is_new_format = len(first_texts) >= 6 and (
-            '模型名称' in first_texts or 
+            '模型名称' in first_texts or
             (len(first_texts) > 1 and first_texts[1] == '排名')
         )
 
-        start_row = 1  # 跳过表头
+        start_row = 1
         extracted_count = 0
 
         for row in table_rows[start_row:]:
@@ -131,8 +120,6 @@ def parse_superclue_table(page):
             cell_texts = [cell.inner_text().strip() for cell in cells]
 
             if is_new_format:
-                # 新格式: ['', '-', '模型名', '机构', '开/闭源', '总分', ...]
-                # 索引: 0    1     2        3      4        5
                 name = cell_texts[2] if len(cell_texts) > 2 else ""
                 vendor = cell_texts[3] if len(cell_texts) > 3 else ""
                 model_type_text = cell_texts[4] if len(cell_texts) > 4 else ""
@@ -148,8 +135,14 @@ def parse_superclue_table(page):
 
                 if score > 100 or score < 0:
                     continue
+
+                math_reasoning = safe_float(cell_texts[6] if len(cell_texts) > 6 else "-")
+                hallucination_control = safe_float(cell_texts[7] if len(cell_texts) > 7 else "-")
+                science_reasoning = safe_float(cell_texts[8] if len(cell_texts) > 8 else "-")
+                instruction_following = safe_float(cell_texts[9] if len(cell_texts) > 9 else "-")
+                code_generation = safe_float(cell_texts[10] if len(cell_texts) > 10 else "-")
+                agent_planning = safe_float(cell_texts[11] if len(cell_texts) > 11 else "-")
             else:
-                # 旧格式：查找排名列
                 rank_idx = None
                 for ci in range(min(2, len(cell_texts))):
                     ct = re.sub(r'[^0-9]', '', cell_texts[ci])
@@ -176,16 +169,21 @@ def parse_superclue_table(page):
                 if score > 100 or score < 0:
                     continue
 
+                math_reasoning = "-"
+                hallucination_control = "-"
+                science_reasoning = "-"
+                instruction_following = "-"
+                code_generation = "-"
+                agent_planning = "-"
+
             if name in seen_names:
                 continue
             seen_names.add(name)
 
-            # 从表格中提取模型类型
             model_type = "闭源"
             if "开源" in model_type_text:
                 model_type = "开源"
 
-            # 分配排名（按当前顺序）
             rank = len(models) + 1
 
             models.append({
@@ -195,6 +193,12 @@ def parse_superclue_table(page):
                 "type": model_type,
                 "languages": infer_languages(vendor),
                 "score": round(score, 2),
+                "math_reasoning": math_reasoning,
+                "hallucination_control": hallucination_control,
+                "science_reasoning": science_reasoning,
+                "instruction_following": instruction_following,
+                "code_generation": code_generation,
+                "agent_planning": agent_planning,
                 "special": "-",
             })
 
@@ -202,9 +206,8 @@ def parse_superclue_table(page):
             extracted_count += 1
 
         if extracted_count > 0:
-            print(f"  [DEBUG] 表格 {table_idx} 提取了 {extracted_count} 个模型")
+            print(f"  [INFO] 表格 {table_idx} 提取了 {extracted_count} 个模型")
 
-    print(f"  [DEBUG] 总共提取 {len(models)} 个模型")
     return models
 
 
@@ -220,7 +223,6 @@ def scrape_source(source):
         print(f"  尝试 {attempt}/{MAX_RETRIES}...")
         try:
             with sync_playwright() as p:
-                print(f"  [DEBUG] 启动 Playwright...")
                 browser = p.chromium.launch(
                     headless=True,
                     args=[
@@ -230,25 +232,18 @@ def scrape_source(source):
                         "--disable-dev-shm-usage",
                     ]
                 )
-                print(f"  [DEBUG] 浏览器启动成功")
                 context = browser.new_context(
                     user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
                 )
                 page = context.new_page()
-                print(f"  [DEBUG] 正在访问: {url}")
                 page.goto(url, timeout=PAGE_LOAD_TIMEOUT)
-                print(f"  [DEBUG] 页面导航完成")
                 models = parse_superclue_table(page)
                 browser.close()
-                print(f"  [DEBUG] 浏览器关闭")
                 return models
         except PlaywrightTimeoutError:
             print(f"  [WARN] 页面加载超时")
         except Exception as e:
-            import traceback
-            print(f"  [ERROR] 异常: {e}")
-            print(f"  [ERROR] 详细堆栈:")
-            traceback.print_exc()
+            print(f"  [ERROR] {e}")
 
     print(f"  [FAIL] 无法从 {name} 抓取数据")
     return []
@@ -271,7 +266,6 @@ def main():
         else:
             print(f"[WARN] {source['name']}: 无数据")
 
-    # 去重
     seen = {}
     for m in all_models:
         key = m.get("name", "").strip()
@@ -279,23 +273,25 @@ def main():
             seen[key] = m
     unique_models = list(seen.values())
 
-    # 按分数降序排序
     unique_models.sort(key=lambda x: x.get("score", 0), reverse=True)
 
-    # 重新分配排名
     for i, m in enumerate(unique_models):
         m["rank"] = i + 1
 
+    now = datetime.now()
+    update_time = f"{now.year}年{now.month}月"
+
     if unique_models:
-        save_data(unique_models)
+        save_data(unique_models, update_time)
         print(f"\n排名前5:")
         for m in unique_models[:5]:
             print(f"  #{m['rank']} {m['name']} ({m['vendor']}) - 评分: {m['score']}")
+        print(f"\n榜单更新时间: {update_time}")
     else:
         existing = load_existing_data()
         if existing:
             print("[INFO] 本次抓取无新数据，保留上次数据")
-            save_data(existing)
+            save_data(existing, existing.get("update_time", update_time))
         else:
             print("[ERROR] 无数据可保存")
             sys.exit(1)
