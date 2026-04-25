@@ -1,0 +1,137 @@
+[
+  {
+    "id": 1,
+    "name": "GPT-4o",
+    "provider": "OpenAI",
+    "type": "多模态",
+    "access": "闭源",
+    "description": "OpenAI 的旗舰多模态模型，在文本、视觉和音频推理方面实现了革命性的速度和性能提升。",
+    "tags": ["多模态", "128K 上下文", "闭源"]
+  },
+  {
+    "id": 2,
+    "name": "Claude 3.5 Sonnet",
+    "provider": "Anthropic",
+    "type": "大语言模型",
+    "access": "闭源",
+    "description": "Anthropic 推出，在保持极高运行速度的同时，在代码生成和复杂逻辑推理上超越前代旗舰。",
+    "tags": ["代码生成", "200K 上下文", "闭源"]
+  },
+  {
+    "id": 3,
+    "name": "Llama 3 70B",
+    "provider": "Meta",
+    "type": "大语言模型",
+    "access": "开源",
+    "description": "Meta 开发的最先进的开源大语言模型，在多项行业基准测试中表现卓越，适合本地部署。",
+    "tags": ["开源巨头", "8K 上下文", "开源"]
+  },
+  {
+    "id": 4,
+    "name": "Gemini 1.5 Pro",
+    "provider": "Google DeepMind",
+    "type": "多模态",
+    "access": "闭源",
+    "description": "Google DeepMind 提供，具有突破性的百万级上下文窗口，能够处理海量文档和长视频分析。",
+    "tags": ["超长上下文", "1M+ 上下文", "闭源"]
+  },
+  {
+    "id": 5,
+    "name": "Mistral Large",
+    "provider": "Mistral AI",
+    "type": "大语言模型",
+    "access": "闭源",
+    "description": "欧洲领先的 AI 公司 Mistral 旗舰模型，提供顶级的多语言支持和出色的推理成本效益比。",
+    "tags": ["高性价比", "32K 上下文", "闭源"]
+  },
+  {
+    "id": 6,
+    "name": "Qwen2.5-72B",
+    "provider": "阿里巴巴",
+    "type": "大语言模型",
+    "access": "开源",
+    "description": "阿里巴巴通义千问团队开源模型，在中文理解和多轮对话方面表现出色。",
+    "tags": ["中文优化", "32K 上下文", "开源"]
+  },
+  {
+    "id": 7,
+    "name": "DeepSeek-V3",
+    "provider": "深度求索",
+    "type": "大语言模型",
+    "access": "开源",
+    "description": "深度求索开源模型，在数学推理和代码生成领域达到领先水平。",
+    "tags": ["数学推理", "64K 上下文", "开源"]
+  },
+  {
+    "id": 8,
+    "name": "Kimi Chat",
+    "provider": "月之暗面",
+    "type": "多模态",
+    "access": "闭源",
+    "description": "月之暗面推出的超长上下文模型，支持 200 万字上下文处理。",
+    "tags": ["超长上下文", "2M 上下文", "闭源"]
+  },
+  {
+    "id": 9,
+    "name": "GLM-4-9B",
+    "provider": "智谱AI",
+    "type": "大语言模型",
+    "access": "开源",
+    "description": "智谱 AI 开源的中等规模模型，适合本地部署和微调。",
+    "tags": ["本地部署", "8K 上下文", "开源"]
+  },
+  {
+    "id": 10,
+    "name": "Whisper Large V3",
+    "provider": "OpenAI",
+    "type": "音频",
+    "access": "开源",
+    "description": "OpenAI 开源语音识别模型，支持 99 种语言的语音转文字。",
+    "tags": ["语音识别", "99种语言", "开源"]
+  },
+  {
+    "id": 11,
+    "name": "Stable Diffusion 3",
+    "provider": "Stability AI",
+    "type": "视觉",
+    "access": "开源",
+    "description": "Stability AI 推出的最新文生图模型，图像质量和指令跟随能力大幅提升。",
+    "tags": ["文生图", "开源"]
+  },
+  {
+    "id": 12,
+    "name": "Claude 3 Opus",
+    "provider": "Anthropic",
+    "type": "大语言模型",
+    "access": "闭源",
+    "description": "Anthropic 最强模型，在复杂推理、创意写作和高级分析方面达到行业顶尖水平。",
+    "tags": ["复杂推理", "200K 上下文", "闭源"]
+  },
+  {
+    "id": 13,
+    "name": "Gemini 1.5 Flash",
+    "provider": "Google DeepMind",
+    "type": "多模态",
+    "access": "闭源",
+    "description": "Google 轻量级多模态模型，以极低的延迟和成本提供高质量推理能力。",
+    "tags": ["低成本", "1M 上下文", "闭源"]
+  },
+  {
+    "id": 14,
+    "name": "Llama 3.1 405B",
+    "provider": "Meta",
+    "type": "大语言模型",
+    "access": "开源",
+    "description": "Meta 最大规模开源模型，性能可媲美顶级闭源模型，支持 128K 上下文。",
+    "tags": ["超大模型", "128K 上下文", "开源"]
+  },
+  {
+    "id": 15,
+    "name": "DALL-E 3",
+    "provider": "OpenAI",
+    "type": "视觉",
+    "access": "闭源",
+    "description": "OpenAI 文生图模型，精准理解复杂指令，生成高质量多样化图像。",
+    "tags": ["文生图", "精准指令", "闭源"]
+  }
+]
