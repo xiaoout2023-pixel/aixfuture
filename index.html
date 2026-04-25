@@ -5,96 +5,109 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AIX未来视野 - 多维度大模型排名</title>
   <link rel="icon" href="assets/AIX.jpg" type="image/jpeg">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <header class="header">
-    <div class="header-inner">
+  <nav class="top-nav">
+    <div class="nav-inner">
       <a href="/" class="logo-link">
-        <img src="assets/AIX.jpg" alt="AIX" class="logo">
-        <span class="brand-name">AIX未来视野</span>
+        <img src="assets/AIX.jpg" alt="AIX Logo" class="logo-img">
+        AIX未来视野
       </a>
-      <nav class="nav">
-        <div class="nav-dropdown">
-          <a href="#" class="nav-link active" id="rankingsNav">Rankings ▾</a>
-          <div class="nav-dropdown-menu" id="rankingsMenu">
-            <a href="#general" class="dropdown-item" data-board="general">通用排行榜</a>
-            <a href="#reasoning" class="dropdown-item" data-board="reasoning">推理模型总排行榜</a>
-            <a href="#open" class="dropdown-item" data-board="open">开源排行榜</a>
+      <div class="nav-links">
+        <a href="#" class="nav-link active">排行榜</a>
+        <a href="#" class="nav-link">模型库</a>
+        <a href="#" class="nav-link">成本计算</a>
+        <a href="#" class="nav-link">社区</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <header class="page-header">
+      <h1 class="page-title">多维度大模型<span class="text-gradient">排名</span></h1>
+      <p class="page-subtitle">聚合全球主流 AI 模型榜单，一表看清谁更强。</p>
+    </header>
+
+    <div class="content-layout">
+      <aside class="sidebar">
+        <div class="sidebar-card">
+          <h3 class="sidebar-title">排行榜类型</h3>
+          <ul class="board-list" id="boardList">
+            <li class="board-item">
+              <button class="board-btn active" data-board="general">
+                <span class="material-symbols-outlined icon">auto_awesome</span>
+                <span class="label">通用排行榜</span>
+              </button>
+            </li>
+            <li class="board-item">
+              <button class="board-btn" data-board="reasoning">
+                <span class="material-symbols-outlined icon">code</span>
+                <span class="label">推理模型总排行榜</span>
+              </button>
+            </li>
+            <li class="board-item">
+              <button class="board-btn" data-board="open">
+                <span class="material-symbols-outlined icon">terminal</span>
+                <span class="label">开源排行榜</span>
+              </button>
+            </li>
+          </ul>
+        </div>
+      </aside>
+
+      <section class="leaderboard-section">
+        <div class="search-container">
+          <div class="search-box">
+            <span class="material-symbols-outlined search-icon">search</span>
+            <input type="text" id="searchInput" class="search-input" placeholder="搜索模型名称或厂商...">
+            <button id="clearSearch" class="clear-btn" style="display:none;" aria-label="清除搜索">
+              <span class="material-symbols-outlined">close</span>
+            </button>
           </div>
         </div>
-      </nav>
+
+        <div class="update-info">
+          <div id="updateTime" class="update-badge" style="display:none;">
+            <span class="material-symbols-outlined">update</span>
+            <span id="updateText"></span>
+          </div>
+        </div>
+
+        <div class="table-header">
+          <div class="header-cell cell-rank">排名</div>
+          <div class="header-cell cell-name">模型名称</div>
+          <div class="header-cell cell-vendor">厂商</div>
+          <div class="header-cell cell-type">类型</div>
+          <div class="header-cell cell-languages">语言能力</div>
+          <div class="header-cell cell-score">总分</div>
+          <div class="header-cell cell-dim">数学推理</div>
+          <div class="header-cell cell-dim">幻觉控制</div>
+          <div class="header-cell cell-dim">科学推理</div>
+          <div class="header-cell cell-dim">指令遵循</div>
+          <div class="header-cell cell-dim">代码生成</div>
+          <div class="header-cell cell-dim">智能体</div>
+        </div>
+
+        <div class="leaderboard-container" id="leaderboardContainer">
+          <div id="loadingState" class="loading-state">
+            <div class="loading-spinner"></div>
+            <p>加载数据中...</p>
+          </div>
+          <div id="emptyState" class="empty-state" style="display:none;">
+            <span class="material-symbols-outlined empty-icon">search_off</span>
+            <p>未找到匹配的模型</p>
+          </div>
+          <div id="modelCards" class="model-cards" style="display:none;"></div>
+        </div>
+      </section>
     </div>
-  </header>
-
-  <main class="main">
-    <section class="hero">
-      <h1 class="hero-title">多维度大模型排名</h1>
-      <p class="hero-subtitle">聚合全球主流 AI 模型榜单，一图看清谁更强</p>
-    </section>
-
-    <section class="search-section">
-      <div class="search-container">
-        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
-        <input type="text" id="searchInput" class="search-input" placeholder="搜索模型名称或厂商...">
-        <button id="clearSearch" class="clear-btn" style="display:none;" aria-label="清除搜索">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-    </section>
-
-    <section class="table-section">
-      <div id="updateTime" class="update-time" style="display:none;"></div>
-      <div id="boardTitle" class="board-title" style="display:none;"></div>
-      <div class="table-container" id="tableContainer">
-        <div id="loadingState" class="loading-state">
-          <div class="loading-spinner"></div>
-          <p>加载数据中...</p>
-        </div>
-        <div id="emptyState" class="empty-state" style="display:none;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            <line x1="8" y1="11" x2="14" y2="11"></line>
-          </svg>
-          <p>未找到匹配的模型</p>
-        </div>
-        <table id="rankTable" class="rank-table" style="display:none;">
-          <thead>
-            <tr>
-              <th data-sort="rank" class="sortable">排名 <span class="sort-arrow"></span></th>
-              <th data-sort="name" class="sortable">模型名称 <span class="sort-arrow"></span></th>
-              <th data-sort="vendor" class="sortable">厂商 <span class="sort-arrow"></span></th>
-              <th data-sort="type" class="sortable">类型 <span class="sort-arrow"></span></th>
-              <th data-sort="languages" class="sortable">语言能力 <span class="sort-arrow"></span></th>
-              <th data-sort="score" class="sortable">总分 <span class="sort-arrow"></span></th>
-              <th data-sort="math_reasoning" class="sortable">数学推理 <span class="sort-arrow"></span></th>
-              <th data-sort="hallucination_control" class="sortable">幻觉控制 <span class="sort-arrow"></span></th>
-              <th data-sort="science_reasoning" class="sortable">科学推理 <span class="sort-arrow"></span></th>
-              <th data-sort="instruction_following" class="sortable">指令遵循 <span class="sort-arrow"></span></th>
-              <th data-sort="code_generation" class="sortable">代码生成 <span class="sort-arrow"></span></th>
-              <th data-sort="agent_planning" class="sortable">智能体 <span class="sort-arrow"></span></th>
-            </tr>
-          </thead>
-          <tbody id="rankBody">
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="source-note">
-      <p>数据来源：SuperCLUE 等公开榜单 · 每 15 天更新</p>
-    </section>
   </main>
 
   <footer class="footer">
-    <p>&copy; 2026 AIX未来视野. All rights reserved.</p>
+    <p>© 2026 AIX未来视野. 保留所有权利。</p>
   </footer>
 
   <script src="js/main.js"></script>

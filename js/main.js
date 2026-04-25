@@ -9,7 +9,7 @@
   var sortDirection = 'asc';
   var updateTime = '';
 
-  var tableEl, bodyEl, loadingEl, emptyEl, searchInput, clearBtn, tableContainer, updateTimeEl, rankingsNav, rankingsMenu, boardTitleEl;
+  var modelCardsEl, loadingEl, emptyEl, searchInput, clearBtn, updateTimeEl, updateTextEl;
 
   function log(tag, message) {
     var timestamp = new Date().toISOString().substring(11, 23);
@@ -19,30 +19,22 @@
   function init() {
     log('INIT', 'Initializing application');
     
-    tableEl = document.getElementById('rankTable');
-    bodyEl = document.getElementById('rankBody');
+    modelCardsEl = document.getElementById('modelCards');
     loadingEl = document.getElementById('loadingState');
     emptyEl = document.getElementById('emptyState');
     searchInput = document.getElementById('searchInput');
     clearBtn = document.getElementById('clearSearch');
-    tableContainer = document.getElementById('tableContainer');
     updateTimeEl = document.getElementById('updateTime');
-    rankingsNav = document.getElementById('rankingsNav');
-    rankingsMenu = document.getElementById('rankingsMenu');
-    boardTitleEl = document.getElementById('boardTitle');
+    updateTextEl = document.getElementById('updateText');
 
     var missingElements = [];
-    if (!tableEl) missingElements.push('rankTable');
-    if (!bodyEl) missingElements.push('rankBody');
+    if (!modelCardsEl) missingElements.push('modelCards');
     if (!loadingEl) missingElements.push('loadingState');
     if (!emptyEl) missingElements.push('emptyState');
     if (!searchInput) missingElements.push('searchInput');
     if (!clearBtn) missingElements.push('clearSearch');
-    if (!tableContainer) missingElements.push('tableContainer');
     if (!updateTimeEl) missingElements.push('updateTime');
-    if (!rankingsNav) missingElements.push('rankingsNav');
-    if (!rankingsMenu) missingElements.push('rankingsMenu');
-    if (!boardTitleEl) missingElements.push('boardTitle');
+    if (!updateTextEl) missingElements.push('updateText');
     
     if (missingElements.length > 0) {
       log('ERROR', 'Missing DOM elements: ' + missingElements.join(', '));
@@ -52,8 +44,7 @@
     
     fetchData();
     bindSearch();
-    bindSortHeaders();
-    bindDropdownNav();
+    bindSidebarNav();
     handleHashChange();
     log('INIT', 'Initialization complete');
   }
@@ -61,7 +52,7 @@
   function fetchData() {
     log('FETCH', 'Starting data fetch');
     loadingEl.style.display = '';
-    tableEl.style.display = 'none';
+    modelCardsEl.style.display = 'none';
     emptyEl.style.display = 'none';
     updateTimeEl.style.display = 'none';
 
@@ -87,13 +78,13 @@
         }
 
         if (updateTime) {
-          updateTimeEl.textContent = '榜单更新时间：' + updateTime;
-          updateTimeEl.style.display = 'block';
+          updateTextEl.textContent = '排行榜更新时间：' + updateTime;
+          updateTimeEl.style.display = '';
         }
 
         switchBoard(currentBoard, false);
         loadingEl.style.display = 'none';
-        tableEl.style.display = '';
+        modelCardsEl.style.display = '';
         log('FETCH', 'Data load complete, board=' + currentBoard);
       })
       .catch(function (err) {
@@ -120,9 +111,7 @@
 
     log('BOARD', 'Switched to board "' + board + '" with ' + filteredModels.length + ' models');
 
-    updateBoardTitle();
-    updateDropdownItems();
-    updateSortIndicators();
+    updateSidebarItems();
     sortAndRender();
 
     if (saveHash) {
@@ -131,25 +120,18 @@
     }
   }
 
-  function updateBoardTitle() {
-    var boardName = leaderboards[currentBoard].name || currentBoard;
-    boardTitleEl.textContent = boardName;
-    boardTitleEl.style.display = 'block';
-    log('BOARD', 'Updated board title to: ' + boardName);
-  }
-
-  function updateDropdownItems() {
-    var items = rankingsMenu.querySelectorAll('.dropdown-item');
+  function updateSidebarItems() {
+    var items = document.querySelectorAll('.board-btn');
     for (var j = 0; j < items.length; j++) {
       var item = items[j];
       item.classList.toggle('active', item.getAttribute('data-board') === currentBoard);
     }
   }
 
-  function bindDropdownNav() {
-    log('EVENT', 'Binding dropdown navigation');
-    var items = rankingsMenu.querySelectorAll('.dropdown-item');
-    log('EVENT', 'Found ' + items.length + ' dropdown items');
+  function bindSidebarNav() {
+    log('EVENT', 'Binding sidebar navigation');
+    var items = document.querySelectorAll('.board-btn');
+    log('EVENT', 'Found ' + items.length + ' sidebar buttons');
     
     for (var i = 0; i < items.length; i++) {
       (function(item, index) {
@@ -157,31 +139,16 @@
           e.preventDefault();
           e.stopPropagation();
           var board = item.getAttribute('data-board');
-          log('EVENT', 'Dropdown item clicked (index=' + index + '): ' + board);
-          log('EVENT', 'This element: ' + this.tagName + ', data-board=' + this.getAttribute('data-board'));
-          log('EVENT', 'Leaderboards before switchBoard: ' + Object.keys(leaderboards).join(','));
+          log('EVENT', 'Sidebar button clicked (index=' + index + '): ' + board);
           try {
             switchBoard(board, true);
             log('EVENT', 'switchBoard completed successfully');
           } catch (err) {
             log('ERROR', 'switchBoard threw error: ' + err.message);
           }
-          rankingsMenu.classList.remove('show');
         });
       })(items[i], i);
     }
-
-    rankingsNav.addEventListener('click', function (e) {
-      e.preventDefault();
-      log('EVENT', 'Rankings nav clicked, toggling menu');
-      rankingsMenu.classList.toggle('show');
-    });
-
-    document.addEventListener('click', function (e) {
-      if (!rankingsNav.contains(e.target) && !rankingsMenu.contains(e.target)) {
-        rankingsMenu.classList.remove('show');
-      }
-    });
   }
 
   function handleHashChange() {
@@ -239,38 +206,6 @@
     });
   }
 
-  function bindSortHeaders() {
-    var headers = tableEl.querySelectorAll('th.sortable');
-    for (var i = 0; i < headers.length; i++) {
-      headers[i].addEventListener('click', (function (el) {
-        return function () {
-          var col = el.getAttribute('data-sort');
-          if (sortColumn === col) {
-            sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-          } else {
-            sortColumn = col;
-            sortDirection = col === 'rank' || col === 'score' ? 'desc' : 'asc';
-          }
-          updateSortIndicators();
-          sortAndRender();
-        };
-      })(headers[i]));
-    }
-  }
-
-  function updateSortIndicators() {
-    var headers = tableEl.querySelectorAll('th.sortable');
-    for (var i = 0; i < headers.length; i++) {
-      var el = headers[i];
-      el.classList.remove('sorted');
-      el.removeAttribute('data-direction');
-      if (el.getAttribute('data-sort') === sortColumn) {
-        el.classList.add('sorted');
-        el.setAttribute('data-direction', sortDirection);
-      }
-    }
-  }
-
   function sortAndRender() {
     filteredModels.sort(function (a, b) {
       var va = a[sortColumn];
@@ -288,43 +223,57 @@
     });
 
     if (filteredModels.length === 0) {
-      tableEl.style.display = 'none';
+      modelCardsEl.style.display = 'none';
       emptyEl.style.display = '';
       emptyEl.querySelector('p').textContent = '未找到匹配的模型';
     } else {
-      tableEl.style.display = '';
+      modelCardsEl.style.display = '';
       emptyEl.style.display = 'none';
-      renderRows();
+      renderCards();
     }
   }
 
-  function renderRows() {
+  function renderCards() {
     var html = '';
     for (var i = 0; i < filteredModels.length; i++) {
       var m = filteredModels[i];
-      var scoreClass = m.score >= 9 ? 'high' : m.score >= 8 ? 'mid' : '';
+      var rankClass = m.rank === 1 ? 'rank-1' : '';
       var typeClass = m.type === '开源' ? 'open' : m.type === '闭源' ? 'closed' : '';
-      html += '<tr style="animation-delay:' + (i * 0.03) + 's">';
-      html += '<td class="cell-rank">' + escapeHtml(m.rank) + '</td>';
-      html += '<td class="cell-name">' + escapeHtml(m.name) + '</td>';
-      html += '<td class="cell-vendor">' + escapeHtml(m.vendor) + '</td>';
-      html += '<td class="cell-type ' + typeClass + '">' + escapeHtml(m.type) + '</td>';
-      html += '<td class="cell-languages">' + escapeHtml(m.languages) + '</td>';
-      html += '<td class="cell-score ' + scoreClass + '">' + escapeHtml(m.score) + '</td>';
-      html += '<td class="cell-dim">' + formatDim(m.math_reasoning) + '</td>';
-      html += '<td class="cell-dim">' + formatDim(m.hallucination_control) + '</td>';
-      html += '<td class="cell-dim">' + formatDim(m.science_reasoning) + '</td>';
-      html += '<td class="cell-dim">' + formatDim(m.instruction_following) + '</td>';
-      html += '<td class="cell-dim">' + formatDim(m.code_generation) + '</td>';
-      html += '<td class="cell-dim">' + formatDim(m.agent_planning) + '</td>';
-      html += '</tr>';
+      var scoreClass = m.rank <= 3 ? '' : 'rank-normal';
+      
+      html += '<div class="model-card ' + rankClass + '" style="animation-delay:' + (i * 0.03) + 's">';
+      html += '<div class="card-grid">';
+      html += '<div class="card-rank ' + scoreClass + '">#' + escapeHtml(m.rank) + '</div>';
+      html += '<div class="card-name">';
+      html += '<div class="card-icon"><span class="material-symbols-outlined">' + getIconForRank(m.rank) + '</span></div>';
+      html += '<span class="card-name-text">' + escapeHtml(m.name) + '</span>';
+      html += '</div>';
+      html += '<div class="card-vendor">' + escapeHtml(m.vendor) + '</div>';
+      html += '<div class="card-type ' + typeClass + '">' + escapeHtml(m.type) + '</div>';
+      html += '<div class="card-languages">' + escapeHtml(m.languages) + '</div>';
+      html += '<div class="card-score ' + scoreClass + '">' + escapeHtml(m.score) + '</div>';
+      html += '<div class="card-dim">' + formatDim(m.math_reasoning) + '</div>';
+      html += '<div class="card-dim">' + formatDim(m.hallucination_control) + '</div>';
+      html += '<div class="card-dim">' + formatDim(m.science_reasoning) + '</div>';
+      html += '<div class="card-dim">' + formatDim(m.instruction_following) + '</div>';
+      html += '<div class="card-dim">' + formatDim(m.code_generation) + '</div>';
+      html += '<div class="card-dim">' + formatDim(m.agent_planning) + '</div>';
+      html += '</div>';
+      html += '</div>';
     }
-    bodyEl.innerHTML = html;
+    modelCardsEl.innerHTML = html;
+  }
+
+  function getIconForRank(rank) {
+    if (rank === 1) return 'auto_awesome';
+    if (rank === 2) return 'psychology';
+    if (rank === 3) return 'smart_toy';
+    return 'memory';
   }
 
   function formatDim(val) {
     if (val === '-' || val == null || val === '') return '-';
-    return escapeHtml(val);
+    return escapeHtml(val) + '<span class="unit">%</span>';
   }
 
   function escapeHtml(str) {
