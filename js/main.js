@@ -9,7 +9,7 @@
   var sortDirection = 'asc';
   var updateTime = '';
 
-  var tableEl, bodyEl, loadingEl, emptyEl, searchInput, clearBtn, tableContainer, updateTimeEl, rankingsNav, rankingsMenu;
+  var tableEl, bodyEl, loadingEl, emptyEl, searchInput, clearBtn, tableContainer, updateTimeEl, rankingsNav, rankingsMenu, boardTitleEl;
 
   function log(tag, message) {
     var timestamp = new Date().toISOString().substring(11, 23);
@@ -29,6 +29,7 @@
     updateTimeEl = document.getElementById('updateTime');
     rankingsNav = document.getElementById('rankingsNav');
     rankingsMenu = document.getElementById('rankingsMenu');
+    boardTitleEl = document.getElementById('boardTitle');
 
     var missingElements = [];
     if (!tableEl) missingElements.push('rankTable');
@@ -41,6 +42,7 @@
     if (!updateTimeEl) missingElements.push('updateTime');
     if (!rankingsNav) missingElements.push('rankingsNav');
     if (!rankingsMenu) missingElements.push('rankingsMenu');
+    if (!boardTitleEl) missingElements.push('boardTitle');
     
     if (missingElements.length > 0) {
       log('ERROR', 'Missing DOM elements: ' + missingElements.join(', '));
@@ -118,6 +120,7 @@
 
     log('BOARD', 'Switched to board "' + board + '" with ' + filteredModels.length + ' models');
 
+    updateBoardTitle();
     updateDropdownItems();
     updateSortIndicators();
     sortAndRender();
@@ -126,6 +129,13 @@
       log('BOARD', 'Saving hash to URL: #' + board);
       window.location.hash = board;
     }
+  }
+
+  function updateBoardTitle() {
+    var boardName = leaderboards[currentBoard].name || currentBoard;
+    boardTitleEl.textContent = boardName;
+    boardTitleEl.style.display = 'block';
+    log('BOARD', 'Updated board title to: ' + boardName);
   }
 
   function updateDropdownItems() {
