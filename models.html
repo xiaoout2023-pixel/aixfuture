@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIX未来视野 - AI 模型库</title>
+  <link rel="icon" href="assets/AIX.jpg" type="image/jpeg">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/models.css">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="/" class="logo-link">
+        <img src="assets/AIX.jpg" alt="AIX Logo" class="logo-img">
+        AIX未来视野
+      </a>
+      <div class="nav-links">
+        <a href="/" class="nav-link">排行榜</a>
+        <a href="models.html" class="nav-link active">模型库</a>
+        <a href="#" class="nav-link">成本计算</a>
+        <a href="#" class="nav-link">社区</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-content models-main">
+    <header class="page-header models-header">
+      <h1 class="page-title">AI <span class="text-gradient">模型库</span></h1>
+      <p class="page-subtitle">探索、比较和集成全球顶尖的人工智能模型。</p>
+    </header>
+
+    <div class="content-layout">
+      <aside class="sidebar models-sidebar">
+        <div class="sidebar-card">
+          <h3 class="sidebar-title">
+            <span class="material-symbols-outlined sidebar-icon">filter_list</span>
+            筛选条件
+          </h3>
+
+          <div class="filter-section">
+            <h4 class="filter-label">供应商</h4>
+            <div class="checkbox-list" id="providerFilters">
+              <label class="checkbox-item">
+                <input type="checkbox" value="OpenAI" class="filter-checkbox">
+                <span class="checkbox-label">OpenAI</span>
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" value="Anthropic" class="filter-checkbox">
+                <span class="checkbox-label">Anthropic</span>
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" value="Google DeepMind" class="filter-checkbox">
+                <span class="checkbox-label">Google DeepMind</span>
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" value="Meta" class="filter-checkbox">
+                <span class="checkbox-label">Meta</span>
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" value="阿里巴巴" class="filter-checkbox">
+                <span class="checkbox-label">阿里巴巴</span>
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" value="月之暗面" class="filter-checkbox">
+                <span class="checkbox-label">月之暗面</span>
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" value="深度求索" class="filter-checkbox">
+                <span class="checkbox-label">深度求索</span>
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" value="智谱AI" class="filter-checkbox">
+                <span class="checkbox-label">智谱AI</span>
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" value="Mistral AI" class="filter-checkbox">
+                <span class="checkbox-label">Mistral AI</span>
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" value="Stability AI" class="filter-checkbox">
+                <span class="checkbox-label">Stability AI</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="filter-section">
+            <h4 class="filter-label">模型类型</h4>
+            <div class="tag-filters" id="typeFilters">
+              <button class="tag-btn" data-type="大语言模型">大语言模型</button>
+              <button class="tag-btn" data-type="多模态">多模态</button>
+              <button class="tag-btn" data-type="视觉">视觉</button>
+              <button class="tag-btn" data-type="音频">音频</button>
+            </div>
+          </div>
+
+          <div class="filter-section">
+            <h4 class="filter-label">访问权限</h4>
+            <div class="radio-list">
+              <label class="radio-item">
+                <input type="radio" name="access" value="all" checked class="filter-radio">
+                <span class="radio-label">全部</span>
+              </label>
+              <label class="radio-item">
+                <input type="radio" name="access" value="开源" class="filter-radio">
+                <span class="radio-label">开源模型</span>
+              </label>
+              <label class="radio-item">
+                <input type="radio" name="access" value="闭源" class="filter-radio">
+                <span class="radio-label">闭源/API</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <section class="leaderboard-section models-section">
+        <div class="models-top-bar">
+          <div class="models-header-text">
+            <h2 class="models-subtitle">AI 模型库</h2>
+          </div>
+          <div class="search-box models-search">
+            <span class="material-symbols-outlined search-icon">search</span>
+            <input type="text" id="modelSearchInput" class="search-input" placeholder="搜索模型名称、供应商或标签...">
+            <button id="clearModelSearch" class="clear-btn" style="display:none;" aria-label="清除搜索">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="models-grid-container">
+          <div id="modelsLoading" class="loading-state">
+            <div class="loading-spinner"></div>
+            <p>加载数据中...</p>
+          </div>
+          <div id="modelsEmpty" class="empty-state" style="display:none;">
+            <span class="material-symbols-outlined empty-icon">search_off</span>
+            <p>未找到匹配的模型</p>
+          </div>
+          <div id="modelsGrid" class="models-grid" style="display:none;"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>© 2026 AIX未来视野. 保留所有权利。</p>
+  </footer>
+
+  <script src="js/models.js"></script>
+</body>
+</html>
