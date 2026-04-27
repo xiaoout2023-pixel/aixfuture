@@ -13,3 +13,9 @@ logs/
 *.swp
 *.swo
 data/models.json.mock
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
