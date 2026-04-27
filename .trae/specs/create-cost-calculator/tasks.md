@@ -1,0 +1,37 @@
+# Tasks
+- [x] Task 1: Create calculator.html page
+  - [x] SubTask 1.1: Create basic HTML structure with dark theme
+  - [x] SubTask 1.2: Implement left sidebar - scenario configuration panel with sliders
+  - [x] SubTask 1.3: Implement right column - model comparison list with cards
+  - [x] SubTask 1.4: Add cost saving tips section
+  - [x] SubTask 1.5: Add search functionality for models
+  - [x] SubTask 1.6: Implement responsive layout (mobile/desktop)
+- [x] Task 2: Create calculator.css styles
+  - [x] SubTask 2.1: Implement design system variables (colors, fonts, spacing)
+  - [x] SubTask 2.2: Style scenario configuration panel with glassmorphism
+  - [x] SubTask 2.3: Style custom range sliders with primary color
+  - [x] SubTask 2.4: Style model cards with hover effects and transitions
+  - [x] SubTask 2.5: Style cost display with glow effects
+  - [x] SubTask 2.6: Add responsive breakpoints
+- [x] Task 3: Create calculator.js logic
+  - [x] SubTask 3.1: Fetch models from GET /api/models API
+  - [x] SubTask 3.2: Implement cost calculation formula
+  - [x] SubTask 3.3: Add slider event listeners for real-time updates
+  - [x] SubTask 3.4: Implement model filtering and search
+  - [x] SubTask 3.5: Add model selection functionality
+  - [x] SubTask 3.6: Implement task type selection (Text/Code/Vision)
+  - [x] SubTask 3.7: Add logging and error handling
+- [x] Task 4: Update navigation
+  - [x] SubTask 4.1: Add Calculator link to main navigation
+  - [x] SubTask 4.2: Ensure consistent active state across all pages
+- [x] Task 5: Local testing
+  - [x] SubTask 5.1: Start local server
+  - [x] SubTask 5.2: Test all interactive features
+  - [x] SubTask 5.3: Test responsive layout
+  - [x] SubTask 5.4: Test API integration with mock/fallback data
+
+# Task Dependencies
+- Task 2 depends on Task 1 (styles depend on HTML structure)
+- Task 3 depends on Task 1 and Task 2 (logic depends on UI)
+- Task 4 depends on Task 1 (navigation needs page to exist)
+- Task 5 depends on Task 1, 2, 3, 4 (testing after implementation)

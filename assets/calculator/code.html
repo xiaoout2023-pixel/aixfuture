@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Model Cost Calculator - AIX Vision</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom range slider styling for a premium look */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #00FFA3;
+            cursor: pointer;
+            margin-top: -6px;
+            box-shadow: 0 0 10px rgba(0, 255, 163, 0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #353534; /* surface-container-highest */
+            border-radius: 2px;
+        }
+    </style>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "error-container": "#93000a",
+                        "on-secondary": "#002e6a",
+                        "outline-variant": "#3a4a3f",
+                        "on-tertiary-container": "#616363",
+                        "surface-dim": "#131313",
+                        "secondary": "#adc6ff",
+                        "on-tertiary-fixed": "#1a1c1c",
+                        "primary-fixed": "#52ffac",
+                        "on-secondary-container": "#e6ecff",
+                        "background": "#131313",
+                        "tertiary": "#fcfcfc",
+                        "primary-fixed-dim": "#00e290",
+                        "surface-container": "#201f1f",
+                        "on-secondary-fixed": "#001a42",
+                        "on-background": "#e5e2e1",
+                        "tertiary-fixed": "#e2e2e2",
+                        "outline": "#849588",
+                        "inverse-surface": "#e5e2e1",
+                        "tertiary-container": "#e0e0e0",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "error": "#ffb4ab",
+                        "surface": "#131313",
+                        "on-primary-fixed": "#002111",
+                        "tertiary-fixed-dim": "#c6c6c7",
+                        "on-error": "#690005",
+                        "inverse-on-surface": "#313030",
+                        "on-error-container": "#ffdad6",
+                        "on-primary-container": "#007146",
+                        "on-surface": "#e5e2e1",
+                        "on-tertiary-fixed-variant": "#454747",
+                        "secondary-fixed": "#d8e2ff",
+                        "surface-bright": "#3a3939",
+                        "inverse-primary": "#006d43",
+                        "primary": "#f5fff5",
+                        "surface-tint": "#00e290",
+                        "on-primary": "#003920",
+                        "surface-variant": "#353534",
+                        "surface-container-highest": "#353534",
+                        "surface-container-high": "#2a2a2a",
+                        "primary-container": "#00ffa3",
+                        "on-primary-fixed-variant": "#005231",
+                        "secondary-container": "#0566d9",
+                        "surface-container-low": "#1c1b1b",
+                        "on-surface-variant": "#b9cbbd",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-tertiary": "#2f3131",
+                        "on-secondary-fixed-variant": "#004395"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sm": "8px",
+                        "unit": "4px",
+                        "container-max": "1200px",
+                        "lg": "24px",
+                        "gutter": "24px",
+                        "xxl": "80px",
+                        "xs": "4px",
+                        "xl": "40px",
+                        "md": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-xl": ["Space Grotesk", "sans-serif"],
+                        "display-lg": ["Space Grotesk", "sans-serif"],
+                        "body-md": ["Inter", "sans-serif"],
+                        "label-sm": ["Inter", "sans-serif"],
+                        "headline-md": ["Space Grotesk", "sans-serif"],
+                        "body-lg": ["Inter", "sans-serif"]
+                    },
+                    "fontSize": {
+                        "headline-xl": ["40px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "display-lg": ["64px", { "lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "700" }],
+                        "body-md": ["15px", { "lineHeight": "1.6", "letterSpacing": "0", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "1.4", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "letterSpacing": "0", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col font-body-md antialiased pt-16 selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopAppBar -->
+<nav class="fixed top-0 w-full z-50 flex justify-between items-center px-8 h-16 bg-[#050505]/80 backdrop-blur-xl border-b border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] font-['Space_Grotesk'] tracking-tight">
+<div class="flex items-center gap-12 h-full">
+<!-- Brand -->
+<div class="text-xl font-bold tracking-tighter text-white uppercase">
+                AIX VISION
+            </div>
+<!-- Navigation -->
+<div class="hidden md:flex h-full items-center gap-8">
+<a class="h-full flex items-center text-zinc-400 hover:text-white hover:bg-white/5 transition-all duration-300 px-3" href="#">Models</a>
+<!-- Active Nav: Calculator -->
+<a class="h-full flex items-center text-[#00FFA3] border-b-2 border-[#00FFA3] pb-1 px-3" href="#">Calculator</a>
+<a class="h-full flex items-center text-zinc-400 hover:text-white hover:bg-white/5 transition-all duration-300 px-3" href="#">Benchmarks</a>
+<a class="h-full flex items-center text-zinc-400 hover:text-white hover:bg-white/5 transition-all duration-300 px-3" href="#">API Docs</a>
+</div>
+</div>
+<!-- Trailing Actions -->
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4 hidden sm:flex">
+<button class="text-zinc-400 hover:text-white transition-colors flex items-center justify-center w-8 h-8 rounded-full hover:bg-white/5">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+</button>
+<button class="text-zinc-400 hover:text-white transition-colors flex items-center justify-center w-8 h-8 rounded-full hover:bg-white/5 relative">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+<span class="absolute top-1 right-1 w-2 h-2 bg-[#00FFA3] rounded-full"></span>
+</button>
+</div>
+<button class="bg-white/5 border border-white/20 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-white hover:text-black transition-colors duration-300">
+                Connect Wallet
+            </button>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 w-full max-w-[container-max] mx-auto px-lg py-xl grid grid-cols-1 lg:grid-cols-12 gap-lg my-md">
+<!-- Left Column: Scenario Configuration (Span 4) -->
+<div class="lg:col-span-4 flex flex-col gap-lg">
+<!-- Configuration Panel -->
+<div class="bg-surface-container rounded-xl border border-white/10 p-lg flex flex-col gap-xl relative overflow-hidden shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+<!-- Soft glow accent behind panel -->
+<div class="absolute top-0 right-0 w-64 h-64 bg-primary-container/5 rounded-full blur-[60px] pointer-events-none"></div>
+<div class="relative z-10">
+<h2 class="font-headline-md text-headline-md text-on-surface mb-lg">Scenario Configuration</h2>
+<!-- Task Type Selection -->
+<div class="flex flex-col gap-sm mb-lg">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Task Type</span>
+<div class="flex flex-wrap gap-2 mt-2">
+<button class="bg-primary-container/10 border border-primary-container/50 text-primary-container px-4 py-2 rounded-full text-sm font-medium transition-colors">
+                                Text Generation
+                            </button>
+<button class="bg-surface-container-highest border border-white/5 text-on-surface-variant px-4 py-2 rounded-full text-sm font-medium hover:text-on-surface hover:bg-white/5 transition-colors">
+                                Code Copilot
+                            </button>
+<button class="bg-surface-container-highest border border-white/5 text-on-surface-variant px-4 py-2 rounded-full text-sm font-medium hover:text-on-surface hover:bg-white/5 transition-colors">
+                                Vision / Multimodal
+                            </button>
+</div>
+</div>
+<!-- Sliders Section -->
+<div class="flex flex-col gap-lg">
+<!-- Input Tokens -->
+<div class="flex flex-col gap-2">
+<div class="flex justify-between items-end">
+<label class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Avg. Input Tokens</label>
+<span class="font-mono text-on-surface text-sm bg-surface-container-lowest px-2 py-1 rounded border border-white/5">4,096</span>
+</div>
+<input class="mt-2" max="128000" min="0" type="range" value="4096"/>
+<div class="flex justify-between text-[10px] text-on-surface-variant mt-1 font-mono">
+<span>0</span>
+<span>128K</span>
+</div>
+</div>
+<!-- Output Tokens -->
+<div class="flex flex-col gap-2">
+<div class="flex justify-between items-end">
+<label class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Avg. Output Tokens</label>
+<span class="font-mono text-on-surface text-sm bg-surface-container-lowest px-2 py-1 rounded border border-white/5">1,024</span>
+</div>
+<input class="mt-2" max="32000" min="0" type="range" value="1024"/>
+<div class="flex justify-between text-[10px] text-on-surface-variant mt-1 font-mono">
+<span>0</span>
+<span>32K</span>
+</div>
+</div>
+<!-- Daily Volume -->
+<div class="flex flex-col gap-2">
+<div class="flex justify-between items-end">
+<label class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Daily Requests</label>
+<span class="font-mono text-on-surface text-sm bg-surface-container-lowest px-2 py-1 rounded border border-white/5">50,000</span>
+</div>
+<input class="mt-2" max="1000000" min="0" type="range" value="50000"/>
+<div class="flex justify-between text-[10px] text-on-surface-variant mt-1 font-mono">
+<span>100</span>
+<span>1M+</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Divider -->
+<div class="h-px w-full bg-white/5 my-2"></div>
+<!-- Real-time Cost Estimation -->
+<div class="bg-surface-container-lowest border border-white/5 rounded-xl p-6 flex flex-col items-center justify-center relative group">
+<div class="absolute inset-0 bg-primary-container/5 rounded-xl blur-md group-hover:bg-primary-container/10 transition-colors duration-500"></div>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-2 relative z-10">Est. Monthly Cost</span>
+<div class="flex items-start gap-1 relative z-10 text-primary-container drop-shadow-[0_0_15px_rgba(0,255,163,0.3)]">
+<span class="text-2xl font-medium mt-1">$</span>
+<span class="font-headline-xl text-headline-xl tracking-tighter">1,245</span>
+<span class="text-xl font-medium mt-auto mb-2 text-primary-container/80">.00</span>
+</div>
+</div>
+</div>
+<!-- Cost Saving Tips -->
+<div class="bg-surface-container-high/50 border border-white/5 border-l-2 border-l-secondary rounded-lg p-5 flex items-start gap-4 hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-secondary mt-0.5">auto_awesome</span>
+<div class="flex flex-col gap-1">
+<h4 class="text-sm font-semibold text-on-surface">Optimization Insight</h4>
+<p class="text-xs text-on-surface-variant leading-relaxed">
+                        Switching to a prompt caching capable model could reduce your input token costs by up to <strong>45%</strong> for repetitive system prompts in this workflow.
+                    </p>
+</div>
+</div>
+</div>
+<!-- Right Column: Model Recommendation & Comparison (Span 8) -->
+<div class="lg:col-span-8 flex flex-col gap-lg">
+<!-- Header & Search -->
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
+<h2 class="font-headline-md text-headline-md text-on-surface flex items-center gap-3">
+                    Supported Models
+                    <span class="text-xs font-medium bg-surface-container-highest px-2 py-0.5 rounded-full text-on-surface-variant border border-white/5">12 Matches</span>
+</h2>
+<div class="relative w-full sm:w-72 group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px] group-focus-within:text-primary-container transition-colors">search</span>
+<input class="w-full bg-surface-container border border-white/10 rounded-full py-2 pl-10 pr-4 text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-primary-container/50 focus:ring-1 focus:ring-primary-container/50 transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]" placeholder="Search models, providers..." type="text"/>
+</div>
+</div>
+<!-- List Header (Desktop only) -->
+<div class="hidden md:grid grid-cols-12 gap-4 px-4 py-2 border-b border-white/5 text-[11px] uppercase tracking-widest text-on-surface-variant font-semibold">
+<div class="col-span-4">Model &amp; Provider</div>
+<div class="col-span-4">Performance Target</div>
+<div class="col-span-2 text-right">Est. Cost/Mo</div>
+<div class="col-span-2"></div>
+</div>
+<!-- Model Cards List -->
+<div class="flex flex-col gap-3">
+<!-- Active Recommended Model -->
+<div class="bg-surface-container border border-primary-container/30 rounded-xl p-4 md:p-0 grid grid-cols-1 md:grid-cols-12 items-center gap-4 md:gap-4 relative overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary-container"></div>
+<!-- Meta -->
+<div class="md:col-span-4 flex items-center gap-4 md:pl-6">
+<div class="w-10 h-10 rounded-lg bg-[#1a1a1a] border border-white/10 flex items-center justify-center font-bold text-white shadow-inner">
+                            C
+                        </div>
+<div class="flex flex-col">
+<span class="font-semibold text-on-surface text-sm flex items-center gap-2">
+                                Claude 3.5 Sonnet
+                                <span class="text-[9px] bg-primary-container/20 text-primary-container px-1.5 py-0.5 rounded border border-primary-container/30">RECOMMENDED</span>
+</span>
+<span class="text-xs text-on-surface-variant">Anthropic</span>
+</div>
+</div>
+<!-- Performance -->
+<div class="md:col-span-4 flex flex-col gap-1.5 w-full">
+<div class="flex justify-between text-[11px] text-on-surface-variant">
+<span>Intelligence Score</span>
+<span class="text-on-surface font-mono">92/100</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-gradient-to-r from-secondary to-primary-container w-[92%]"></div>
+</div>
+<span class="text-[10px] text-on-surface-variant mt-0.5">200k Context • Vision</span>
+</div>
+<!-- Cost -->
+<div class="md:col-span-2 flex md:justify-end text-lg font-medium text-primary-container drop-shadow-[0_0_8px_rgba(0,255,163,0.2)]">
+                        $1,245
+                    </div>
+<!-- Action -->
+<div class="md:col-span-2 flex justify-end md:pr-4">
+<button class="w-full md:w-auto bg-primary-container text-on-primary-container px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-fixed transition-colors shadow-[0_0_20px_rgba(0,255,163,0.15)]">
+                            Selected
+                        </button>
+</div>
+</div>
+<!-- Model Card 2 -->
+<div class="bg-surface-container border border-white/5 rounded-xl p-4 md:p-0 grid grid-cols-1 md:grid-cols-12 items-center gap-4 md:gap-4 relative transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)] hover:border-white/20">
+<!-- Meta -->
+<div class="md:col-span-4 flex items-center gap-4 md:pl-6">
+<div class="w-10 h-10 rounded-lg bg-[#1a1a1a] border border-white/10 flex items-center justify-center font-bold text-white shadow-inner">
+                            G
+                        </div>
+<div class="flex flex-col">
+<span class="font-semibold text-on-surface text-sm">GPT-4o</span>
+<span class="text-xs text-on-surface-variant">OpenAI</span>
+</div>
+</div>
+<!-- Performance -->
+<div class="md:col-span-4 flex flex-col gap-1.5 w-full">
+<div class="flex justify-between text-[11px] text-on-surface-variant">
+<span>Intelligence Score</span>
+<span class="text-on-surface font-mono">89/100</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-white/40 w-[89%]"></div>
+</div>
+<span class="text-[10px] text-on-surface-variant mt-0.5">128k Context • Vision</span>
+</div>
+<!-- Cost -->
+<div class="md:col-span-2 flex md:justify-end text-lg font-medium text-on-surface">
+                        $1,850
+                    </div>
+<!-- Action -->
+<div class="md:col-span-2 flex justify-end md:pr-4">
+<button class="w-full md:w-auto bg-transparent border border-white/20 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/10 transition-colors">
+                            Select
+                        </button>
+</div>
+</div>
+<!-- Model Card 3 -->
+<div class="bg-surface-container border border-white/5 rounded-xl p-4 md:p-0 grid grid-cols-1 md:grid-cols-12 items-center gap-4 md:gap-4 relative transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)] hover:border-white/20">
+<!-- Meta -->
+<div class="md:col-span-4 flex items-center gap-4 md:pl-6">
+<div class="w-10 h-10 rounded-lg bg-[#1a1a1a] border border-white/10 flex items-center justify-center font-bold text-white shadow-inner">
+                            L
+                        </div>
+<div class="flex flex-col">
+<span class="font-semibold text-on-surface text-sm">Llama 3 70B</span>
+<span class="text-xs text-on-surface-variant">Meta / Groq</span>
+</div>
+</div>
+<!-- Performance -->
+<div class="md:col-span-4 flex flex-col gap-1.5 w-full">
+<div class="flex justify-between text-[11px] text-on-surface-variant">
+<span>Intelligence Score</span>
+<span class="text-on-surface font-mono">82/100</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-white/40 w-[82%]"></div>
+</div>
+<span class="text-[10px] text-on-surface-variant mt-0.5">8k Context • Text Only</span>
+</div>
+<!-- Cost -->
+<div class="md:col-span-2 flex md:justify-end text-lg font-medium text-on-surface">
+                        $240
+                    </div>
+<!-- Action -->
+<div class="md:col-span-2 flex justify-end md:pr-4">
+<button class="w-full md:w-auto bg-transparent border border-white/20 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/10 transition-colors">
+                            Select
+                        </button>
+</div>
+</div>
+<!-- Model Card 4 -->
+<div class="bg-surface-container border border-white/5 rounded-xl p-4 md:p-0 grid grid-cols-1 md:grid-cols-12 items-center gap-4 md:gap-4 relative transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)] hover:border-white/20">
+<!-- Meta -->
+<div class="md:col-span-4 flex items-center gap-4 md:pl-6">
+<div class="w-10 h-10 rounded-lg bg-[#1a1a1a] border border-white/10 flex items-center justify-center font-bold text-white shadow-inner">
+                            G
+                        </div>
+<div class="flex flex-col">
+<span class="font-semibold text-on-surface text-sm">Gemini 1.5 Pro</span>
+<span class="text-xs text-on-surface-variant">Google</span>
+</div>
+</div>
+<!-- Performance -->
+<div class="md:col-span-4 flex flex-col gap-1.5 w-full">
+<div class="flex justify-between text-[11px] text-on-surface-variant">
+<span>Intelligence Score</span>
+<span class="text-on-surface font-mono">90/100</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-white/40 w-[90%]"></div>
+</div>
+<span class="text-[10px] text-on-surface-variant mt-0.5">1M+ Context • Vision/Audio</span>
+</div>
+<!-- Cost -->
+<div class="md:col-span-2 flex md:justify-end text-lg font-medium text-on-surface">
+                        $1,400
+                    </div>
+<!-- Action -->
+<div class="md:col-span-2 flex justify-end md:pr-4">
+<button class="w-full md:w-auto bg-transparent border border-white/20 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/10 transition-colors">
+                            Select
+                        </button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="w-full py-8 px-12 flex justify-between items-center bg-[#050505] border-t border-white/5 mt-auto">
+<div class="font-['Space_Grotesk'] text-[10px] tracking-[0.2em] text-zinc-500 uppercase">
+            © 2024 AIX FUTURE RESEARCH. ALL RIGHTS RESERVED.
+        </div>
+<div class="flex gap-lg">
+<a class="text-zinc-600 hover:text-[#00FFA3] transition-colors font-['Space_Grotesk'] text-[10px] tracking-[0.2em] uppercase duration-500" href="#">Terms</a>
+<a class="text-zinc-600 hover:text-[#00FFA3] transition-colors font-['Space_Grotesk'] text-[10px] tracking-[0.2em] uppercase duration-500" href="#">Privacy</a>
+<a class="text-zinc-600 hover:text-[#00FFA3] transition-colors font-['Space_Grotesk'] text-[10px] tracking-[0.2em] uppercase duration-500" href="#">Status</a>
+</div>
+</footer>
+</body></html>

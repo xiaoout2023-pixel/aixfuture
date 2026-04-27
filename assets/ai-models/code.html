@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="zh"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AIX Future Vision - 模型库</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config from Style Guidance -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-high": "#2a2a2a",
+                        "on-secondary-fixed-variant": "#004395",
+                        "on-tertiary-container": "#616363",
+                        "tertiary": "#fcfcfc",
+                        "tertiary-container": "#e0e0e0",
+                        "primary-fixed-dim": "#00e290",
+                        "on-tertiary-fixed-variant": "#454747",
+                        "primary-container": "#00ffa3",
+                        "surface": "#131313",
+                        "on-error": "#690005",
+                        "on-background": "#e5e2e1",
+                        "on-secondary-container": "#e6ecff",
+                        "on-primary-container": "#007146",
+                        "outline": "#849588",
+                        "on-primary": "#003920",
+                        "tertiary-fixed-dim": "#c6c6c7",
+                        "surface-variant": "#353534",
+                        "on-primary-fixed-variant": "#005231",
+                        "inverse-surface": "#e5e2e1",
+                        "tertiary-fixed": "#e2e2e2",
+                        "secondary": "#adc6ff",
+                        "surface-container": "#201f1f",
+                        "secondary-fixed": "#d8e2ff",
+                        "background": "#131313",
+                        "inverse-primary": "#006d43",
+                        "on-secondary-fixed": "#001a42",
+                        "surface-bright": "#3a3939",
+                        "outline-variant": "#3a4a3f",
+                        "surface-container-highest": "#353534",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "on-error-container": "#ffdad6",
+                        "on-surface": "#e5e2e1",
+                        "on-primary-fixed": "#002111",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-tertiary": "#2f3131",
+                        "on-surface-variant": "#b9cbbd",
+                        "surface-tint": "#00e290",
+                        "primary-fixed": "#52ffac",
+                        "inverse-on-surface": "#313030",
+                        "on-secondary": "#002e6a",
+                        "error-container": "#93000a",
+                        "secondary-container": "#0566d9",
+                        "on-tertiary-fixed": "#1a1c1c",
+                        "surface-dim": "#131313",
+                        "primary": "#f5fff5",
+                        "surface-container-low": "#1c1b1b",
+                        "error": "#ffb4ab"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "lg": "24px",
+                        "xl": "40px",
+                        "xs": "4px",
+                        "sm": "8px",
+                        "xxl": "80px",
+                        "md": "16px",
+                        "container-max": "1200px",
+                        "unit": "4px",
+                        "gutter": "24px"
+                    },
+                    "fontFamily": {
+                        "headline-xl": ["Space Grotesk"],
+                        "body-lg": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-md": ["Space Grotesk"],
+                        "display-lg": ["Space Grotesk"]
+                    },
+                    "fontSize": {
+                        "headline-xl": ["40px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "letterSpacing": "0", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "body-md": ["15px", { "lineHeight": "1.6", "letterSpacing": "0", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "1.4", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+                        "display-lg": ["64px", { "lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #131313;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #353534;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #454747;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md antialiased pt-[60px] min-h-screen flex flex-col">
+<!-- Shared Component: TopNavBar -->
+<nav class="fixed top-0 w-full flex justify-between items-center px-6 py-3 bg-[#050505]/80 backdrop-blur-md font-['Space_Grotesk'] antialiased tracking-tight docked full-width z-50 border-b border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.8)]">
+<div class="flex items-center gap-8">
+<div class="text-xl font-bold tracking-tighter text-[#00FFA3]">AIX Future Vision</div>
+<div class="hidden md:flex gap-6 items-center"><a class="text-zinc-400 font-medium hover:text-white hover:bg-white/5 transition-all duration-300 active:scale-95 cursor-pointer" href="#">排行榜</a>
+<a class="text-[#00FFA3] border-b-2 border-[#00FFA3] pb-1 hover:text-white hover:bg-white/5 transition-all duration-300 active:scale-95 cursor-pointer" href="#">模型库</a>
+<a class="text-zinc-400 font-medium hover:text-white hover:bg-white/5 transition-all duration-300 active:scale-95 cursor-pointer" href="#">成本计算</a></div>
+</div>
+</nav>
+<!-- Main Content Container -->
+<main class="flex-1 w-full max-w-container-max mx-auto px-gutter py-xl flex flex-col md:flex-row gap-gutter">
+<!-- Sidebar Filters -->
+<aside class="w-full md:w-64 flex-shrink-0 flex flex-col gap-lg">
+<div class="flex items-center gap-2 mb-sm text-on-surface">
+<span class="material-symbols-outlined" data-icon="filter_list">filter_list</span>
+<span class="font-headline-md text-headline-md">筛选条件</span>
+</div>
+<!-- Filter Section: Provider -->
+<div class="border-t border-outline-variant/50 pt-md">
+<h3 class="font-label-sm text-label-sm text-on-surface-variant mb-sm uppercase tracking-widest">供应商</h3>
+<div class="flex flex-col gap-2">
+<label class="flex items-center gap-sm cursor-pointer group">
+<input class="form-checkbox bg-surface-container border-outline-variant text-primary-container focus:ring-primary-container/20 rounded-sm" type="checkbox"/>
+<span class="font-body-md text-body-md text-on-surface group-hover:text-primary-container transition-colors">OpenAI</span>
+</label>
+<label class="flex items-center gap-sm cursor-pointer group">
+<input class="form-checkbox bg-surface-container border-outline-variant text-primary-container focus:ring-primary-container/20 rounded-sm" type="checkbox"/>
+<span class="font-body-md text-body-md text-on-surface group-hover:text-primary-container transition-colors">Google DeepMind</span>
+</label>
+<label class="flex items-center gap-sm cursor-pointer group">
+<input class="form-checkbox bg-surface-container border-outline-variant text-primary-container focus:ring-primary-container/20 rounded-sm" type="checkbox"/>
+<span class="font-body-md text-body-md text-on-surface group-hover:text-primary-container transition-colors">Anthropic</span>
+</label>
+<label class="flex items-center gap-sm cursor-pointer group">
+<input class="form-checkbox bg-surface-container border-outline-variant text-primary-container focus:ring-primary-container/20 rounded-sm" type="checkbox"/>
+<span class="font-body-md text-body-md text-on-surface group-hover:text-primary-container transition-colors">Meta</span>
+</label>
+</div>
+</div>
+<!-- Filter Section: Type -->
+<div class="border-t border-outline-variant/50 pt-md">
+<h3 class="font-label-sm text-label-sm text-on-surface-variant mb-sm uppercase tracking-widest">模型类型</h3>
+<div class="flex flex-wrap gap-2">
+<button class="bg-surface-container-high hover:bg-surface-bright border border-outline-variant/30 text-on-surface font-label-sm text-label-sm px-3 py-1.5 rounded-full transition-colors active:scale-95">大语言模型</button>
+<button class="bg-primary-container/10 border border-primary-container/30 text-primary-container font-label-sm text-label-sm px-3 py-1.5 rounded-full transition-colors active:scale-95">多模态</button>
+<button class="bg-surface-container-high hover:bg-surface-bright border border-outline-variant/30 text-on-surface font-label-sm text-label-sm px-3 py-1.5 rounded-full transition-colors active:scale-95">视觉</button>
+<button class="bg-surface-container-high hover:bg-surface-bright border border-outline-variant/30 text-on-surface font-label-sm text-label-sm px-3 py-1.5 rounded-full transition-colors active:scale-95">音频</button>
+</div>
+</div>
+<!-- Filter Section: Access -->
+<div class="border-t border-outline-variant/50 pt-md">
+<h3 class="font-label-sm text-label-sm text-on-surface-variant mb-sm uppercase tracking-widest">访问权限</h3>
+<div class="flex flex-col gap-2">
+<label class="flex items-center gap-sm cursor-pointer group">
+<input class="form-radio bg-surface-container border-outline-variant text-primary-container focus:ring-primary-container/20" name="access" type="radio"/>
+<span class="font-body-md text-body-md text-on-surface group-hover:text-primary-container transition-colors">全部</span>
+</label>
+<label class="flex items-center gap-sm cursor-pointer group">
+<input class="form-radio bg-surface-container border-outline-variant text-primary-container focus:ring-primary-container/20" name="access" type="radio"/>
+<span class="font-body-md text-body-md text-on-surface group-hover:text-primary-container transition-colors">开源模型</span>
+</label>
+<label class="flex items-center gap-sm cursor-pointer group">
+<input class="form-radio bg-surface-container border-outline-variant text-primary-container focus:ring-primary-container/20" name="access" type="radio"/>
+<span class="font-body-md text-body-md text-on-surface group-hover:text-primary-container transition-colors">闭源/API</span>
+</label>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<section class="flex-1 flex flex-col gap-lg">
+<!-- Header & Search -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-md mb-sm">
+<div>
+<h1 class="font-headline-xl text-headline-xl text-on-surface mb-xs">AI 模型库</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">探索、比较和集成全球顶尖的人工智能模型。</p>
+</div>
+<div class="w-full md:w-80 relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary-container transition-colors" data-icon="search">search</span>
+<input class="w-full bg-surface-container-low border border-outline-variant text-on-surface font-body-md text-body-md pl-10 pr-4 py-2 rounded-lg focus:border-primary-container focus:ring-1 focus:ring-primary-container/20 focus:outline-none transition-all placeholder:text-outline" placeholder="搜索模型名称、供应商或标签..." type="text"/>
+</div>
+</div>
+<!-- Model Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-md">
+<!-- Card 1 -->
+<div class="bg-surface-container-low border border-outline-variant rounded-xl p-md flex flex-col gap-sm hover:-translate-y-1 hover:border-primary-container/50 hover:shadow-[0_0_30px_rgba(0,255,163,0.05)] transition-all duration-300 group cursor-pointer relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-br from-primary-container/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+<div class="flex justify-between items-start mb-xs z-10">
+<h2 class="font-headline-md text-headline-md text-on-surface group-hover:text-primary-container transition-colors">GPT-4o</h2>
+<div class="w-8 h-8 rounded bg-surface-container-highest flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined text-xl" data-icon="language">language</span>
+</div>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant flex-1 z-10">OpenAI 的旗舰多模态模型，在文本、视觉和音频推理方面实现了革命性的速度和性能提升。</p>
+<div class="flex flex-wrap gap-2 mt-auto z-10 pt-sm border-t border-outline-variant/30">
+<span class="bg-primary-container/10 text-primary-container font-label-sm text-label-sm px-2 py-1 rounded-full">#多模态</span>
+<span class="bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm px-2 py-1 rounded-full">128K 上下文</span>
+<span class="bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm px-2 py-1 rounded-full">闭源</span>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-surface-container-low border border-outline-variant rounded-xl p-md flex flex-col gap-sm hover:-translate-y-1 hover:border-primary-container/50 hover:shadow-[0_0_30px_rgba(0,255,163,0.05)] transition-all duration-300 group cursor-pointer relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-br from-primary-container/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+<div class="flex justify-between items-start mb-xs z-10">
+<h2 class="font-headline-md text-headline-md text-on-surface group-hover:text-primary-container transition-colors">Claude 3.5 Sonnet</h2>
+<div class="w-8 h-8 rounded bg-surface-container-highest flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined text-xl" data-icon="psychology">language</span>
+</div>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant flex-1 z-10">Anthropic 推出，在保持极高运行速度的同时，在代码生成和复杂逻辑推理上超越前代旗舰。</p>
+<div class="flex flex-wrap gap-2 mt-auto z-10 pt-sm border-t border-outline-variant/30">
+<span class="bg-primary-container/10 text-primary-container font-label-sm text-label-sm px-2 py-1 rounded-full">#代码生成</span>
+<span class="bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm px-2 py-1 rounded-full">200K 上下文</span>
+<span class="bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm px-2 py-1 rounded-full">闭源</span>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-surface-container-low border border-outline-variant rounded-xl p-md flex flex-col gap-sm hover:-translate-y-1 hover:border-primary-container/50 hover:shadow-[0_0_30px_rgba(0,255,163,0.05)] transition-all duration-300 group cursor-pointer relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-br from-primary-container/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+<div class="flex justify-between items-start mb-xs z-10">
+<h2 class="font-headline-md text-headline-md text-on-surface group-hover:text-primary-container transition-colors">Llama 3 70B</h2>
+<div class="w-8 h-8 rounded bg-surface-container-highest flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined text-xl" data-icon="hub">language</span>
+</div>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant flex-1 z-10">Meta 开发的最先进的开源大语言模型，在多项行业基准测试中表现卓越，适合本地部署部署。</p>
+<div class="flex flex-wrap gap-2 mt-auto z-10 pt-sm border-t border-outline-variant/30">
+<span class="bg-primary-container/10 text-primary-container font-label-sm text-label-sm px-2 py-1 rounded-full">#开源巨头</span>
+<span class="bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm px-2 py-1 rounded-full">8K 上下文</span>
+<span class="bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm px-2 py-1 rounded-full">开源</span>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="bg-surface-container-low border border-outline-variant rounded-xl p-md flex flex-col gap-sm hover:-translate-y-1 hover:border-primary-container/50 hover:shadow-[0_0_30px_rgba(0,255,163,0.05)] transition-all duration-300 group cursor-pointer relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-br from-primary-container/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+<div class="flex justify-between items-start mb-xs z-10">
+<h2 class="font-headline-md text-headline-md text-on-surface group-hover:text-primary-container transition-colors">Gemini 1.5 Pro</h2>
+<div class="w-8 h-8 rounded bg-surface-container-highest flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined text-xl" data-icon="view_in_ar">language</span>
+</div>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant flex-1 z-10">Google DeepMind 提供，具有突破性的百万级上下文窗口，能够处理海量文档和长视频分析。</p>
+<div class="flex flex-wrap gap-2 mt-auto z-10 pt-sm border-t border-outline-variant/30">
+<span class="bg-primary-container/10 text-primary-container font-label-sm text-label-sm px-2 py-1 rounded-full">#超长上下文</span>
+<span class="bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm px-2 py-1 rounded-full">1M+ 上下文</span>
+<span class="bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm px-2 py-1 rounded-full">闭源</span>
+</div>
+</div>
+<!-- Card 5 -->
+<div class="bg-surface-container-low border border-outline-variant rounded-xl p-md flex flex-col gap-sm hover:-translate-y-1 hover:border-primary-container/50 hover:shadow-[0_0_30px_rgba(0,255,163,0.05)] transition-all duration-300 group cursor-pointer relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-br from-primary-container/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+<div class="flex justify-between items-start mb-xs z-10">
+<h2 class="font-headline-md text-headline-md text-on-surface group-hover:text-primary-container transition-colors">Mistral Large</h2>
+<div class="w-8 h-8 rounded bg-surface-container-highest flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined text-xl" data-icon="bolt">language</span>
+</div>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant flex-1 z-10">欧洲领先的 AI 公司 Mistral 旗舰模型，提供顶级的多语言支持和出色的推理成本效益比。</p>
+<div class="flex flex-wrap gap-2 mt-auto z-10 pt-sm border-t border-outline-variant/30">
+<span class="bg-primary-container/10 text-primary-container font-label-sm text-label-sm px-2 py-1 rounded-full">#高性价比</span>
+<span class="bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm px-2 py-1 rounded-full">32K 上下文</span>
+<span class="bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm px-2 py-1 rounded-full">闭源</span>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Shared Component: Footer -->
+<footer class="full-width py-12 border-t border-white/5 bg-[#050505] font-['Space_Grotesk'] text-xs uppercase tracking-widest text-[#00FFA3] mt-auto">
+<div class="flex flex-col md:flex-row justify-between items-center px-10 max-w-7xl mx-auto gap-4">
+<span class="">© 2024 AIX Future Vision. Forging the synthetic frontier.</span>
+</div>
+</footer>
+</body></html>

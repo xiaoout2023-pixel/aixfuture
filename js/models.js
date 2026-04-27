@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var API_BASE = 'https://aixfutureapi.vercel.app/api';
+  var API_BASE = 'https://www.aixfutrueapi.top/api';
   var modelsData = [];
   var providersData = [];
   var filteredModels = [];
