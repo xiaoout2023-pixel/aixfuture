@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIX未来视野 - AI 模型成本计算器</title>
+  <link rel="icon" href="assets/AIX.jpg" type="image/jpeg">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/calculator.css">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="/" class="logo-link">
+        <img src="assets/AIX.jpg" alt="AIX Logo" class="logo-img">
+        AIX未来视野
+      </a>
+      <div class="nav-links">
+        <a href="/" class="nav-link">排行榜</a>
+        <a href="models.html" class="nav-link">模型库</a>
+        <a href="calculator.html" class="nav-link active">成本计算</a>
+        <a href="#" class="nav-link">社区</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="calc-main">
+    <header class="calc-header">
+      <h1 class="page-title">AI 模型<span class="text-gradient">成本计算器</span></h1>
+      <p class="page-subtitle">配置您的使用场景，实时比较不同模型的成本效益。</p>
+    </header>
+
+    <div class="calc-content">
+      <div class="calc-sidebar">
+        <div class="calc-config-panel">
+          <h2 class="calc-panel-title">场景配置</h2>
+          
+          <div class="calc-section">
+            <span class="calc-section-label">任务类型</span>
+            <div class="calc-chips" id="taskTypeChips">
+              <button class="calc-chip active" data-task="text">
+                <span class="material-symbols-outlined chip-icon">text_fields</span>
+                文本生成
+              </button>
+              <button class="calc-chip" data-task="code">
+                <span class="material-symbols-outlined chip-icon">code</span>
+                代码助手
+              </button>
+              <button class="calc-chip" data-task="vision">
+                <span class="material-symbols-outlined chip-icon">visibility</span>
+                视觉/多模态
+              </button>
+            </div>
+          </div>
+
+          <div class="calc-section">
+            <div class="calc-slider-group">
+              <div class="calc-slider-header">
+                <label class="calc-slider-label">平均输入 Tokens</label>
+                <span class="calc-slider-value" id="inputTokenValue">4,096</span>
+              </div>
+              <input type="range" class="calc-slider" id="inputTokens" min="0" max="128000" value="4096" step="256">
+              <div class="calc-slider-limits">
+                <span>0</span>
+                <span>128K</span>
+              </div>
+            </div>
+
+            <div class="calc-slider-group">
+              <div class="calc-slider-header">
+                <label class="calc-slider-label">平均输出 Tokens</label>
+                <span class="calc-slider-value" id="outputTokenValue">1,024</span>
+              </div>
+              <input type="range" class="calc-slider" id="outputTokens" min="0" max="32000" value="1024" step="128">
+              <div class="calc-slider-limits">
+                <span>0</span>
+                <span>32K</span>
+              </div>
+            </div>
+
+            <div class="calc-slider-group">
+              <div class="calc-slider-header">
+                <label class="calc-slider-label">每日请求数</label>
+                <span class="calc-slider-value" id="dailyRequestsValue">50,000</span>
+              </div>
+              <input type="range" class="calc-slider" id="dailyRequests" min="100" max="1000000" value="50000" step="1000">
+              <div class="calc-slider-limits">
+                <span>100</span>
+                <span>1M+</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="calc-divider"></div>
+
+          <div class="calc-estimation">
+            <span class="calc-est-label">预估月度成本</span>
+            <div class="calc-est-value">
+              <span class="calc-currency">$</span>
+              <span class="calc-amount" id="totalCost">0.00</span>
+            </div>
+            <div class="calc-est-breakdown">
+              <div class="calc-breakdown-row">
+                <span class="calc-breakdown-label">输入成本</span>
+                <span class="calc-breakdown-value" id="inputCost">$0.00</span>
+              </div>
+              <div class="calc-breakdown-row">
+                <span class="calc-breakdown-label">输出成本</span>
+                <span class="calc-breakdown-value" id="outputCost">$0.00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="calc-tip-card">
+          <span class="material-symbols-outlined tip-icon">auto_awesome</span>
+          <div class="tip-content">
+            <h4 class="tip-title">优化建议</h4>
+            <p class="tip-text" id="tipText">使用支持缓存的模型可以降低最多45%的输入token成本。</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="calc-models">
+        <div class="calc-models-header">
+          <h2 class="calc-models-title">
+            支持的模型
+            <span class="calc-model-count" id="modelCount">0</span>
+          </h2>
+          <div class="calc-sort-group">
+            <select class="calc-sort-select" id="sortSelect">
+              <option value="cost">按成本排序</option>
+              <option value="score">按评分排序</option>
+              <option value="name">按名称排序</option>
+            </select>
+            <div class="calc-search-box">
+              <span class="material-symbols-outlined calc-search-icon">search</span>
+              <input type="text" class="calc-search-input" id="modelSearch" placeholder="搜索模型、供应商...">
+              <button class="calc-clear-btn" id="clearSearch" aria-label="清除搜索">
+                <span class="material-symbols-outlined" style="font-size:16px;">close</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="calc-model-list-header">
+          <div class="calc-col calc-col-model">模型 & 供应商</div>
+          <div class="calc-col calc-col-perf">性能指标</div>
+          <div class="calc-col calc-col-cost">预估月成本</div>
+          <div class="calc-col calc-col-action">操作</div>
+        </div>
+
+        <div class="calc-model-list" id="modelList">
+          <div class="calc-loading" id="calcLoading">
+            <div class="calc-spinner"></div>
+            <p>加载模型数据...</p>
+          </div>
+          <div class="calc-empty" id="calcEmpty" style="display:none;">
+            <span class="material-symbols-outlined calc-empty-icon">search_off</span>
+            <p>未找到匹配的模型</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>© 2026 AIX未来视野. 保留所有权利。</p>
+  </footer>
+
+  <script src="js/calculator.js"></script>
+</body>
+</html>

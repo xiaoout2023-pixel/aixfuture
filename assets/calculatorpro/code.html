@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="zh"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AIX Future Vision - Scenario Cost Simulator</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "tertiary-fixed": "#e2e2e2",
+                      "tertiary": "#fcfcfc",
+                      "primary-fixed-dim": "#00e290",
+                      "on-tertiary-container": "#616363",
+                      "error-container": "#93000a",
+                      "secondary-container": "#0566d9",
+                      "on-tertiary-fixed-variant": "#454747",
+                      "tertiary-container": "#e0e0e0",
+                      "primary": "#f5fff5",
+                      "primary-fixed": "#52ffac",
+                      "secondary-fixed": "#d8e2ff",
+                      "on-primary-fixed": "#002111",
+                      "on-primary-container": "#007146",
+                      "surface-container-highest": "#353534",
+                      "error": "#ffb4ab",
+                      "background": "#131313",
+                      "outline-variant": "#3a4a3f",
+                      "on-secondary-fixed-variant": "#004395",
+                      "secondary": "#adc6ff",
+                      "on-surface": "#e5e2e1",
+                      "inverse-surface": "#e5e2e1",
+                      "inverse-primary": "#006d43",
+                      "on-background": "#e5e2e1",
+                      "surface-variant": "#353534",
+                      "surface-bright": "#3a3939",
+                      "on-error-container": "#ffdad6",
+                      "surface-tint": "#00e290",
+                      "primary-container": "#00ffa3",
+                      "tertiary-fixed-dim": "#c6c6c7",
+                      "on-tertiary-fixed": "#1a1c1c",
+                      "on-primary": "#003920",
+                      "surface-container-high": "#2a2a2a",
+                      "on-surface-variant": "#b9cbbd",
+                      "inverse-on-surface": "#313030",
+                      "surface": "#131313",
+                      "surface-container-lowest": "#0e0e0e",
+                      "surface-container": "#201f1f",
+                      "secondary-fixed-dim": "#adc6ff",
+                      "surface-dim": "#131313",
+                      "surface-container-low": "#1c1b1b",
+                      "on-secondary": "#002e6a",
+                      "outline": "#849588",
+                      "on-secondary-fixed": "#001a42",
+                      "on-error": "#690005",
+                      "on-tertiary": "#2f3131",
+                      "on-primary-fixed-variant": "#005231",
+                      "on-secondary-container": "#e6ecff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "md": "16px",
+                      "lg": "24px",
+                      "gutter": "24px",
+                      "unit": "4px",
+                      "xxl": "80px",
+                      "xl": "40px",
+                      "sm": "8px",
+                      "container-max": "1200px",
+                      "xs": "4px"
+              },
+              "fontFamily": {
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "headline-xl": [
+                              "Space Grotesk"
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "Space Grotesk"
+                      ],
+                      "display-lg": [
+                              "Space Grotesk"
+                      ]
+              },
+              "fontSize": {
+                      "body-md": [
+                              "15px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "letterSpacing": "0",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "letterSpacing": "0",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-xl": [
+                              "40px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "1",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "display-lg": [
+                              "64px",
+                              {
+                                      "lineHeight": "1.1",
+                                      "letterSpacing": "-0.04em",
+                                      "fontWeight": "700"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        /* Inner borders for 'beveled glass' edge */
+        .glass-edge {
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Soft glows */
+        .glow-primary {
+            box-shadow: 0 0 20px rgba(0, 255, 163, 0.2);
+        }
+        
+        /* Grid pattern */
+        .bg-grid {
+            background-size: 40px 40px;
+            background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen overflow-hidden flex flex-col selection:bg-primary-container selection:text-background">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-black/80 backdrop-blur-xl border-b border-white/10 shadow-2xl shadow-[#00FFA3]/5">
+<div class="flex items-center gap-4">
+<button class="text-zinc-400 hover:text-white transition-colors hover:bg-white/5 p-2 rounded-full active:scale-95 duration-150">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<div class="text-xl font-bold tracking-tighter text-[#00FFA3] flex items-center gap-2">
+<span>AIX Future Vision</span>
+<span class="text-zinc-600 font-normal">/</span>
+<input class="bg-transparent border-none text-on-surface font-headline-md focus:ring-0 focus:outline-none placeholder-zinc-600 px-0 w-80 truncate" type="text" value="Customer Support AI Workflow"/>
+<span class="material-symbols-outlined text-zinc-500 text-sm ml-1 hover:text-[#00FFA3] cursor-pointer">edit</span>
+</div>
+</div>
+<nav class="hidden md:flex items-center gap-8 font-['Space_Grotesk'] text-sm tracking-tight h-full">
+<a class="text-[#00FFA3] border-b-2 border-[#00FFA3] h-full flex items-center px-1" href="#">Simulator</a>
+<a class="text-zinc-400 hover:text-white transition-colors h-full flex items-center px-1" href="#">Models</a>
+<a class="text-zinc-400 hover:text-white transition-colors h-full flex items-center px-1" href="#">History</a>
+<a class="text-zinc-400 hover:text-white transition-colors h-full flex items-center px-1" href="#">Compare</a>
+</nav>
+<div class="flex items-center gap-2">
+<button class="text-zinc-400 hover:text-[#00FFA3] transition-colors p-2 rounded-full hover:bg-white/5 active:scale-95 duration-150">
+<span class="material-symbols-outlined">save</span>
+</button>
+<button class="text-zinc-400 hover:text-secondary transition-colors p-2 rounded-full hover:bg-white/5 active:scale-95 duration-150">
+<span class="material-symbols-outlined">share</span>
+</button>
+</div>
+</header>
+<!-- Main Layout -->
+<main class="flex-1 mt-16 flex h-[calc(100vh-64px)] relative">
+<!-- Workflow Canvas (Center) -->
+<section class="flex-1 relative bg-grid flex flex-col overflow-hidden">
+<!-- Canvas Controls -->
+<div class="absolute top-6 left-6 z-10 flex gap-2">
+<button class="bg-surface-container-high/80 backdrop-blur-md glass-edge text-on-surface p-2 rounded-lg hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined">zoom_in</span>
+</button>
+<button class="bg-surface-container-high/80 backdrop-blur-md glass-edge text-on-surface p-2 rounded-lg hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined">zoom_out</span>
+</button>
+<button class="bg-surface-container-high/80 backdrop-blur-md glass-edge text-on-surface p-2 rounded-lg hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined">center_focus_strong</span>
+</button>
+</div>
+<!-- Nodes Container -->
+<div class="flex-1 overflow-auto py-12 flex flex-col items-center gap-8 relative z-0">
+<!-- Node 1 -->
+<div class="bg-[#121212] glass-edge rounded-xl w-80 p-5 shadow-lg hover:-translate-y-1 transition-transform duration-300 group cursor-pointer relative z-10">
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-3">
+<div class="bg-surface-container p-2 rounded-lg">
+<span class="material-symbols-outlined text-secondary">psychology</span>
+</div>
+<div>
+<h3 class="font-headline-md text-base text-on-surface">Intent Recognition</h3>
+<p class="font-label-sm text-zinc-400">GPT-4o mini</p>
+</div>
+</div>
+<button class="text-zinc-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-sm">more_vert</span>
+</button>
+</div>
+<div class="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-white/5">
+<div>
+<p class="font-label-sm text-zinc-500 mb-1">CALLS / DAY</p>
+<p class="font-body-md text-on-surface font-semibold">10,000</p>
+</div>
+<div>
+<p class="font-label-sm text-zinc-500 mb-1">COST / DAY</p>
+<p class="font-body-md text-primary-container font-semibold">$2.40</p>
+</div>
+</div>
+</div>
+<!-- Connector -->
+<div class="w-px h-8 bg-gradient-to-b from-white/20 to-white/5 relative z-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-white/30 text-xs absolute rotate-90 translate-x-px">arrow_forward_ios</span>
+</div>
+<!-- Node 2 -->
+<div class="bg-[#121212] glass-edge rounded-xl w-80 p-5 shadow-lg hover:-translate-y-1 transition-transform duration-300 group cursor-pointer relative z-10 glow-primary border-primary-container/30 border">
+<div class="absolute -top-3 -right-3 bg-primary-container text-background font-label-sm px-2 py-1 rounded-full shadow-lg">
+                        Bottleneck
+                    </div>
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-3">
+<div class="bg-primary-container/10 p-2 rounded-lg">
+<span class="material-symbols-outlined text-primary-container">edit_document</span>
+</div>
+<div>
+<h3 class="font-headline-md text-base text-on-surface">Content Generation</h3>
+<p class="font-label-sm text-primary-container">Claude 3 Haiku</p>
+</div>
+</div>
+<button class="text-zinc-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-sm">more_vert</span>
+</button>
+</div>
+<div class="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-white/5">
+<div>
+<p class="font-label-sm text-zinc-500 mb-1">CALLS / DAY</p>
+<p class="font-body-md text-on-surface font-semibold">8,500</p>
+</div>
+<div>
+<p class="font-label-sm text-zinc-500 mb-1">COST / DAY</p>
+<p class="font-body-md text-primary-container font-semibold">$106.25</p>
+</div>
+</div>
+</div>
+<!-- Connector -->
+<div class="w-px h-8 bg-gradient-to-b from-white/20 to-white/5 relative z-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-white/30 text-xs absolute rotate-90 translate-x-px">arrow_forward_ios</span>
+</div>
+<!-- Node 3 -->
+<div class="bg-[#121212] glass-edge rounded-xl w-80 p-5 shadow-lg hover:-translate-y-1 transition-transform duration-300 group cursor-pointer relative z-10">
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-3">
+<div class="bg-surface-container p-2 rounded-lg">
+<span class="material-symbols-outlined text-[#FF6B6B]">fact_check</span>
+</div>
+<div>
+<h3 class="font-headline-md text-base text-on-surface">Code Review</h3>
+<p class="font-label-sm text-zinc-400">Gemini 1.5 Pro</p>
+</div>
+</div>
+<button class="text-zinc-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-sm">more_vert</span>
+</button>
+</div>
+<div class="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-white/5">
+<div>
+<p class="font-label-sm text-zinc-500 mb-1">CALLS / DAY</p>
+<p class="font-body-md text-on-surface font-semibold">2,000</p>
+</div>
+<div>
+<p class="font-label-sm text-zinc-500 mb-1">COST / DAY</p>
+<p class="font-body-md text-primary-container font-semibold">$19.85</p>
+</div>
+</div>
+</div>
+<!-- Add Node Button -->
+<button class="mt-8 flex items-center gap-2 px-6 py-3 rounded-full border border-white/20 text-white hover:bg-white hover:text-black transition-all duration-300 bg-[#050505]">
+<span class="material-symbols-outlined text-sm">add</span>
+<span class="font-label-sm">Add Node</span>
+</button>
+</div>
+<!-- Scenario Tabs (Bottom) -->
+<div class="absolute bottom-6 left-1/2 -translate-x-1/2 bg-surface-container-high/80 backdrop-blur-xl glass-edge rounded-full p-1 flex items-center z-20 shadow-2xl">
+<button class="px-6 py-2 rounded-full bg-zinc-800 text-[#00FFA3] font-label-sm shadow-[0_0_15px_rgba(0,255,163,0.1)] transition-all">
+                    Current Setup
+                </button>
+<button class="px-6 py-2 rounded-full text-zinc-400 hover:text-zinc-200 font-label-sm transition-all hover:bg-zinc-800/50">
+                    Low Cost
+                </button>
+<button class="px-6 py-2 rounded-full text-zinc-400 hover:text-zinc-200 font-label-sm transition-all hover:bg-zinc-800/50">
+                    High Perf
+                </button>
+<div class="w-px h-4 bg-white/10 mx-2"></div>
+<button class="px-4 py-2 rounded-full text-zinc-400 hover:text-white font-label-sm transition-all hover:bg-zinc-800/50 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">add</span> New
+                </button>
+</div>
+</section>
+<!-- Cost Panel (Right Side) -->
+<aside class="w-96 bg-[#0A0A0A] border-l border-white/10 flex flex-col h-full z-10">
+<div class="p-6 border-b border-white/5">
+<div class="flex justify-between items-end mb-6">
+<div>
+<h2 class="font-headline-md text-zinc-400 text-sm mb-2 uppercase tracking-wider">Total Cost</h2>
+<div class="font-display-lg text-[#00FFA3] text-5xl tracking-tighter glow-text shadow-primary-container/20">$128<span class="text-3xl text-primary-container/70">.50</span></div>
+</div>
+</div>
+<!-- Time Range Toggle -->
+<div class="bg-surface-container-low rounded-lg p-1 flex">
+<button class="flex-1 py-1.5 rounded bg-zinc-800 text-white font-label-sm shadow text-center">Day</button>
+<button class="flex-1 py-1.5 rounded text-zinc-500 hover:text-zinc-300 font-label-sm text-center transition-colors">Month</button>
+<button class="flex-1 py-1.5 rounded text-zinc-500 hover:text-zinc-300 font-label-sm text-center transition-colors">Year</button>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto p-6 flex flex-col gap-8">
+<!-- Breakdown Chart -->
+<div>
+<h3 class="font-headline-md text-base text-on-surface mb-4 flex items-center justify-between">
+                        Cost Breakdown
+                        <span class="material-symbols-outlined text-zinc-500 text-sm">pie_chart</span>
+</h3>
+<div class="space-y-4">
+<!-- Bar 1 -->
+<div>
+<div class="flex justify-between font-label-sm mb-2">
+<span class="text-zinc-300 flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-primary-container"></div>
+                                    Content Generation
+                                </span>
+<span class="text-white">82.6%</span>
+</div>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary-container w-[82.6%] rounded-full shadow-[0_0_10px_rgba(0,255,163,0.5)]"></div>
+</div>
+</div>
+<!-- Bar 2 -->
+<div>
+<div class="flex justify-between font-label-sm mb-2">
+<span class="text-zinc-300 flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-[#FF6B6B]"></div>
+                                    Code Review
+                                </span>
+<span class="text-white">15.4%</span>
+</div>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-[#FF6B6B] w-[15.4%] rounded-full"></div>
+</div>
+</div>
+<!-- Bar 3 -->
+<div>
+<div class="flex justify-between font-label-sm mb-2">
+<span class="text-zinc-300 flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-secondary"></div>
+                                    Intent Recognition
+                                </span>
+<span class="text-white">2.0%</span>
+</div>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-[2.0%] rounded-full"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Insights Bento -->
+<div>
+<h3 class="font-headline-md text-base text-on-surface mb-4 flex items-center justify-between">
+                        Optimization Insights
+                        <span class="material-symbols-outlined text-zinc-500 text-sm">lightbulb</span>
+</h3>
+<div class="bg-surface-container-low rounded-xl p-4 glass-edge border-l-2 border-primary-container">
+<p class="font-body-md text-zinc-300 text-sm mb-3">
+                            Switching "Content Generation" to <span class="text-primary-container font-semibold">Claude 3.5 Sonnet</span> could save ~$42/day while maintaining similar quality metrics.
+                        </p>
+<div class="flex gap-2">
+<span class="bg-primary-container/10 text-primary-container font-label-sm px-2 py-1 rounded-full uppercase tracking-wider text-[10px]">High Impact</span>
+<span class="bg-white/5 text-zinc-400 font-label-sm px-2 py-1 rounded-full uppercase tracking-wider text-[10px]">Easy Swap</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Action Area -->
+<div class="p-6 border-t border-white/5 bg-[#050505]">
+<button class="w-full bg-primary-container text-[#0A0A0A] font-headline-md text-base py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-primary-fixed transition-colors glow-primary">
+<span class="material-symbols-outlined fill">magic_button</span>
+                    How to save money?
+                </button>
+</div>
+</aside>
+</main>
+</body></html>
