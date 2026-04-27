@@ -4,7 +4,7 @@
    ======================================== */
 
 :root {
-  --color-bg: #131313;
+  --color-bg: #0A0A0A;
   --color-surface-container-lowest: #0e0e0e;
   --color-surface-container-low: #1c1b1b;
   --color-surface-container: #201f1f;
@@ -143,7 +143,7 @@ body::selection {
   flex: 1;
   max-width: 1600px;
   margin: 0 auto;
-  padding: calc(80px + var(--spacing-xxl)) var(--spacing-lg) var(--spacing-xxl);
+  padding: 6.5rem 1.5rem 3rem;
   width: 100%;
 }
 
@@ -154,7 +154,7 @@ body::selection {
 
 .page-title {
   font-family: var(--font-display);
-  font-size: 64px;
+  font-size: 40px;
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: -0.04em;
@@ -600,13 +600,13 @@ body::selection {
     justify-content: center;
   }
   .page-title {
-    font-size: 48px;
+    font-size: 40px;
   }
 }
 
 @media (max-width: 768px) {
   .main-content {
-    padding: calc(64px + var(--spacing-xl)) var(--spacing-md) var(--spacing-xl);
+    padding: 6.5rem var(--spacing-md) var(--spacing-xl);
   }
   .nav-inner {
     padding: var(--spacing-sm) var(--spacing-md);
@@ -615,7 +615,7 @@ body::selection {
     display: none;
   }
   .page-title {
-    font-size: 36px;
+    font-size: 40px;
   }
   .page-subtitle {
     font-size: 16px;

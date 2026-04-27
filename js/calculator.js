@@ -137,7 +137,7 @@
 
         if (modelsData.length > 0) {
           var sample = modelsData[0];
-          log('FETCH', 'Sample - name: ' + sample.model_name + ', pricing: ' + JSON.stringify(sample.pricing) + ', caps: ' + JSON.stringify(sample.capabilities));
+          log('FETCH', 'Sample - id: ' + sample.model_id + ', pricing: ' + JSON.stringify(sample.pricing) + ', caps: ' + JSON.stringify(sample.capabilities));
         }
 
         loadingEl.style.display = 'none';
@@ -249,7 +249,7 @@
   }
 
   function matchSearch(model, query) {
-    var name = (model.model_name || '').toLowerCase();
+    var name = (model.model_id || '').toLowerCase();
     var provider = (model.provider || '').toLowerCase();
     var tags = (model.tags || []).join(' ').toLowerCase();
     return name.indexOf(query) !== -1 || provider.indexOf(query) !== -1 || tags.indexOf(query) !== -1;
@@ -358,7 +358,7 @@
       });
     } else if (currentSortBy === 'name') {
       displayModels.sort(function(a, b) {
-        return (a.model_name || '').localeCompare(b.model_name || '');
+        return (a.model_id || '').localeCompare(b.model_id || '');
       });
     }
 
@@ -377,7 +377,7 @@
       var cost = costCache[i];
       var isCheapest = (m === cheapestModel);
       var providerName = getProviderName(m.provider);
-      var initialLetter = (m.model_name || 'M').charAt(0).toUpperCase();
+      var initialLetter = (m.model_id || 'M').charAt(0).toUpperCase();
       var caps = m.capabilities || {};
       var contextWindow = caps.context_length ? formatContextLength(caps.context_length) : '';
       var features = [];
@@ -396,7 +396,7 @@
       html += '<div class="calc-model-info">';
       html += '<div class="calc-model-avatar">' + escapeHtml(initialLetter) + '</div>';
       html += '<div class="calc-model-meta">';
-      html += '<div class="calc-model-name">' + escapeHtml(m.model_name);
+      html += '<div class="calc-model-name">' + escapeHtml(m.model_id);
       if (isCheapest) {
         html += '<span class="calc-badge">RECOMMENDED</span>';
       }
@@ -408,20 +408,28 @@
       if (hasScore) {
         html += '<div class="calc-model-perf">';
         html += '<div class="calc-perf-header">';
-        html += '<span>Intelligence Score</span>';
+        html += '<span>综合评分</span>';
         html += '<span class="calc-perf-value">' + score + '/100</span>';
         html += '</div>';
         html += '<div class="calc-perf-bar">';
         html += '<div class="calc-perf-fill' + (score < 85 ? ' low' : '') + '" style="width:' + Math.min(score, 100) + '%"></div>';
         html += '</div>';
-        html += '<div class="calc-model-features">' + escapeHtml(features.join(' \u2022 ')) + '</div>';
+        html += '<div class="calc-model-features">';
+        for (var fi = 0; fi < features.length; fi++) {
+          html += '<span class="calc-feature-tag">' + escapeHtml(features[fi]) + '</span>';
+        }
+        html += '</div>';
         html += '</div>';
       } else {
         html += '<div class="calc-model-perf">';
         html += '<div class="calc-perf-header">';
         html += '<span>暂无评分</span>';
         html += '</div>';
-        html += '<div class="calc-model-features">' + escapeHtml(features.join(' \u2022 ')) + '</div>';
+        html += '<div class="calc-model-features">';
+        for (var fi2 = 0; fi2 < features.length; fi2++) {
+          html += '<span class="calc-feature-tag">' + escapeHtml(features[fi2]) + '</span>';
+        }
+        html += '</div>';
         html += '</div>';
       }
 
@@ -494,9 +502,28 @@
     return tokens.toString();
   }
 
+  function initSwitcherThumb() {
+    var thumb = document.getElementById('switcherThumb');
+    if (!thumb) return;
+    
+    var activeBtn = document.querySelector('.calc-switcher-track .calc-switch-btn.active');
+    if (activeBtn) {
+      var track = activeBtn.parentElement;
+      var btns = track.querySelectorAll('.calc-switch-btn');
+      var idx = Array.prototype.indexOf.call(btns, activeBtn);
+      if (idx === 1) {
+        thumb.style.transform = 'translateX(calc(100%))';
+      }
+    }
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', function() {
+      init();
+      initSwitcherThumb();
+    });
   } else {
     init();
+    initSwitcherThumb();
   }
 })();

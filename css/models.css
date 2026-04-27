@@ -3,7 +3,7 @@
    ======================================== */
 
 .models-main {
-  padding-top: calc(80px + var(--spacing-xl));
+  /* 移除 padding-top 覆盖，继承 .main-content 的 80px 顶部间距 */
 }
 
 .models-header {
@@ -17,6 +17,11 @@
 
 .models-header .page-subtitle {
   font-size: 15px;
+}
+
+/* 排行榜页面标题样式 */
+.page-header .page-title {
+  font-size: 40px;
 }
 
 /* Sidebar Styles */
@@ -240,12 +245,12 @@
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-lg);
-  padding: var(--spacing-md);
+  padding: 1rem;
   transition: all 0.3s ease;
   animation: cardFadeIn 0.3s ease backwards;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: 0.5rem;
   position: relative;
   overflow: hidden;
   cursor: pointer;
@@ -285,7 +290,7 @@
 
 .model-card-title {
   font-family: var(--font-display);
-  font-size: 24px;
+  font-size: 1rem;
   font-weight: 500;
   color: var(--color-on-surface);
   letter-spacing: -0.01em;
@@ -293,8 +298,8 @@
 }
 
 .model-card-icon {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--radius);
   background: var(--color-surface-container-highest);
   display: flex;
@@ -304,23 +309,24 @@
 }
 
 .model-card-icon .material-symbols-outlined {
-  font-size: 18px;
+  font-size: 16px;
   color: var(--color-secondary);
 }
 
 .model-card-description {
-  font-size: 15px;
+  font-size: 0.8125rem;
   color: var(--color-on-surface-variant);
   flex: 1;
   position: relative;
   z-index: 1;
+  line-height: 1.5;
 }
 
 .model-card-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-xs);
-  padding-top: var(--spacing-sm);
+  gap: 0.25rem;
+  padding-top: 0.5rem;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
   margin-top: auto;
   position: relative;
@@ -328,10 +334,10 @@
 }
 
 .model-tag {
-  font-size: 12px;
+  font-size: 0.6875rem;
   font-weight: 600;
-  letter-spacing: 0.05em;
-  padding: 4px 8px;
+  letter-spacing: 0.03em;
+  padding: 0.125rem 0.5rem;
   border-radius: var(--radius-full);
 }
 

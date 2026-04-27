@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AIX未来视野 - AI 模型成本计算器</title>
+  <title>AIX未来视野 - AI 模型成本引擎</title>
   <link rel="icon" href="assets/AIX.jpg" type="image/jpeg">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap">
@@ -21,19 +21,27 @@
         <a href="/" class="nav-link">排行榜</a>
         <a href="models.html" class="nav-link">模型库</a>
         <a href="calculator.html" class="nav-link active">成本计算</a>
-        <a href="#" class="nav-link">社区</a>
       </div>
     </div>
   </nav>
 
   <main class="calc-main">
-    <header class="calc-header">
-      <h1 class="page-title">AI 模型<span class="text-gradient">成本计算器</span></h1>
-      <p class="page-subtitle">配置您的使用场景，实时比较不同模型的成本效益。</p>
-    </header>
+    <div class="calc-header-bar">
+      <div class="calc-header-left">
+        <h1 class="page-title">AI 模型<span class="text-gradient">成本引擎</span></h1>
+        <p class="page-subtitle">配置您的使用场景，实时比较不同模型的成本效益。</p>
+      </div>
+      <div class="calc-header-right">
+        <div class="calc-switcher-track">
+          <div class="calc-switcher-thumb" id="switcherThumb"></div>
+          <a href="calculator.html" class="calc-switch-btn active">简单计算</a>
+          <a href="calculator-pro.html" class="calc-switch-btn">高级场景</a>
+        </div>
+      </div>
+    </div>
 
     <div class="calc-content">
-      <div class="calc-sidebar">
+        <div class="calc-sidebar">
         <div class="calc-config-panel">
           <h2 class="calc-panel-title">场景配置</h2>
           
