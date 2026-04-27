@@ -209,7 +209,7 @@
   }
 
   function matchSearch(model, query) {
-    var name = (model.model_name || '').toLowerCase();
+    var name = (model.model_id || '').toLowerCase();
     var provider = (model.provider || '').toLowerCase();
     var tags = (model.tags || []).join(' ').toLowerCase();
     return name.indexOf(query) !== -1 || provider.indexOf(query) !== -1 || tags.indexOf(query) !== -1;
@@ -255,7 +255,7 @@
       var m = filteredModels[i];
       html += '<div class="model-card" style="animation-delay:' + (i * 0.03) + 's">';
       html += '<div class="model-card-header">';
-      html += '<h2 class="model-card-title">' + escapeHtml(m.model_name) + '</h2>';
+      html += '<h2 class="model-card-title">' + escapeHtml(m.model_id) + '</h2>';
       html += '<div class="model-card-icon"><span class="material-symbols-outlined">' + getIconForModel(m) + '</span></div>';
       html += '</div>';
       html += '<p class="model-card-description">' + getModelDescription(m) + '</p>';

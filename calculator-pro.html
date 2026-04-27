@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIX未来视野 - AI 模型成本引擎</title>
+  <link rel="icon" href="assets/AIX.jpg" type="image/jpeg">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/calculator.css">
+  <link rel="stylesheet" href="css/calculator-pro.css">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="/" class="logo-link">
+        <img src="assets/AIX.jpg" alt="AIX Logo" class="logo-img">
+        AIX未来视野
+      </a>
+      <div class="nav-links">
+        <a href="/" class="nav-link">排行榜</a>
+        <a href="models.html" class="nav-link">模型库</a>
+        <a href="calculator.html" class="nav-link active">成本计算</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="calc-pro-container">
+    <div class="calc-pro-header-bar">
+      <div class="calc-pro-header-left">
+        <h1 class="page-title">AI 模型<span class="text-gradient">成本引擎</span></h1>
+        <p class="page-subtitle">配置您的使用场景，实时比较不同模型的成本效益。</p>
+      </div>
+      <div class="calc-pro-header-right">
+        <div class="calc-switcher-track">
+          <div class="calc-switcher-thumb" id="switcherThumb"></div>
+          <a href="calculator.html" class="calc-switch-btn" data-mode="simple">简单计算</a>
+          <a href="calculator-pro.html" class="calc-switch-btn active" data-mode="pro">高级场景</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="calc-pro-content">
+      <div class="calc-pro-sidebar">
+      <div class="calc-pro-sidebar-header">
+        <span class="calc-pro-sidebar-title">Local Scenarios</span>
+        <button class="calc-pro-new-btn" id="addScenarioBtn">
+          <span class="material-symbols-outlined">add</span>
+          New Scenario
+        </button>
+      </div>
+      <div class="calc-pro-scenarios" id="scenarioListItems"></div>
+    </div>
+
+    <div class="calc-pro-workspace">
+      <div class="calc-pro-workspace-header">
+        <div class="calc-pro-workspace-left">
+          <h1 class="calc-pro-workspace-title" id="scenarioName">Customer Support Bot</h1>
+          <button class="calc-pro-icon-btn" id="editScenarioNameBtn">
+            <span class="material-symbols-outlined">edit</span>
+          </button>
+        </div>
+        <div class="calc-pro-workspace-right">
+          <button class="calc-pro-action-btn" id="compareBtn">
+            <span class="material-symbols-outlined">compare_arrows</span>
+            Compare
+          </button>
+          <button class="calc-pro-action-btn" id="shareBtn">
+            <span class="material-symbols-outlined">share</span>
+            Share
+          </button>
+        </div>
+      </div>
+
+      <div class="calc-pro-table-wrapper">
+        <table class="calc-pro-table">
+          <thead>
+            <tr>
+              <th style="width: 40px;"></th>
+              <th>Task Type</th>
+              <th>Model</th>
+              <th style="text-align: right;">Input Tokens</th>
+              <th style="text-align: right;">Output Tokens</th>
+              <th style="text-align: right;">Daily Requests</th>
+              <th style="text-align: right;">Cache Hit %</th>
+              <th style="text-align: right;">Unit Cost</th>
+              <th style="text-align: right;">Daily Cost</th>
+            </tr>
+          </thead>
+          <tbody id="costTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="calc-pro-summary">
+      <div class="calc-pro-summary-header">Cost Projection</div>
+      
+      <div class="calc-pro-daily-total">
+        <div class="calc-pro-daily-label">Daily Total</div>
+        <div class="calc-pro-daily-value" id="totalDailyCost">$0.00</div>
+      </div>
+
+      <div class="calc-pro-monthly-yearly">
+        <div class="calc-pro-my-col">
+          <div class="calc-pro-my-label">Monthly</div>
+          <div class="calc-pro-my-value" id="totalMonthlyCost">$0.00</div>
+        </div>
+        <div class="calc-pro-my-col">
+          <div class="calc-pro-my-label">Yearly</div>
+          <div class="calc-pro-my-value" id="totalYearlyCost">$0.00</div>
+        </div>
+      </div>
+
+      <div class="calc-pro-breakdown-section">
+        <div class="calc-pro-breakdown-header">Breakdown</div>
+        <div class="calc-pro-breakdown-list" id="breakdownList"></div>
+      </div>
+
+      <div class="calc-pro-max-cost" id="maxCostDisplay">
+        <span class="calc-pro-max-label">最大成本Step</span>
+        <span class="calc-pro-max-value" id="maxCostStep">-</span>
+      </div>
+
+      <div class="calc-pro-insight" id="optimizationInsight">
+        <span class="material-symbols-outlined">lightbulb</span>
+        <div class="calc-pro-insight-content">
+          <div class="calc-pro-insight-title">Optimization Insight</div>
+          <div class="calc-pro-insight-text" id="insightText">添加步骤以获取优化建议</div>
+        </div>
+      </div>
+
+      <button class="calc-pro-export-btn" id="exportBtn">
+        <span class="material-symbols-outlined">download</span>
+        Export Report
+      </button>
+    </div>
+    </div>
+
+  <div class="calc-pro-modal-overlay" id="modelSelectorModal">
+    <div class="calc-pro-modal">
+      <div class="calc-pro-modal-header">
+        <span class="calc-pro-modal-title">Select Model</span>
+        <button class="calc-pro-modal-close" id="closeModalBtn">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="calc-pro-modal-search-wrap">
+        <span class="material-symbols-outlined calc-pro-search-icon">search</span>
+        <input type="text" class="calc-pro-modal-search" id="modelSearchInput" placeholder="Search model name, provider...">
+      </div>
+      <div class="calc-pro-modal-list" id="modelSelectorList"></div>
+    </div>
+  </div>
+
+  <script src="js/calculator-pro.js"></script>
+</body>
+</html>
