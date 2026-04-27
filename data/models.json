@@ -62,6 +62,20 @@
         },
         {
           "rank": 5,
+          "name": "DeepSeek-V4-Pro(max)",
+          "vendor": "深度求索",
+          "type": "开源",
+          "languages": "中文/英文",
+          "score": 70.98,
+          "math_reasoning": 87.39,
+          "hallucination_control": 80.68,
+          "science_reasoning": 79.27,
+          "instruction_following": 37.84,
+          "code_generation": 63.24,
+          "agent_planning": 77.49
+        },
+        {
+          "rank": 6,
           "name": "Gemini-3-Flash-Preview(high)",
           "vendor": "Google",
           "type": "闭源",
@@ -75,7 +89,21 @@
           "agent_planning": 63.65
         },
         {
-          "rank": 6,
+          "rank": 7,
+          "name": "DeepSeek-V4-Flash(max)",
+          "vendor": "深度求索",
+          "type": "开源",
+          "languages": "中文/英文",
+          "score": 68.82,
+          "math_reasoning": 89.08,
+          "hallucination_control": 75.67,
+          "science_reasoning": 79.01,
+          "instruction_following": 32.43,
+          "code_generation": 61.43,
+          "agent_planning": 75.28
+        },
+        {
+          "rank": 8,
           "name": "Grok-4.20-Beta-0309(Reasoning)",
           "vendor": "X.AI",
           "type": "闭源",
@@ -89,7 +117,7 @@
           "agent_planning": 67.35
         },
         {
-          "rank": 7,
+          "rank": 9,
           "name": "Kimi-K2.5-Thinking",
           "vendor": "月之暗面",
           "type": "开源",
@@ -103,7 +131,7 @@
           "agent_planning": 78.44
         },
         {
-          "rank": 8,
+          "rank": 10,
           "name": "Qwen3.5-397B-A17B-Thinking",
           "vendor": "阿里巴巴",
           "type": "开源",
@@ -117,7 +145,7 @@
           "agent_planning": 71.52
         },
         {
-          "rank": 9,
+          "rank": 11,
           "name": "GLM-5",
           "vendor": "智谱AI",
           "type": "开源",
@@ -131,7 +159,7 @@
           "agent_planning": 66.64
         },
         {
-          "rank": 10,
+          "rank": 12,
           "name": "DeepSeek-V3.2-Thinking",
           "vendor": "深度求索",
           "type": "开源",
@@ -145,7 +173,7 @@
           "agent_planning": 56.62
         },
         {
-          "rank": 11,
+          "rank": 13,
           "name": "MiMo-V2-Pro",
           "vendor": "小米集团",
           "type": "闭源",
@@ -159,7 +187,7 @@
           "agent_planning": 55.97
         },
         {
-          "rank": 12,
+          "rank": 14,
           "name": "Tencent HY 2.0 Think",
           "vendor": "腾讯",
           "type": "闭源",
@@ -173,7 +201,7 @@
           "agent_planning": 59.68
         },
         {
-          "rank": 13,
+          "rank": 15,
           "name": "Qwen3.5-122B-A10B-Thinking",
           "vendor": "阿里巴巴",
           "type": "开源",
@@ -187,7 +215,7 @@
           "agent_planning": 65.15
         },
         {
-          "rank": 14,
+          "rank": 16,
           "name": "LongCat-Flash-Thinking-2601",
           "vendor": "美团",
           "type": "开源",
@@ -201,7 +229,7 @@
           "agent_planning": 67.94
         },
         {
-          "rank": 15,
+          "rank": 17,
           "name": "gpt-oss-120b(high)",
           "vendor": "OpenAI",
           "type": "开源",
@@ -215,7 +243,7 @@
           "agent_planning": 61.12
         },
         {
-          "rank": 16,
+          "rank": 18,
           "name": "Step-3.5-Flash",
           "vendor": "阶跃星辰",
           "type": "开源",
@@ -229,7 +257,7 @@
           "agent_planning": 64.06
         },
         {
-          "rank": 17,
+          "rank": 19,
           "name": "MiniMax-M2.5",
           "vendor": "稀宇科技",
           "type": "开源",
@@ -243,7 +271,7 @@
           "agent_planning": 65.64
         },
         {
-          "rank": 18,
+          "rank": 20,
           "name": "MiniMax-M2.7",
           "vendor": "稀宇科技",
           "type": "开源",
@@ -257,7 +285,7 @@
           "agent_planning": 59.68
         },
         {
-          "rank": 19,
+          "rank": 21,
           "name": "Spark X2",
           "vendor": "科大讯飞",
           "type": "闭源",
@@ -271,7 +299,7 @@
           "agent_planning": 62.13
         },
         {
-          "rank": 20,
+          "rank": 22,
           "name": "MiMo-V2-Flash",
           "vendor": "小米集团",
           "type": "开源",
@@ -285,7 +313,7 @@
           "agent_planning": 56.37
         },
         {
-          "rank": 21,
+          "rank": 23,
           "name": "Mistral Large 3",
           "vendor": "Mistral AI",
           "type": "开源",
@@ -299,7 +327,7 @@
           "agent_planning": 44.51
         },
         {
-          "rank": 22,
+          "rank": 24,
           "name": "Llama-4-Maverick-17B-128E-Instruct",
           "vendor": "Meta",
           "type": "开源",
