@@ -2,26 +2,31 @@
   'use strict';
 
   var hostname = window.location.hostname;
+  var port = window.location.port;
 
   var PRODUCTION_HOSTS = ['www.aixfuture.top', 'aixfuture.top'];
   var UAT_HOSTS = ['aixfuture.vercel.app'];
   var DEV_HOSTS = ['localhost', '127.0.0.1'];
 
+  var DEV_API = 'https://aixfutureapi.vercel.app';
+  var UAT_API = 'https://aixfutureapi.vercel.app';
+  var PROD_API = 'https://www.aixfutrueapi.top';
+
   var env = 'production';
-  var apiBase = '';
+  var apiBase = PROD_API;
 
   if (DEV_HOSTS.indexOf(hostname) !== -1) {
     env = 'development';
-    apiBase = 'https://aixfutureapi.vercel.app';
+    apiBase = DEV_API;
   } else if (UAT_HOSTS.indexOf(hostname) !== -1) {
     env = 'uat';
-    apiBase = 'https://aixfutureapi.vercel.app';
+    apiBase = UAT_API;
   } else if (PRODUCTION_HOSTS.indexOf(hostname) !== -1) {
     env = 'production';
-    apiBase = '';
+    apiBase = PROD_API;
   } else {
     env = 'unknown';
-    apiBase = '';
+    apiBase = PROD_API;
     console.warn('[AIX][CONFIG] Unknown hostname: ' + hostname + ', falling back to production');
   }
 
@@ -30,5 +35,5 @@
     apiBase: apiBase
   };
 
-  console.log('[AIX][CONFIG] env=' + env + ', apiBase="' + apiBase + '", hostname=' + hostname);
+  console.log('[AIX][CONFIG] env=' + env + ', apiBase="' + apiBase + '", hostname=' + hostname + ', port=' + port);
 })();
