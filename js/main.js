@@ -76,7 +76,7 @@
   var currentPage = 1;
   var totalPages = 1;
   var totalItems = 0;
-  var PAGE_SIZE = 15;
+  var PAGE_SIZE = 10;
 
   var modelCardsEl, loadingEl, emptyEl, searchInput, clearBtn;
   var updateTimeEl, updateTextEl, boardListEl, tableHeaderEl;
