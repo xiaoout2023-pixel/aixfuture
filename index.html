@@ -34,26 +34,7 @@
       <aside class="sidebar">
         <div class="sidebar-card">
           <h3 class="sidebar-title">排行榜类型</h3>
-          <ul class="board-list" id="boardList">
-            <li class="board-item">
-              <button class="board-btn active" data-board="general">
-                <span class="material-symbols-outlined icon">auto_awesome</span>
-                <span class="label">通用排行榜</span>
-              </button>
-            </li>
-            <li class="board-item">
-              <button class="board-btn" data-board="reasoning">
-                <span class="material-symbols-outlined icon">code</span>
-                <span class="label">推理模型总排行榜</span>
-              </button>
-            </li>
-            <li class="board-item">
-              <button class="board-btn" data-board="open">
-                <span class="material-symbols-outlined icon">terminal</span>
-                <span class="label">开源排行榜</span>
-              </button>
-            </li>
-          </ul>
+          <ul class="board-list" id="boardList"></ul>
         </div>
       </aside>
 
@@ -66,6 +47,18 @@
               <span class="material-symbols-outlined">close</span>
             </button>
           </div>
+          <div class="filter-group">
+            <select id="opensourceSelect" class="filter-select">
+              <option value="">全部类型</option>
+              <option value="open">开源</option>
+              <option value="closed">闭源</option>
+            </select>
+            <select id="domesticSelect" class="filter-select">
+              <option value="">全部地区</option>
+              <option value="domestic">国内</option>
+              <option value="overseas">海外</option>
+            </select>
+          </div>
         </div>
 
         <div class="update-info">
@@ -75,20 +68,7 @@
           </div>
         </div>
 
-        <div class="table-header">
-          <div class="header-cell cell-rank">排名</div>
-          <div class="header-cell cell-name">模型名称</div>
-          <div class="header-cell cell-vendor">厂商</div>
-          <div class="header-cell cell-type">类型</div>
-          <div class="header-cell cell-languages">语言能力</div>
-          <div class="header-cell cell-score">总分</div>
-          <div class="header-cell cell-dim">数学推理</div>
-          <div class="header-cell cell-dim">幻觉控制</div>
-          <div class="header-cell cell-dim">科学推理</div>
-          <div class="header-cell cell-dim">指令遵循</div>
-          <div class="header-cell cell-dim">代码生成</div>
-          <div class="header-cell cell-dim">智能体</div>
-        </div>
+        <div class="table-header" id="tableHeader"></div>
 
         <div class="leaderboard-container" id="leaderboardContainer">
           <div id="loadingState" class="loading-state">
@@ -109,6 +89,7 @@
     <p>© 2026 AIX未来视野. 保留所有权利。</p>
   </footer>
 
+  <script src="js/config.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var API_BASE = 'https://www.aixfutrueapi.top/api';
+  var API_BASE = window.AIX_CONFIG.apiBase + '/api';
 
   var scenarios = [];
   var activeScenarioId = null;
@@ -96,22 +96,52 @@
 
   function fetchModels() {
     log('FETCH', 'Fetching models from API');
-    fetch(API_BASE + '/models?page_size=100')
-      .then(function (res) {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
-      })
-      .then(function (data) {
-        modelsData = (data.data || []).filter(function (m) {
+    fetchAllModels()
+      .then(function (allModels) {
+        modelsData = allModels.filter(function (m) {
           var p = m.pricing || {};
-          return p.input_price_per_1m_tokens || p.output_price_per_1m_tokens;
+          var inp = p.input_per_1m_tokens || p.input_price_per_1m_tokens || 0;
+          var out = p.output_per_1m_tokens || p.output_price_per_1m_tokens || 0;
+          return (inp > 0 || out > 0);
         });
         log('FETCH', 'Loaded ' + modelsData.length + ' models');
         if (activeScenarioId) renderActiveScenario();
+        var modal = document.getElementById('modelSelectorModal');
+        if (modal && modal.classList.contains('active')) {
+          renderModelSelector(document.getElementById('modelSearchInput').value.trim().toLowerCase());
+        }
       })
       .catch(function (err) {
         log('ERROR', 'Fetch models failed: ' + err.message);
       });
+  }
+
+  function fetchAllModels() {
+    var allModels = [];
+    var page = 1;
+    var pageSize = 100;
+
+    function fetchPage() {
+      var url = API_BASE + '/models?page=' + page + '&page_size=' + pageSize;
+      return fetch(url)
+        .then(function (res) {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.json();
+        })
+        .then(function (data) {
+          var items = data.data || [];
+          allModels = allModels.concat(items);
+          var totalPages = data.total_pages || Math.ceil((data.total || 0) / pageSize);
+          log('FETCH', 'Page ' + page + '/' + totalPages + ' loaded, items: ' + items.length);
+          if (page < totalPages) {
+            page++;
+            return fetchPage();
+          }
+          return allModels;
+        });
+    }
+
+    return fetchPage();
   }
 
   function loadExchangeRate() {
@@ -239,8 +269,8 @@
     var model = findModel(row.modelId);
     if (!model) return { unitCost: 0, dailyCost: 0, monthlyCost: 0 };
     var pricing = model.pricing || {};
-    var inputPrice = pricing.input_price_per_1m_tokens || 0;
-    var outputPrice = pricing.output_price_per_1m_tokens || 0;
+    var inputPrice = pricing.input_per_1m_tokens || pricing.input_price_per_1m_tokens || 0;
+    var outputPrice = pricing.output_per_1m_tokens || pricing.output_price_per_1m_tokens || 0;
     var unitCost = (row.inputTokens * inputPrice + row.outputTokens * outputPrice) / 1000000;
     var dailyCost = unitCost * row.dailyRequests * (1 - row.cacheRate / 100);
     return { unitCost: unitCost, dailyCost: dailyCost, monthlyCost: dailyCost * 30 };
@@ -271,6 +301,12 @@
   function renderModelSelector(searchQuery) {
     var container = document.getElementById('modelSelectorList');
     if (!container) return;
+
+    if (modelsData.length === 0) {
+      container.innerHTML = '<div style="padding:2rem;text-align:center;color:#737878;font-size:0.875rem;"><span class="material-symbols-outlined" style="font-size:24px;display:block;margin-bottom:8px;">hourglass_top</span>模型数据加载中...</div>';
+      return;
+    }
+
     var filtered = searchQuery ? modelsData.filter(function (m) {
       var n = (m.model_id || '').toLowerCase();
       var p = (m.provider || '').toLowerCase();
@@ -287,8 +323,8 @@
     for (var i = 0; i < filtered.length && i < 50; i++) {
       var m = filtered[i];
       var pricing = m.pricing || {};
-      var inputPrice = pricing.input_price_per_1m_tokens || 0;
-      var outputPrice = pricing.output_price_per_1m_tokens || 0;
+      var inputPrice = pricing.input_per_1m_tokens || pricing.input_price_per_1m_tokens || 0;
+      var outputPrice = pricing.output_per_1m_tokens || pricing.output_price_per_1m_tokens || 0;
       html += '<button class="calc-pro-model-option" data-model-id="' + escapeHtml(m.model_id) + '">';
       html += '<div class="calc-pro-model-option-avatar">' + escapeHtml((m.model_id || 'M').charAt(0).toUpperCase()) + '</div>';
       html += '<div class="calc-pro-model-option-info"><div class="calc-pro-model-option-name">' + escapeHtml(m.model_id) + '</div>';

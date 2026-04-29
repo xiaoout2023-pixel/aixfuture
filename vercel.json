@@ -15,6 +15,7 @@
     }
   ],
   "rewrites": [
+    { "source": "/api/:match*", "destination": "https://aixfutureapi.vercel.app/api/:match*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

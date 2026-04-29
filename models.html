@@ -119,6 +119,7 @@
         <div class="models-top-bar">
           <div class="models-header-text">
             <h2 class="models-subtitle">AI 模型库</h2>
+            <span class="result-count" id="resultCount"></span>
           </div>
           <div class="search-box models-search">
             <span class="material-symbols-outlined search-icon">search</span>
@@ -140,6 +141,8 @@
           </div>
           <div id="modelsGrid" class="models-grid" style="display:none;"></div>
         </div>
+
+        <div id="modelsPagination" class="pagination" style="display:none;"></div>
       </section>
     </div>
   </main>
@@ -148,6 +151,7 @@
     <p>© 2026 AIX未来视野. 保留所有权利。</p>
   </footer>
 
+  <script src="js/config.js"></script>
   <script src="js/models.js"></script>
 </body>
 </html>
