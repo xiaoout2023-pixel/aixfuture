@@ -14,12 +14,8 @@
     general_base: '基础模型',
     general_reasoning_task: '推理任务',
     general_opensource: '开源排行榜',
-    multimodal_t2v: '文生视频',
-    multimodal_i2v: '图生视频',
     multimodal_edit: '图像编辑',
-    multimodal_r2v: '参考生视频',
     multimodal_image: '文生图',
-    multimodal_tts: '语音合成',
     multimodal_image_1: '图像质量',
     multimodal_image_2: '图文一致性',
     multimodal_image_3: '汉字生成',
@@ -30,9 +26,9 @@
     multimodal_edit_3: '测评模型列表'
   };
 
+  var MODEL_LIST_CATEGORIES = ['multimodal_edit_3'];
+
   var CATEGORY_DISPLAY_NAMES = {
-    'SuperCLUE-Image 文生图': '文生图',
-    'SuperCLUE-Edit 图像编辑': '图像编辑',
     '总榜': '总榜'
   };
 
@@ -42,12 +38,8 @@
     general_base: 'foundation',
     general_reasoning_task: 'lightbulb',
     general_opensource: 'code',
-    multimodal_t2v: 'movie',
-    multimodal_i2v: 'video_call',
     multimodal_edit: 'edit',
-    multimodal_r2v: 'videocam',
     multimodal_image: 'image',
-    multimodal_tts: 'text_to_speech',
     multimodal_image_1: 'image',
     multimodal_image_2: 'image',
     multimodal_image_3: 'image',
@@ -55,7 +47,7 @@
     multimodal_image_5: 'image',
     multimodal_edit_1: 'edit',
     multimodal_edit_2: 'edit',
-    multimodal_edit_3: 'edit'
+    multimodal_edit_3: 'list'
   };
 
   var RANK_HEADER_NAMES = ['排名', 'rank'];
@@ -84,7 +76,6 @@
 
   var modelCardsEl, loadingEl, emptyEl, searchInput, clearBtn;
   var updateTimeEl, updateTextEl, boardListEl, tableHeaderEl;
-  var opensourceSelectEl, domesticSelectEl;
 
   function log(tag, message) {
     var timestamp = new Date().toISOString().substring(11, 23);
@@ -273,11 +264,8 @@
     updateTextEl = document.getElementById('updateText');
     boardListEl = document.getElementById('boardList');
     tableHeaderEl = document.getElementById('tableHeader');
-    opensourceSelectEl = document.getElementById('opensourceSelect');
-    domesticSelectEl = document.getElementById('domesticSelect');
 
     bindSearch();
-    bindFilterSelects();
     handleHashChange();
 
     fetchCategories()
@@ -375,12 +363,14 @@
         var shortName = getCategoryShortName(cat);
         var total = cat.total || 0;
         html += '<button class="sub-board-item" data-category="' + escapeHtml(cat.key) + '">';
-        html += '<span class="material-symbols-outlined icon">' + icon + '</span>';
-        html += '<span class="label">' + escapeHtml(shortName) + '</span>';
-        if (total === 0) {
-          html += '<span class="coming-soon">暂无数据</span>';
-        }
-        html += '</button>';
+      html += '<span class="material-symbols-outlined icon">' + icon + '</span>';
+      html += '<span class="label">' + escapeHtml(shortName) + '</span>';
+      if (total === 0) {
+        html += '<span class="coming-soon">暂无数据</span>';
+      } else if (MODEL_LIST_CATEGORIES.indexOf(cat.key) !== -1) {
+        html += '<span class="model-list-tag">列表</span>';
+      }
+      html += '</button>';
       }
       html += '</div>';
       html += '</li>';
@@ -459,8 +449,6 @@
 
   function resetFiltersQuiet() {
     isLoading = true;
-    if (opensourceSelectEl) opensourceSelectEl.value = '';
-    if (domesticSelectEl) domesticSelectEl.value = '';
     if (searchInput) { searchInput.value = ''; clearBtn.style.display = 'none'; }
     isLoading = false;
   }
@@ -472,10 +460,6 @@
     showLoading();
 
     var url = API_BASE + '/api/leaderboard/' + encodeURIComponent(categoryKey) + '?page_size=100';
-    var opensource = opensourceSelectEl ? opensourceSelectEl.value : '';
-    var domestic = domesticSelectEl ? domesticSelectEl.value : '';
-    if (opensource) url += '&opensource=' + encodeURIComponent(opensource);
-    if (domestic) url += '&domestic=' + encodeURIComponent(domestic);
 
     fetch(url)
       .then(function (res) {
@@ -718,21 +702,6 @@
       sortAndRender();
       searchInput.focus();
     });
-  }
-
-  function bindFilterSelects() {
-    if (opensourceSelectEl) {
-      opensourceSelectEl.addEventListener('change', function () {
-        if (isLoading) return;
-        loadCategory(currentCategory);
-      });
-    }
-    if (domesticSelectEl) {
-      domesticSelectEl.addEventListener('change', function () {
-        if (isLoading) return;
-        loadCategory(currentCategory);
-      });
-    }
   }
 
   if (document.readyState === 'loading') {
