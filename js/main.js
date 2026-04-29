@@ -73,9 +73,14 @@
   var sortDirection = 'asc';
   var expandedGroups = new Set(['general']);
   var isLoading = false;
+  var currentPage = 1;
+  var totalPages = 1;
+  var totalItems = 0;
+  var PAGE_SIZE = 15;
 
   var modelCardsEl, loadingEl, emptyEl, searchInput, clearBtn;
   var updateTimeEl, updateTextEl, boardListEl, tableHeaderEl;
+  var paginationEl;
 
   function log(tag, message) {
     var timestamp = new Date().toISOString().substring(11, 23);
@@ -264,6 +269,7 @@
     updateTextEl = document.getElementById('updateText');
     boardListEl = document.getElementById('boardList');
     tableHeaderEl = document.getElementById('tableHeader');
+    paginationEl = document.getElementById('leaderboardPagination');
 
     bindSearch();
     handleHashChange();
@@ -442,6 +448,7 @@
 
   function switchCategory(categoryKey, saveHash) {
     currentCategory = categoryKey;
+    currentPage = 1;
     if (saveHash) window.location.hash = categoryKey;
     resetFiltersQuiet();
     loadCategory(categoryKey);
@@ -459,7 +466,7 @@
     log('LOAD', 'Loading category: ' + categoryKey);
     showLoading();
 
-    var url = API_BASE + '/api/leaderboard/' + encodeURIComponent(categoryKey) + '?page_size=100';
+    var url = API_BASE + '/api/leaderboard/' + encodeURIComponent(categoryKey) + '?page=' + currentPage + '&page_size=' + PAGE_SIZE;
 
     fetch(url)
       .then(function (res) {
@@ -479,6 +486,9 @@
         var rows = data.rows || data.entries || [];
         currentData = rows;
         filteredModels = currentData.slice();
+        totalItems = data.total || rows.length;
+        totalPages = data.total_pages || Math.ceil(totalItems / PAGE_SIZE);
+        currentPage = data.page || currentPage;
         sortColumn = '';
         sortDirection = 'asc';
 
@@ -497,6 +507,7 @@
 
         renderTableHeader();
         sortAndRender();
+        renderPagination();
         updateSidebar();
         updateTimeDisplay();
 
@@ -609,6 +620,69 @@
       html += '</div>';
     }
     modelCardsEl.innerHTML = html;
+  }
+
+  function renderPagination() {
+    if (!paginationEl) return;
+    if (totalPages <= 1) {
+      paginationEl.style.display = 'none';
+      return;
+    }
+
+    paginationEl.style.display = '';
+
+    var html = '';
+    html += '<button class="page-btn page-prev" ' + (currentPage <= 1 ? 'disabled' : '') + ' data-page="' + (currentPage - 1) + '">';
+    html += '<span class="material-symbols-outlined">chevron_left</span>';
+    html += '</button>';
+
+    var pages = getPageNumbers(currentPage, totalPages);
+    for (var i = 0; i < pages.length; i++) {
+      if (pages[i] === '...') {
+        html += '<span class="page-ellipsis">...</span>';
+      } else {
+        var activeClass = pages[i] === currentPage ? ' page-active' : '';
+        html += '<button class="page-btn page-num' + activeClass + '" data-page="' + pages[i] + '">' + pages[i] + '</button>';
+      }
+    }
+
+    html += '<button class="page-btn page-next" ' + (currentPage >= totalPages ? 'disabled' : '') + ' data-page="' + (currentPage + 1) + '">';
+    html += '<span class="material-symbols-outlined">chevron_right</span>';
+    html += '</button>';
+
+    paginationEl.innerHTML = html;
+    bindPagination();
+  }
+
+  function getPageNumbers(current, total) {
+    if (total <= 7) {
+      var arr = [];
+      for (var i = 1; i <= total; i++) arr.push(i);
+      return arr;
+    }
+    var pages = [];
+    pages.push(1);
+    if (current > 3) pages.push('...');
+    var start = Math.max(2, current - 1);
+    var end = Math.min(total - 1, current + 1);
+    for (var j = start; j <= end; j++) pages.push(j);
+    if (current < total - 2) pages.push('...');
+    pages.push(total);
+    return pages;
+  }
+
+  function bindPagination() {
+    var btns = paginationEl.querySelectorAll('.page-btn[data-page]');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].addEventListener('click', function () {
+        if (this.disabled) return;
+        var page = parseInt(this.getAttribute('data-page'), 10);
+        if (isNaN(page) || page < 1 || page > totalPages || page === currentPage) return;
+        currentPage = page;
+        loadCategory(currentCategory);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
   }
 
   function updateTimeDisplay() {
