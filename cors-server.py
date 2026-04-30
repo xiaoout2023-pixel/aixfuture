@@ -7,9 +7,9 @@ import threading
 import urllib.request
 import urllib.error
 
-API_ORIGIN = os.environ.get('API_ORIGIN', 'https://www.aixfutrueapi.top')
-STATIC_PORT = int(os.environ.get('STATIC_PORT', 8080))
-API_PORT = int(os.environ.get('API_PORT', 8081))
+API_ORIGIN = os.environ.get('API_ORIGIN', 'https://aixfutureapi.vercel.app')
+STATIC_PORT = int(os.environ.get('STATIC_PORT', 8000))
+API_PORT = int(os.environ.get('API_PORT', 8001))
 
 
 class StaticHandler(SimpleHTTPRequestHandler):

@@ -32,7 +32,10 @@
 
   window.AIX_CONFIG = {
     env: env,
-    apiBase: apiBase
+    apiBase: apiBase,
+    isDev: env === 'development',
+    isUat: env === 'uat',
+    isProd: env === 'production'
   };
 
   console.log('[AIX][CONFIG] env=' + env + ', apiBase="' + apiBase + '", hostname=' + hostname + ', port=' + port);
