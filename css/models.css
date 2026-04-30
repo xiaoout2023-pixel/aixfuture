@@ -71,6 +71,100 @@
   color: var(--color-primary);
 }
 
+.provider-toggle-btn {
+  width: 100%;
+  padding: 6px 0;
+  margin-top: 4px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--color-primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: opacity 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.provider-toggle-btn:hover {
+  opacity: 0.8;
+}
+
+.toggle-icon-down,
+.toggle-icon-up {
+  font-size: 10px;
+  line-height: 1;
+}
+
+.provider-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.provider-total-text {
+  font-size: 12px;
+  color: var(--color-on-surface-variant);
+}
+
+.provider-summary .provider-toggle-btn {
+  width: auto;
+  margin-top: 0;
+  padding: 0;
+  font-size: 12px;
+}
+
+#providerFilters {
+  overflow-y: auto;
+  overflow-x: hidden;
+  transition: max-height 0.3s ease;
+}
+
+#providerFilters.provider-expanded {
+  max-height: 320px;
+}
+
+#providerFilters:not(.provider-expanded) {
+  max-height: none;
+  overflow-y: hidden;
+}
+
+#providerFilters::-webkit-scrollbar {
+  width: 4px;
+}
+
+#providerFilters::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#providerFilters::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+  transition: background 0.3s ease;
+}
+
+#providerFilters:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+#providerFilters::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 255, 163, 0.4);
+}
+
+#providerFilters {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+#providerFilters:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
+}
+
 .filter-checkbox {
   appearance: none;
   width: 16px;
@@ -349,6 +443,13 @@
 .model-tag.tag-secondary {
   background: var(--color-surface-container-high);
   color: var(--color-on-surface-variant);
+}
+
+.result-count {
+  font-size: 13px;
+  color: var(--color-on-surface-variant);
+  margin-top: 2px;
+  display: block;
 }
 
 /* Responsive */

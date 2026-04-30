@@ -1,16 +1,19 @@
 (function () {
   'use strict';
 
-  var API_BASE = 'https://www.aixfutrueapi.top/api';
+  var API_BASE = window.AIX_CONFIG.apiBase + '/api';
   var modelsData = [];
   var filteredModels = [];
+  var displayModels = [];
   var searchQuery = '';
   var selectedTaskType = 'text';
   var inputTokens = 4096;
   var outputTokens = 1024;
   var dailyRequests = 50000;
+  var currentPage = 1;
+  var PAGE_SIZE = 20;
 
-  var modelListEl, loadingEl, emptyEl, searchInput, clearBtn;
+  var modelListEl, loadingEl, emptyEl, searchInput, clearBtn, paginationEl;
   var inputSlider, outputSlider, dailySlider;
   var inputTokenValueEl, outputTokenValueEl, dailyRequestsValueEl;
   var totalCostEl, inputCostEl, outputCostEl, modelCountEl, tipTextEl;
@@ -67,6 +70,7 @@
     emptyEl = document.getElementById('calcEmpty');
     searchInput = document.getElementById('modelSearch');
     clearBtn = document.getElementById('clearSearch');
+    paginationEl = document.getElementById('calcPagination');
     inputSlider = document.getElementById('inputTokens');
     outputSlider = document.getElementById('outputTokens');
     dailySlider = document.getElementById('dailyRequests');
@@ -79,23 +83,6 @@
     modelCountEl = document.getElementById('modelCount');
     tipTextEl = document.getElementById('tipText');
 
-    var missingElements = [];
-    if (!modelListEl) missingElements.push('modelList');
-    if (!loadingEl) missingElements.push('calcLoading');
-    if (!emptyEl) missingElements.push('calcEmpty');
-    if (!searchInput) missingElements.push('modelSearch');
-    if (!inputSlider) missingElements.push('inputTokens');
-    if (!outputSlider) missingElements.push('outputTokens');
-    if (!dailySlider) missingElements.push('dailyRequests');
-    if (!totalCostEl) missingElements.push('totalCost');
-    if (!modelCountEl) missingElements.push('modelCount');
-
-    if (missingElements.length > 0) {
-      log('ERROR', 'Missing DOM elements: ' + missingElements.join(', '));
-      return;
-    }
-
-    log('INIT', 'All DOM elements found');
     bindSliders();
     bindSearch();
     bindTaskTypeChips();
@@ -108,7 +95,7 @@
     if (sortSelect) {
       sortSelect.addEventListener('change', function () {
         currentSortBy = this.value;
-        log('SORT', 'Sort by: ' + currentSortBy);
+        currentPage = 1;
         applyFilters();
       });
     }
@@ -119,32 +106,22 @@
     loadingEl.style.display = '';
     if (emptyEl) emptyEl.style.display = 'none';
 
-    fetch(API_BASE + '/models?page_size=100')
-      .then(function (res) {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
-      })
-      .then(function (data) {
-        var allModels = data.data || [];
+    fetchAllModels()
+      .then(function (allModels) {
         log('FETCH', 'Received ' + allModels.length + ' models');
 
         modelsData = allModels.filter(function(m) {
           var pricing = m.pricing || {};
-          return pricing.input_price_per_1m_tokens || pricing.output_price_per_1m_tokens;
+          var inp = pricing.input_per_1m_tokens || pricing.input_price_per_1m_tokens || 0;
+          var out = pricing.output_per_1m_tokens || pricing.output_price_per_1m_tokens || 0;
+          return (inp > 0 || out > 0);
         });
 
         log('FETCH', 'Models with pricing: ' + modelsData.length);
-
-        if (modelsData.length > 0) {
-          var sample = modelsData[0];
-          log('FETCH', 'Sample - id: ' + sample.model_id + ', pricing: ' + JSON.stringify(sample.pricing) + ', caps: ' + JSON.stringify(sample.capabilities));
-        }
-
         loadingEl.style.display = 'none';
         filteredModels = modelsData.slice();
         loadExchangeRate();
         applyFilters();
-        log('FETCH', 'Done');
       })
       .catch(function (err) {
         log('ERROR', 'Fetch failed: ' + err.message);
@@ -154,6 +131,33 @@
           emptyEl.querySelector('p').textContent = '数据加载失败: ' + err.message;
         }
       });
+  }
+
+  function fetchAllModels() {
+    var allModels = [];
+    var page = 1;
+    var pageSize = 100;
+
+    function fetchPage() {
+      var url = API_BASE + '/models?page=' + page + '&page_size=' + pageSize;
+      return fetch(url)
+        .then(function (res) {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.json();
+        })
+        .then(function (data) {
+          var items = data.data || [];
+          allModels = allModels.concat(items);
+          var totalPages = data.total_pages || Math.ceil((data.total || 0) / pageSize);
+          if (page < totalPages) {
+            page++;
+            return fetchPage();
+          }
+          return allModels;
+        });
+    }
+
+    return fetchPage();
   }
 
   function loadExchangeRate() {
@@ -203,6 +207,7 @@
       }
       timeout = setTimeout(function () {
         searchQuery = val.toLowerCase();
+        currentPage = 1;
         applyFilters();
       }, 200);
     });
@@ -212,6 +217,7 @@
         searchInput.value = '';
         searchQuery = '';
         clearBtn.classList.remove('visible');
+        currentPage = 1;
         applyFilters();
         searchInput.focus();
       });
@@ -227,7 +233,7 @@
         }
         this.classList.add('active');
         selectedTaskType = this.getAttribute('data-task');
-        log('TASK', 'Selected: ' + selectedTaskType);
+        currentPage = 1;
         applyFilters();
       });
     }
@@ -237,15 +243,37 @@
     filteredModels = modelsData.filter(function (model) {
       if (searchQuery && !matchSearch(model, searchQuery)) return false;
       var caps = model.capabilities || {};
-      if (selectedTaskType === 'text' && !caps.text_generation) return false;
-      if (selectedTaskType === 'code' && !caps.code_generation) return false;
-      if (selectedTaskType === 'vision' && !caps.vision && !caps.multimodal) return false;
+      var hasText = caps.text_generation === true || caps.text_generation == null;
+      var hasCode = caps.code_generation === true || caps.code_generation == null;
+      var hasVision = caps.vision === true || caps.multimodal === true;
+      if (selectedTaskType === 'text' && !hasText) return false;
+      if (selectedTaskType === 'code' && !hasCode) return false;
+      if (selectedTaskType === 'vision' && !hasVision) return false;
       return true;
     });
 
-    log('FILTER', filteredModels.length + '/' + modelsData.length);
+    sortFiltered();
     renderModels();
+    renderPagination();
     recalcAll();
+  }
+
+  function sortFiltered() {
+    displayModels = filteredModels.slice();
+
+    if (currentSortBy === 'cost') {
+      displayModels.sort(function(a, b) {
+        return calculateCost(a).total - calculateCost(b).total;
+      });
+    } else if (currentSortBy === 'score') {
+      displayModels.sort(function(a, b) {
+        return ((b.scores && b.scores.overall_score) || 0) - ((a.scores && a.scores.overall_score) || 0);
+      });
+    } else if (currentSortBy === 'name') {
+      displayModels.sort(function(a, b) {
+        return (a.model_id || '').localeCompare(b.model_id || '');
+      });
+    }
   }
 
   function matchSearch(model, query) {
@@ -257,8 +285,8 @@
 
   function calculateCost(model) {
     var pricing = model.pricing || {};
-    var inputPrice = pricing.input_price_per_1m_tokens || 0;
-    var outputPrice = pricing.output_price_per_1m_tokens || 0;
+    var inputPrice = pricing.input_per_1m_tokens || pricing.input_price_per_1m_tokens || 0;
+    var outputPrice = pricing.output_per_1m_tokens || pricing.output_price_per_1m_tokens || 0;
 
     var monthlyInputCost = (inputTokens * dailyRequests / 1000000) * inputPrice * 30;
     var monthlyOutputCost = (outputTokens * dailyRequests / 1000000) * outputPrice * 30;
@@ -281,13 +309,11 @@
 
     var cheapestModel = null;
     var cheapestCost = Infinity;
-    var costCache = {};
     var selectedModel = null;
 
     for (var i = 0; i < filteredModels.length; i++) {
       var m = filteredModels[i];
       var cost = calculateCost(m);
-      costCache[i] = cost;
       if (cost.total < cheapestCost) {
         cheapestCost = cost.total;
         cheapestModel = m;
@@ -306,7 +332,6 @@
     if (modelCountEl) modelCountEl.textContent = filteredModels.length;
 
     updateOptimizationTip();
-    updateModelCosts(costCache);
   }
 
   function updateOptimizationTip() {
@@ -323,19 +348,8 @@
     }
   }
 
-  function updateModelCosts(costCache) {
-    var cards = modelListEl.querySelectorAll('.calc-model-card');
-    for (var i = 0; i < cards.length; i++) {
-      var costEl = cards[i].querySelector('.calc-model-cost');
-      if (costEl && costCache[i] != null) {
-        var cost = costCache[i];
-        costEl.textContent = '$' + formatNumber(Math.round(cost.total));
-      }
-    }
-  }
-
   function renderModels() {
-    if (filteredModels.length === 0) {
+    if (displayModels.length === 0) {
       if (emptyEl) emptyEl.style.display = '';
       if (emptyEl) emptyEl.querySelector('p').textContent = searchQuery ? '未找到匹配的模型' : '当前任务类型没有可用模型';
       return;
@@ -343,38 +357,28 @@
 
     if (emptyEl) emptyEl.style.display = 'none';
 
+    var totalPages = Math.ceil(displayModels.length / PAGE_SIZE);
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+
+    var start = (currentPage - 1) * PAGE_SIZE;
+    var end = Math.min(start + PAGE_SIZE, displayModels.length);
+    var pageModels = displayModels.slice(start, end);
+
     var cheapestModel = null;
     var cheapestCost = Infinity;
-    var costCache = {};
-    var displayModels = filteredModels.slice();
-
-    if (currentSortBy === 'cost') {
-      displayModels.sort(function(a, b) {
-        return calculateCost(a).total - calculateCost(b).total;
-      });
-    } else if (currentSortBy === 'score') {
-      displayModels.sort(function(a, b) {
-        return ((b.scores && b.scores.overall_score) || 0) - ((a.scores && a.scores.overall_score) || 0);
-      });
-    } else if (currentSortBy === 'name') {
-      displayModels.sort(function(a, b) {
-        return (a.model_id || '').localeCompare(b.model_id || '');
-      });
-    }
-
-    for (var i = 0; i < displayModels.length; i++) {
-      var cost = calculateCost(displayModels[i]);
-      costCache[i] = cost;
-      if (cost.total < cheapestCost) {
-        cheapestCost = cost.total;
-        cheapestModel = displayModels[i];
+    for (var c = 0; c < displayModels.length; c++) {
+      var cc = calculateCost(displayModels[c]);
+      if (cc.total < cheapestCost) {
+        cheapestCost = cc.total;
+        cheapestModel = displayModels[c];
       }
     }
 
     var html = '';
-    for (var i = 0; i < displayModels.length; i++) {
-      var m = displayModels[i];
-      var cost = costCache[i];
+    for (var i = 0; i < pageModels.length; i++) {
+      var m = pageModels[i];
+      var cost = calculateCost(m);
       var isCheapest = (m === cheapestModel);
       var providerName = getProviderName(m.provider);
       var initialLetter = (m.model_id || 'M').charAt(0).toUpperCase();
@@ -438,7 +442,7 @@
       html += '</div>';
 
       html += '<div class="calc-model-action">';
-      html += '<button class="calc-btn calc-btn-secondary">选择</button>';
+      html += '<button class="calc-btn calc-btn-secondary" data-model-id="' + escapeHtml(m.model_id) + '">选择</button>';
       html += '</div>';
 
       html += '</div>';
@@ -448,51 +452,114 @@
 
     var buttons = modelListEl.querySelectorAll('.calc-btn');
     for (var j = 0; j < buttons.length; j++) {
-      var btnModelId = displayModels[j] ? displayModels[j].model_id : null;
+      var btnModelId = buttons[j].getAttribute('data-model-id');
       var isSelected = selectedModelId === btnModelId;
-      
+
       if (isSelected) {
-        var card = modelListEl.querySelectorAll('.calc-model-card')[j];
-        var btn = buttons[j];
+        var card = buttons[j].closest('.calc-model-card');
         if (card) card.classList.add('selected');
-        if (btn) {
-          btn.setAttribute('data-selected', 'true');
-          btn.textContent = '已选择';
-          btn.className = 'calc-btn calc-btn-primary';
-        }
+        buttons[j].setAttribute('data-selected', 'true');
+        buttons[j].textContent = '已选择';
+        buttons[j].className = 'calc-btn calc-btn-primary';
       }
-      
-      buttons[j].addEventListener('click', (function(cardIndex) {
-        return function () {
-          var btn = this;
-          var isSelected = btn.getAttribute('data-selected') === 'true';
-          
-          var cards = modelListEl.querySelectorAll('.calc-model-card');
-          for (var k = 0; k < cards.length; k++) {
-            cards[k].classList.remove('selected');
-            var b = cards[k].querySelector('.calc-btn');
-            if (b) {
-              b.setAttribute('data-selected', 'false');
-              b.textContent = '选择';
-              b.className = 'calc-btn calc-btn-secondary';
-            }
+
+      buttons[j].addEventListener('click', function () {
+        var clickedModelId = this.getAttribute('data-model-id');
+        var isCurrentlySelected = this.getAttribute('data-selected') === 'true';
+
+        var cards = modelListEl.querySelectorAll('.calc-model-card');
+        for (var k = 0; k < cards.length; k++) {
+          cards[k].classList.remove('selected');
+          var b = cards[k].querySelector('.calc-btn');
+          if (b) {
+            b.setAttribute('data-selected', 'false');
+            b.textContent = '选择';
+            b.className = 'calc-btn calc-btn-secondary';
           }
-          
-          if (!isSelected && displayModels[cardIndex]) {
-            selectedModelId = displayModels[cardIndex].model_id;
-            cards[cardIndex].classList.add('selected');
-            btn.setAttribute('data-selected', 'true');
-            btn.textContent = '已选择';
-            btn.className = 'calc-btn calc-btn-primary';
-            recalcAll();
-            log('SELECT', '选择: ' + displayModels[cardIndex].model_name);
-          } else {
-            selectedModelId = null;
-            recalcAll();
-            log('SELECT', '取消选择');
-          }
-        };
-      })(j));
+        }
+
+        if (!isCurrentlySelected) {
+          selectedModelId = clickedModelId;
+          var clickedCard = this.closest('.calc-model-card');
+          if (clickedCard) clickedCard.classList.add('selected');
+          this.setAttribute('data-selected', 'true');
+          this.textContent = '已选择';
+          this.className = 'calc-btn calc-btn-primary';
+          recalcAll();
+        } else {
+          selectedModelId = null;
+          recalcAll();
+        }
+      });
+    }
+  }
+
+  function renderPagination() {
+    if (!paginationEl) return;
+
+    var totalPages = Math.ceil(displayModels.length / PAGE_SIZE);
+    if (totalPages <= 1) {
+      paginationEl.style.display = 'none';
+      return;
+    }
+
+    paginationEl.style.display = '';
+
+    var html = '';
+
+    html += '<button class="page-btn page-prev" ' + (currentPage <= 1 ? 'disabled' : '') + ' data-page="' + (currentPage - 1) + '">';
+    html += '<span class="material-symbols-outlined">chevron_left</span>';
+    html += '</button>';
+
+    var pages = getPageNumbers(currentPage, totalPages);
+    for (var i = 0; i < pages.length; i++) {
+      if (pages[i] === '...') {
+        html += '<span class="page-ellipsis">...</span>';
+      } else {
+        var activeClass = pages[i] === currentPage ? ' page-active' : '';
+        html += '<button class="page-btn page-num' + activeClass + '" data-page="' + pages[i] + '">' + pages[i] + '</button>';
+      }
+    }
+
+    html += '<button class="page-btn page-next" ' + (currentPage >= totalPages ? 'disabled' : '') + ' data-page="' + (currentPage + 1) + '">';
+    html += '<span class="material-symbols-outlined">chevron_right</span>';
+    html += '</button>';
+
+    paginationEl.innerHTML = html;
+    bindPagination();
+  }
+
+  function getPageNumbers(current, total) {
+    if (total <= 7) {
+      var arr = [];
+      for (var i = 1; i <= total; i++) arr.push(i);
+      return arr;
+    }
+    var pages = [];
+    pages.push(1);
+    if (current > 3) pages.push('...');
+    var start = Math.max(2, current - 1);
+    var end = Math.min(total - 1, current + 1);
+    for (var j = start; j <= end; j++) pages.push(j);
+    if (current < total - 2) pages.push('...');
+    pages.push(total);
+    return pages;
+  }
+
+  function bindPagination() {
+    var btns = paginationEl.querySelectorAll('.page-btn[data-page]');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].addEventListener('click', function () {
+        if (this.disabled) return;
+        var page = parseInt(this.getAttribute('data-page'), 10);
+        if (isNaN(page) || page < 1) return;
+        var totalPages = Math.ceil(displayModels.length / PAGE_SIZE);
+        if (page > totalPages) return;
+        currentPage = page;
+        renderModels();
+        renderPagination();
+        modelListEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
     }
   }
 
@@ -505,7 +572,6 @@
   function initSwitcherThumb() {
     var thumb = document.getElementById('switcherThumb');
     if (!thumb) return;
-    
     var activeBtn = document.querySelector('.calc-switcher-track .calc-switch-btn.active');
     if (activeBtn) {
       var track = activeBtn.parentElement;

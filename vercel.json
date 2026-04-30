@@ -2,8 +2,6 @@
   "framework": null,
   "buildCommand": null,
   "outputDirectory": ".",
-  "devCommand": "npx serve",
-  "installCommand": null,
   "headers": [
     {
       "source": "/(.*)",
@@ -15,6 +13,6 @@
     }
   ],
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/((?!assets/|css/|js/|favicon).*)", "destination": "/index.html" }
   ]
 }
