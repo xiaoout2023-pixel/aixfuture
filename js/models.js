@@ -71,53 +71,37 @@
   }
 
   function buildApiUrl() {
-    var useSearch = searchQuery || selectedProviders.length > 1;
-    var url;
+    var url = API_BASE + '/models?page=' + currentPage + '&page_size=' + PAGE_SIZE;
 
-    if (useSearch) {
-      url = API_BASE + '/search?q=' + encodeURIComponent(searchQuery || '') + '&page=' + currentPage + '&page_size=' + PAGE_SIZE;
-
-      if (selectedProviders.length > 0) {
-        url += '&provider=' + encodeURIComponent(selectedProviders.join(','));
-      }
-
-      if (selectedType) {
-        var boolMap = {
-          '多模态': 'multimodal',
-          '视觉': 'vision',
-          '音频': 'audio'
-        };
-        var boolKey = boolMap[selectedType];
-        if (boolKey) {
-          url += '&' + boolKey + '=true';
-        }
-      }
-    } else {
-      url = API_BASE + '/models?page=' + currentPage + '&page_size=' + PAGE_SIZE;
-
-      if (selectedProviders.length === 1) {
-        url += '&provider=' + encodeURIComponent(selectedProviders[0]);
-      }
-
-      if (selectedType) {
-        var typeMap = {
-          '大语言模型': 'llm',
-          '多模态': 'multimodal',
-          '视觉': 'vision',
-          '音频': 'audio'
-        };
-        var apiType = typeMap[selectedType];
-        if (apiType) url += '&type=' + apiType;
-      }
-
-      if (selectedAccess !== 'all') {
-        var accessMap = { '开源': 'open', '闭源': 'closed' };
-        var apiAccess = accessMap[selectedAccess];
-        if (apiAccess) url += '&access=' + apiAccess;
-      }
+    if (searchQuery) {
+      url += '&q=' + encodeURIComponent(searchQuery);
     }
 
-    url += '&sort_by=overall_score&sort_order=desc';
+    if (selectedProviders.length === 1) {
+      url += '&provider=' + encodeURIComponent(selectedProviders[0]);
+    }
+
+    if (selectedType) {
+      var capMap = {
+        '大语言模型': 'text',
+        '多模态': 'vision',
+        '视觉': 'vision',
+        '音频': 'audio',
+        '代码': 'code',
+        '推理': 'reasoning',
+        '图像生成': 'image_gen'
+      };
+      var cap = capMap[selectedType];
+      if (cap) url += '&capability=' + cap;
+    }
+
+    if (selectedAccess !== 'all') {
+      var accessMap = { '开源': 'open_source', '闭源': 'closed' };
+      var apiAccess = accessMap[selectedAccess];
+      if (apiAccess) url += '&provider_type=' + apiAccess;
+    }
+
+    url += '&sort_by=aa_intelligence_index&sort_order=desc';
 
     return url;
   }
@@ -340,7 +324,7 @@
       var m = items[i];
       html += '<div class="model-card" style="animation-delay:' + (i * 0.03) + 's">';
       html += '<div class="model-card-header">';
-      html += '<h2 class="model-card-title">' + escapeHtml(m.model_id) + '</h2>';
+      html += '<h2 class="model-card-title">' + escapeHtml(m.model_name || m.model_id) + '</h2>';
       html += '<div class="model-card-icon"><span class="material-symbols-outlined">' + getIconForModel(m) + '</span></div>';
       html += '</div>';
       html += '<p class="model-card-description">' + getModelDescription(m) + '</p>';
@@ -430,27 +414,29 @@
 
   function getIconForModel(model) {
     var caps = model.capabilities || {};
-    if (caps.audio) return 'mic';
-    if (caps.multimodal) return 'view_in_ar';
-    if (caps.vision) return 'image';
+    if (caps.audio_gen) return 'mic';
+    if (caps.audio) return 'hearing';
+    if (caps.image_gen) return 'image';
+    if (caps.vision) return 'visibility';
+    if (caps.code) return 'code';
+    if (caps.reasoning) return 'psychology';
     return 'language';
   }
 
   function getModelDescription(model) {
-    var caps = model.capabilities || {};
-    var scores = model.scores || {};
     var parts = [];
 
     var providerName = formatProviderName(model.provider);
     parts.push(providerName + ' · ' + formatDate(model.release_date));
 
-    if (caps.context_length) {
-      var ctx = formatContextLength(caps.context_length);
+    if (model.context_length) {
+      var ctx = formatContextLength(model.context_length);
       parts.push(ctx + ' 上下文');
     }
 
-    if (scores.overall_score != null) {
-      parts.push('综合评分 ' + scores.overall_score);
+    var evalData = model.evaluation || {};
+    if (evalData.aa_intelligence_index != null) {
+      parts.push('综合评分 ' + evalData.aa_intelligence_index);
     }
 
     return parts.join(' | ');

@@ -466,7 +466,7 @@
     log('LOAD', 'Loading category: ' + categoryKey);
     showLoading();
 
-    var url = API_BASE + '/api/leaderboard/' + encodeURIComponent(categoryKey) + '?page=' + currentPage + '&page_size=' + PAGE_SIZE;
+    var url = API_BASE + '/api/leaderboard/superclue/' + encodeURIComponent(categoryKey) + '?page=' + currentPage + '&page_size=' + PAGE_SIZE;
 
     fetch(url)
       .then(function (res) {

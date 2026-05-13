@@ -243,9 +243,9 @@
     filteredModels = modelsData.filter(function (model) {
       if (searchQuery && !matchSearch(model, searchQuery)) return false;
       var caps = model.capabilities || {};
-      var hasText = caps.text_generation === true || caps.text_generation == null;
-      var hasCode = caps.code_generation === true || caps.code_generation == null;
-      var hasVision = caps.vision === true || caps.multimodal === true;
+      var hasText = caps.text === true;
+      var hasCode = caps.code === true;
+      var hasVision = caps.vision === true || caps.image_gen === true;
       if (selectedTaskType === 'text' && !hasText) return false;
       if (selectedTaskType === 'code' && !hasCode) return false;
       if (selectedTaskType === 'vision' && !hasVision) return false;
@@ -267,7 +267,7 @@
       });
     } else if (currentSortBy === 'score') {
       displayModels.sort(function(a, b) {
-        return ((b.scores && b.scores.overall_score) || 0) - ((a.scores && a.scores.overall_score) || 0);
+        return ((b.evaluation && b.evaluation.aa_intelligence_index) || 0) - ((a.evaluation && a.evaluation.aa_intelligence_index) || 0);
       });
     } else if (currentSortBy === 'name') {
       displayModels.sort(function(a, b) {
@@ -277,7 +277,7 @@
   }
 
   function matchSearch(model, query) {
-    var name = (model.model_id || '').toLowerCase();
+    var name = (model.model_name || model.model_id || '').toLowerCase();
     var provider = (model.provider || '').toLowerCase();
     var tags = (model.tags || []).join(' ').toLowerCase();
     return name.indexOf(query) !== -1 || provider.indexOf(query) !== -1 || tags.indexOf(query) !== -1;
@@ -383,24 +383,25 @@
       var providerName = getProviderName(m.provider);
       var initialLetter = (m.model_id || 'M').charAt(0).toUpperCase();
       var caps = m.capabilities || {};
-      var contextWindow = caps.context_length ? formatContextLength(caps.context_length) : '';
+      var contextWindow = m.context_length ? formatContextLength(m.context_length) : '';
       var features = [];
 
       if (caps.vision) features.push('Vision');
-      if (caps.multimodal) features.push('Multimodal');
+      if (caps.image_gen) features.push('ImageGen');
       if (caps.audio) features.push('Audio');
-      if (caps.tool_calling) features.push('Tool');
-      if (caps.context_length) features.push(contextWindow + ' Context');
-      if (caps.reasoning_level === 'high') features.push('Reasoning');
+      if (caps.tool_use) features.push('Tool');
+      if (m.context_length) features.push(contextWindow + ' Context');
+      if (caps.reasoning) features.push('Reasoning');
 
-      var hasScore = m.scores && m.scores.overall_score != null;
-      var score = hasScore ? Math.round(m.scores.overall_score) : null;
+      var evalData = m.evaluation || {};
+      var hasScore = evalData.aa_intelligence_index != null;
+      var score = hasScore ? Math.round(evalData.aa_intelligence_index) : null;
 
       html += '<div class="calc-model-card' + (isCheapest ? ' recommended' : '') + '">';
       html += '<div class="calc-model-info">';
       html += '<div class="calc-model-avatar">' + escapeHtml(initialLetter) + '</div>';
       html += '<div class="calc-model-meta">';
-      html += '<div class="calc-model-name">' + escapeHtml(m.model_id);
+      html += '<div class="calc-model-name">' + escapeHtml(m.model_name || m.model_id);
       if (isCheapest) {
         html += '<span class="calc-badge">RECOMMENDED</span>';
       }
