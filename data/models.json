@@ -216,6 +216,20 @@
         },
         {
           "rank": 16,
+          "name": "MiniMax-M3",
+          "vendor": "稀宇科技",
+          "type": "开源",
+          "languages": "中文/英文",
+          "score": 60.37,
+          "math_reasoning": 59.65,
+          "hallucination_control": 73.17,
+          "science_reasoning": 66.67,
+          "instruction_following": 20.95,
+          "code_generation": 65.84,
+          "agent_planning": 75.91
+        },
+        {
+          "rank": 17,
           "name": "Gemma-4-31B",
           "vendor": "Google",
           "type": "开源",
@@ -229,7 +243,7 @@
           "agent_planning": 56.87
         },
         {
-          "rank": 17,
+          "rank": 18,
           "name": "MiMo-V2.5-Pro",
           "vendor": "小米集团",
           "type": "开源",
@@ -243,7 +257,7 @@
           "agent_planning": 62.16
         },
         {
-          "rank": 18,
+          "rank": 19,
           "name": "Step-3.7-Flash",
           "vendor": "阶跃星辰",
           "type": "开源",
@@ -257,7 +271,7 @@
           "agent_planning": 67.24
         },
         {
-          "rank": 19,
+          "rank": 20,
           "name": "Grok-4.3",
           "vendor": "xAI",
           "type": "闭源",
@@ -271,7 +285,7 @@
           "agent_planning": 53.87
         },
         {
-          "rank": 20,
+          "rank": 21,
           "name": "Spark X2",
           "vendor": "科大讯飞",
           "type": "闭源",
@@ -285,7 +299,7 @@
           "agent_planning": 71.83
         },
         {
-          "rank": 21,
+          "rank": 22,
           "name": "Step-3.5-Flash",
           "vendor": "阶跃星辰",
           "type": "开源",
@@ -299,7 +313,7 @@
           "agent_planning": 64.99
         },
         {
-          "rank": 22,
+          "rank": 23,
           "name": "MiniMax-M2.7",
           "vendor": "稀宇科技",
           "type": "开源",
@@ -313,7 +327,7 @@
           "agent_planning": 60.06
         },
         {
-          "rank": 23,
+          "rank": 24,
           "name": "Hy3 preview(high)",
           "vendor": "腾讯",
           "type": "开源",
