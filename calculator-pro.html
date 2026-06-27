@@ -19,9 +19,36 @@
         AIX未来视野
       </a>
       <div class="nav-links">
-        <a href="/" class="nav-link">排行榜</a>
-        <a href="models.html" class="nav-link">模型库</a>
-        <a href="calculator.html" class="nav-link active">成本计算</a>
+        <div class="nav-dropdown">
+          <a href="/" class="nav-link nav-link-with-arrow active">
+            <span data-i18n="nav.zone_llm">大模型专区</span>
+            <span class="material-symbols-outlined nav-arrow">expand_more</span>
+          </a>
+          <div class="nav-dropdown-menu">
+            <a href="models.html" class="nav-dropdown-link">
+              <span class="material-symbols-outlined">inventory_2</span>
+              <span data-i18n="nav.models">模型库</span>
+            </a>
+            <a href="calculator.html" class="nav-dropdown-link">
+              <span class="material-symbols-outlined">calculate</span>
+              <span data-i18n="nav.calculator">成本计算</span>
+            </a>
+          </div>
+        </div>
+        <a href="embodied.html" class="nav-link" data-i18n="nav.embodied">具身智能专区</a>
+      </div>
+      <div class="nav-actions">
+        <div class="lang-switcher">
+          <button class="lang-current">
+            <span class="material-symbols-outlined">language</span>
+            <span class="lang-current-code">中</span>
+            <span class="material-symbols-outlined lang-arrow">expand_more</span>
+          </button>
+          <div class="lang-menu">
+            <a href="#" class="lang-option" data-lang="zh-CN">中文</a>
+            <a href="#" class="lang-option" data-lang="en">English</a>
+          </div>
+        </div>
       </div>
     </div>
   </nav>
@@ -29,14 +56,14 @@
   <div class="calc-pro-container">
     <div class="calc-pro-header-bar">
       <div class="calc-pro-header-left">
-        <h1 class="page-title">AI 模型<span class="text-gradient">成本引擎</span></h1>
-        <p class="page-subtitle">配置您的使用场景，实时比较不同模型的成本效益。</p>
+        <h1 class="page-title" data-i18n-html="calc.page_title_full">AI 模型<span class="text-gradient">成本引擎</span></h1>
+        <p class="page-subtitle" data-i18n="calc.page_subtitle">配置您的使用场景，实时比较不同模型的成本效益。</p>
       </div>
       <div class="calc-pro-header-right">
         <div class="calc-switcher-track">
           <div class="calc-switcher-thumb" id="switcherThumb"></div>
-          <a href="calculator.html" class="calc-switch-btn" data-mode="simple">简单计算</a>
-          <a href="calculator-pro.html" class="calc-switch-btn active" data-mode="pro">高级场景</a>
+          <a href="calculator.html" class="calc-switch-btn" data-mode="simple" data-i18n="calc.switch_simple">简单计算</a>
+          <a href="calculator-pro.html" class="calc-switch-btn active" data-mode="pro" data-i18n="calc.switch_pro">高级场景</a>
         </div>
       </div>
     </div>
@@ -44,10 +71,10 @@
     <div class="calc-pro-content">
       <div class="calc-pro-sidebar">
       <div class="calc-pro-sidebar-header">
-        <span class="calc-pro-sidebar-title">Local Scenarios</span>
+        <span class="calc-pro-sidebar-title" data-i18n="calc_pro.local_scenarios">Local Scenarios</span>
         <button class="calc-pro-new-btn" id="addScenarioBtn">
           <span class="material-symbols-outlined">add</span>
-          New Scenario
+          <span data-i18n="calc_pro.new_scenario">New Scenario</span>
         </button>
       </div>
       <div class="calc-pro-scenarios" id="scenarioListItems"></div>
@@ -64,11 +91,11 @@
         <div class="calc-pro-workspace-right">
           <button class="calc-pro-action-btn" id="compareBtn">
             <span class="material-symbols-outlined">compare_arrows</span>
-            Compare
+            <span data-i18n="calc_pro.compare">Compare</span>
           </button>
           <button class="calc-pro-action-btn" id="shareBtn">
             <span class="material-symbols-outlined">share</span>
-            Share
+            <span data-i18n="calc_pro.share">Share</span>
           </button>
         </div>
       </div>
@@ -78,14 +105,14 @@
           <thead>
             <tr>
               <th style="width: 40px;"></th>
-              <th>Task Type</th>
-              <th>Model</th>
-              <th style="text-align: right;">Input Tokens</th>
-              <th style="text-align: right;">Output Tokens</th>
-              <th style="text-align: right;">Daily Requests</th>
-              <th style="text-align: right;">Cache Hit %</th>
-              <th style="text-align: right;">Unit Cost</th>
-              <th style="text-align: right;">Daily Cost</th>
+              <th data-i18n="calc_pro.th_task">Task Type</th>
+              <th data-i18n="calc_pro.th_model">Model</th>
+              <th style="text-align: right;" data-i18n="calc_pro.th_input">Input Tokens</th>
+              <th style="text-align: right;" data-i18n="calc_pro.th_output">Output Tokens</th>
+              <th style="text-align: right;" data-i18n="calc_pro.th_daily">Daily Requests</th>
+              <th style="text-align: right;" data-i18n="calc_pro.th_cache">Cache Hit %</th>
+              <th style="text-align: right;" data-i18n="calc_pro.th_unit_cost">Unit Cost</th>
+              <th style="text-align: right;" data-i18n="calc_pro.th_daily_cost">Daily Cost</th>
             </tr>
           </thead>
           <tbody id="costTableBody"></tbody>
@@ -140,20 +167,21 @@
   <div class="calc-pro-modal-overlay" id="modelSelectorModal">
     <div class="calc-pro-modal">
       <div class="calc-pro-modal-header">
-        <span class="calc-pro-modal-title">Select Model</span>
+        <span class="calc-pro-modal-title" data-i18n="calc_pro.select_model">Select Model</span>
         <button class="calc-pro-modal-close" id="closeModalBtn">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
       <div class="calc-pro-modal-search-wrap">
         <span class="material-symbols-outlined calc-pro-search-icon">search</span>
-        <input type="text" class="calc-pro-modal-search" id="modelSearchInput" placeholder="Search model name, provider...">
+        <input type="text" class="calc-pro-modal-search" id="modelSearchInput" placeholder="Search model name, provider..." data-i18n-attr="placeholder:calc_pro.search_placeholder">
       </div>
       <div class="calc-pro-modal-list" id="modelSelectorList"></div>
     </div>
   </div>
 
   <script src="js/config.js"></script>
+  <script src="js/i18n.js"></script>
   <script src="js/calculator-pro.js"></script>
 </body>
 </html>

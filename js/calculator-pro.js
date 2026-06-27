@@ -308,7 +308,7 @@
     }
 
     var filtered = searchQuery ? modelsData.filter(function (m) {
-      var n = (m.model_id || '').toLowerCase();
+      var n = (m.model_name || m.model_id || '').toLowerCase();
       var p = (m.provider || '').toLowerCase();
       var t = (m.tags || []).join(' ').toLowerCase();
       return n.indexOf(searchQuery) !== -1 || p.indexOf(searchQuery) !== -1 || t.indexOf(searchQuery) !== -1;
@@ -327,7 +327,7 @@
       var outputPrice = pricing.output_per_1m_tokens || pricing.output_price_per_1m_tokens || 0;
       html += '<button class="calc-pro-model-option" data-model-id="' + escapeHtml(m.model_id) + '">';
       html += '<div class="calc-pro-model-option-avatar">' + escapeHtml((m.model_id || 'M').charAt(0).toUpperCase()) + '</div>';
-      html += '<div class="calc-pro-model-option-info"><div class="calc-pro-model-option-name">' + escapeHtml(m.model_id) + '</div>';
+      html += '<div class="calc-pro-model-option-info"><div class="calc-pro-model-option-name">' + escapeHtml(m.model_name || m.model_id) + '</div>';
       html += '<div style="font-size:0.7rem;color:#737878;">' + escapeHtml(getProviderName(m.provider)) + '</div></div>';
       html += '<div style="font-family:Space Grotesk,monospace;font-size:0.7rem;color:#737878;text-align:right;">$' + inputPrice.toFixed(2) + ' / $' + outputPrice.toFixed(2) + '</div>';
       html += '</button>';
@@ -413,7 +413,7 @@
     for (var i = 0; i < active.rows.length; i++) {
       var row = active.rows[i];
       var model = findModel(row.modelId);
-      var modelId = model ? model.model_id : 'Select Model';
+      var modelId = model ? (model.model_name || model.model_id) : 'Select Model';
       var hasModel = !!row.modelId;
       var taskIcon = getTaskTypeIcon(row.taskType);
 
@@ -576,7 +576,7 @@
       var cost = totalCost.rowCosts[i];
       var model = findModel(row.modelId);
       report += '\nStep ' + (i + 1) + ': ' + (row.taskType || 'Unnamed') + '\n';
-      report += '  Model: ' + (model ? model.model_id : 'Not selected') + '\n';
+      report += '  Model: ' + (model ? (model.model_name || model.model_id) : 'Not selected') + '\n';
       report += '  Input: ' + formatNumber(row.inputTokens) + ' | Output: ' + formatNumber(row.outputTokens) + '\n';
       report += '  Daily Requests: ' + formatNumber(row.dailyRequests) + ' | Cache: ' + row.cacheRate + '%\n';
       report += '  Unit Cost: ' + formatCost(cost.unitCost) + ' | Daily: ' + formatCost(cost.dailyCost) + '\n';

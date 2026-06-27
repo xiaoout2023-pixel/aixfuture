@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AIX未来视野 - 大模型专区</title>
+  <title>AIX未来视野 - 具身智能专区</title>
   <link rel="icon" href="assets/AIX.jpg" type="image/jpeg">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap">
@@ -18,7 +18,7 @@
       </a>
       <div class="nav-links">
         <div class="nav-dropdown">
-          <a href="/" class="nav-link nav-link-with-arrow active">
+          <a href="/" class="nav-link nav-link-with-arrow">
             <span data-i18n="nav.zone_llm">大模型专区</span>
             <span class="material-symbols-outlined nav-arrow">expand_more</span>
           </a>
@@ -33,7 +33,7 @@
             </a>
           </div>
         </div>
-        <a href="embodied.html" class="nav-link" data-i18n="nav.embodied">具身智能专区</a>
+        <a href="embodied.html" class="nav-link active" data-i18n="nav.embodied">具身智能专区</a>
       </div>
       <div class="nav-actions">
         <div class="lang-switcher">
@@ -53,48 +53,44 @@
 
   <main class="main-content zone-main">
     <header class="zone-hero">
-      <div class="zone-hero-tag">
-        <span class="material-symbols-outlined">auto_awesome</span>
-        <span data-i18n="index.hero_tag">大模型专区</span>
+      <div class="zone-hero-tag zone-hero-tag-orange">
+        <span class="material-symbols-outlined">precision_manufacturing</span>
+        <span data-i18n="embodied.hero_tag">具身智能专区</span>
       </div>
-      <h1 class="zone-hero-title" data-i18n-html="index.hero_title_full">探索 <span class="text-gradient">大模型</span> 的无限可能</h1>
-      <p class="zone-hero-subtitle" data-i18n="index.hero_subtitle">聚合全球顶尖 AI 大模型，从模型库筛选到成本测算，一站式解决你的模型选型问题。</p>
+      <h1 class="zone-hero-title" data-i18n-html="embodied.hero_title_full"><span class="text-gradient">具身智能</span> · 让 AI 拥有身体</h1>
+      <p class="zone-hero-subtitle" data-i18n="embodied.hero_subtitle">聚合机器人、感知、控制、世界模型等具身智能相关资源，敬请期待更精彩的内容。</p>
     </header>
 
-    <section class="zone-cards">
-      <a href="models.html" class="zone-card">
-        <div class="zone-card-icon zone-card-icon-blue">
-          <span class="material-symbols-outlined">inventory_2</span>
+    <section class="zone-placeholder">
+      <div class="placeholder-icon">
+        <span class="material-symbols-outlined">rocket_launch</span>
+      </div>
+      <h2 class="placeholder-title" data-i18n="embodied.placeholder_title">内容筹备中</h2>
+      <p class="placeholder-desc" data-i18n="embodied.placeholder_desc">我们正在精心整理具身智能相关的数据采集、产品资料和分析内容，敬请期待。</p>
+      <div class="placeholder-features">
+        <div class="placeholder-feature-item">
+          <span class="material-symbols-outlined">sensors</span>
+          <span data-i18n="embodied.feature_sensors">感知与控制</span>
         </div>
-        <div class="zone-card-body">
-          <h2 class="zone-card-title" data-i18n="index.card_models_title">模型库</h2>
-          <p class="zone-card-desc" data-i18n="index.card_models_desc">浏览、筛选、对比全球主流大模型，了解能力评分、上下文长度、定价等关键信息。</p>
+        <div class="placeholder-feature-item">
+          <span class="material-symbols-outlined">smart_toy</span>
+          <span data-i18n="embodied.feature_robot">机器人产品</span>
         </div>
-        <div class="zone-card-footer">
-          <span class="zone-card-action" data-i18n="index.card_models_action">进入模型库</span>
-          <span class="material-symbols-outlined">arrow_forward</span>
+        <div class="placeholder-feature-item">
+          <span class="material-symbols-outlined">public</span>
+          <span data-i18n="embodied.feature_world">世界模型</span>
         </div>
-      </a>
-
-      <a href="calculator.html" class="zone-card">
-        <div class="zone-card-icon zone-card-icon-green">
-          <span class="material-symbols-outlined">calculate</span>
+        <div class="placeholder-feature-item">
+          <span class="material-symbols-outlined">memory</span>
+          <span data-i18n="embodied.feature_data">数据采集</span>
         </div>
-        <div class="zone-card-body">
-          <h2 class="zone-card-title" data-i18n="index.card_calc_title">成本计算</h2>
-          <p class="zone-card-desc" data-i18n="index.card_calc_desc">输入调用量与 Token 数，一键估算多模型调用成本，辅助你做出最具性价比的选择。</p>
-        </div>
-        <div class="zone-card-footer">
-          <span class="zone-card-action" data-i18n="index.card_calc_action">开始计算</span>
-          <span class="material-symbols-outlined">arrow_forward</span>
-        </div>
-      </a>
+      </div>
     </section>
   </main>
 
   <footer class="page-footer">
     <div class="footer-inner">
-      <p data-i18n="site.footer_llm">© 2026 AIX未来视野 · 大模型专区</p>
+      <p data-i18n="site.footer_embodied">© 2026 AIX未来视野 · 具身智能专区</p>
     </div>
   </footer>
   <script src="js/i18n.js"></script>

@@ -18,17 +18,44 @@
         AIX未来视野
       </a>
       <div class="nav-links">
-        <a href="/" class="nav-link">排行榜</a>
-        <a href="models.html" class="nav-link active">模型库</a>
-        <a href="calculator.html" class="nav-link">成本计算</a>
+        <div class="nav-dropdown">
+          <a href="/" class="nav-link nav-link-with-arrow active">
+            <span data-i18n="nav.zone_llm">大模型专区</span>
+            <span class="material-symbols-outlined nav-arrow">expand_more</span>
+          </a>
+          <div class="nav-dropdown-menu">
+            <a href="models.html" class="nav-dropdown-link">
+              <span class="material-symbols-outlined">inventory_2</span>
+              <span data-i18n="nav.models">模型库</span>
+            </a>
+            <a href="calculator.html" class="nav-dropdown-link">
+              <span class="material-symbols-outlined">calculate</span>
+              <span data-i18n="nav.calculator">成本计算</span>
+            </a>
+          </div>
+        </div>
+        <a href="embodied.html" class="nav-link" data-i18n="nav.embodied">具身智能专区</a>
+      </div>
+      <div class="nav-actions">
+        <div class="lang-switcher">
+          <button class="lang-current">
+            <span class="material-symbols-outlined">language</span>
+            <span class="lang-current-code">中</span>
+            <span class="material-symbols-outlined lang-arrow">expand_more</span>
+          </button>
+          <div class="lang-menu">
+            <a href="#" class="lang-option" data-lang="zh-CN">中文</a>
+            <a href="#" class="lang-option" data-lang="en">English</a>
+          </div>
+        </div>
       </div>
     </div>
   </nav>
 
   <main class="main-content models-main">
     <header class="page-header models-header">
-      <h1 class="page-title">AI <span class="text-gradient">模型库</span></h1>
-      <p class="page-subtitle">探索、比较和集成全球顶尖的人工智能模型。</p>
+      <h1 class="page-title" data-i18n-html="models.page_title_full">AI <span class="text-gradient">模型库</span></h1>
+      <p class="page-subtitle" data-i18n="models.page_subtitle">探索、比较和集成全球顶尖的人工智能模型。</p>
     </header>
 
     <div class="content-layout">
@@ -36,11 +63,11 @@
         <div class="sidebar-card">
           <h3 class="sidebar-title">
             <span class="material-symbols-outlined sidebar-icon">filter_list</span>
-            筛选条件
+            <span data-i18n="models.sidebar_title">筛选条件</span>
           </h3>
 
           <div class="filter-section">
-            <h4 class="filter-label">供应商</h4>
+            <h4 class="filter-label" data-i18n="models.filter_provider">供应商</h4>
             <div class="checkbox-list" id="providerFilters">
               <label class="checkbox-item">
                 <input type="checkbox" value="OpenAI" class="filter-checkbox">
@@ -86,29 +113,29 @@
           </div>
 
           <div class="filter-section">
-            <h4 class="filter-label">模型类型</h4>
+            <h4 class="filter-label" data-i18n="models.filter_type">模型类型</h4>
             <div class="tag-filters" id="typeFilters">
-              <button class="tag-btn" data-type="大语言模型">大语言模型</button>
-              <button class="tag-btn" data-type="多模态">多模态</button>
-              <button class="tag-btn" data-type="视觉">视觉</button>
-              <button class="tag-btn" data-type="音频">音频</button>
+              <button class="tag-btn" data-type="大语言模型" data-i18n="models.type_llm">大语言模型</button>
+              <button class="tag-btn" data-type="多模态" data-i18n="models.type_multimodal">多模态</button>
+              <button class="tag-btn" data-type="视觉" data-i18n="models.type_vision">视觉</button>
+              <button class="tag-btn" data-type="音频" data-i18n="models.type_audio">音频</button>
             </div>
           </div>
 
           <div class="filter-section">
-            <h4 class="filter-label">访问权限</h4>
+            <h4 class="filter-label" data-i18n="models.filter_access">访问权限</h4>
             <div class="radio-list">
               <label class="radio-item">
                 <input type="radio" name="access" value="all" checked class="filter-radio">
-                <span class="radio-label">全部</span>
+                <span class="radio-label" data-i18n="models.access_all">全部</span>
               </label>
               <label class="radio-item">
                 <input type="radio" name="access" value="开源" class="filter-radio">
-                <span class="radio-label">开源模型</span>
+                <span class="radio-label" data-i18n="models.access_open">开源模型</span>
               </label>
               <label class="radio-item">
                 <input type="radio" name="access" value="闭源" class="filter-radio">
-                <span class="radio-label">闭源/API</span>
+                <span class="radio-label" data-i18n="models.access_closed">闭源/API</span>
               </label>
             </div>
           </div>
@@ -118,12 +145,12 @@
       <section class="leaderboard-section models-section">
         <div class="models-top-bar">
           <div class="models-header-text">
-            <h2 class="models-subtitle">AI 模型库</h2>
+            <h2 class="models-subtitle" data-i18n="models.subtitle">AI 模型库</h2>
             <span class="result-count" id="resultCount"></span>
           </div>
           <div class="search-box models-search">
             <span class="material-symbols-outlined search-icon">search</span>
-            <input type="text" id="modelSearchInput" class="search-input" placeholder="搜索模型名称、供应商或标签...">
+            <input type="text" id="modelSearchInput" class="search-input" placeholder="搜索模型名称、供应商或标签..." data-i18n-attr="placeholder:models.search_placeholder">
             <button id="clearModelSearch" class="clear-btn" style="display:none;" aria-label="清除搜索">
               <span class="material-symbols-outlined">close</span>
             </button>
@@ -133,11 +160,11 @@
         <div class="models-grid-container">
           <div id="modelsLoading" class="loading-state">
             <div class="loading-spinner"></div>
-            <p>加载数据中...</p>
+            <p data-i18n="models.loading">加载数据中...</p>
           </div>
           <div id="modelsEmpty" class="empty-state" style="display:none;">
             <span class="material-symbols-outlined empty-icon">search_off</span>
-            <p>未找到匹配的模型</p>
+            <p data-i18n="models.empty">未找到匹配的模型</p>
           </div>
           <div id="modelsGrid" class="models-grid" style="display:none;"></div>
         </div>
@@ -148,10 +175,11 @@
   </main>
 
   <footer class="footer">
-    <p>© 2026 AIX未来视野. 保留所有权利。</p>
+    <p data-i18n="site.footer_rights">© 2026 AIX未来视野. 保留所有权利。</p>
   </footer>
 
   <script src="js/config.js"></script>
+  <script src="js/i18n.js"></script>
   <script src="js/models.js"></script>
 </body>
 </html>
