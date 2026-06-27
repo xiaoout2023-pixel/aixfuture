@@ -1110,6 +1110,16 @@ body::selection {
 /* ========================================
    语言切换器
    ======================================== */
+/* 防止英文模式下出现中文闪烁(FOUC)
+   - 在 <head> 内联 bootstrap 脚本提前检测语言
+   - 英文模式给 <html> 加 .i18n-pending 类
+   - 翻译应用完成后由 i18n.js 移除该类 */
+html.i18n-pending [data-i18n],
+html.i18n-pending [data-i18n-html],
+html.i18n-pending [data-i18n-attr] {
+  visibility: hidden;
+}
+
 .nav-actions {
   display: flex;
   align-items: center;

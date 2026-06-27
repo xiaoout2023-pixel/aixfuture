@@ -3,6 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>
+    // i18n bootstrap：避免英文模式下的中文闪烁(FOUC)
+    // 必须在 CSS 加载前执行，提前给 <html> 加 .i18n-pending 类
+    (function() {
+      try {
+        var lang = localStorage.getItem('aix_lang');
+        if (!lang) {
+          var nav = (navigator.language || navigator.userLanguage || '').toLowerCase();
+          if (nav.indexOf('zh') === 0) lang = 'zh-CN';
+          else if (nav.indexOf('en') === 0) lang = 'en';
+          else lang = 'zh-CN';
+        }
+        if (lang === 'en') {
+          document.documentElement.classList.add('i18n-pending');
+        }
+      } catch (e) {}
+    })();
+  </script>
   <title>AIX未来视野 - 具身智能专区</title>
   <link rel="icon" href="assets/AIX.jpg" type="image/jpeg">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap">
