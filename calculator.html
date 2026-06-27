@@ -19,19 +19,35 @@
       </a>
       <div class="nav-links">
         <div class="nav-dropdown">
-          <a href="/" class="nav-link nav-link-with-arrow active">大模型专区 <span class="material-symbols-outlined nav-arrow">expand_more</span></a>
+          <a href="/" class="nav-link nav-link-with-arrow active">
+            <span data-i18n="nav.zone_llm">大模型专区</span>
+            <span class="material-symbols-outlined nav-arrow">expand_more</span>
+          </a>
           <div class="nav-dropdown-menu">
             <a href="models.html" class="nav-dropdown-link">
               <span class="material-symbols-outlined">inventory_2</span>
-              <span>模型库</span>
+              <span data-i18n="nav.models">模型库</span>
             </a>
             <a href="calculator.html" class="nav-dropdown-link">
               <span class="material-symbols-outlined">calculate</span>
-              <span>成本计算</span>
+              <span data-i18n="nav.calculator">成本计算</span>
             </a>
           </div>
         </div>
-        <a href="embodied.html" class="nav-link">具身智能专区</a>
+        <a href="embodied.html" class="nav-link" data-i18n="nav.embodied">具身智能专区</a>
+      </div>
+      <div class="nav-actions">
+        <div class="lang-switcher">
+          <button class="lang-current">
+            <span class="material-symbols-outlined">language</span>
+            <span class="lang-current-code">中</span>
+            <span class="material-symbols-outlined lang-arrow">expand_more</span>
+          </button>
+          <div class="lang-menu">
+            <a href="#" class="lang-option" data-lang="zh-CN">中文</a>
+            <a href="#" class="lang-option" data-lang="en">English</a>
+          </div>
+        </div>
       </div>
     </div>
   </nav>
@@ -39,14 +55,14 @@
   <main class="calc-main">
     <div class="calc-header-bar">
       <div class="calc-header-left">
-        <h1 class="page-title">AI 模型<span class="text-gradient">成本引擎</span></h1>
-        <p class="page-subtitle">配置您的使用场景，实时比较不同模型的成本效益。</p>
+        <h1 class="page-title" data-i18n-html="calc.page_title_full">AI 模型<span class="text-gradient">成本引擎</span></h1>
+        <p class="page-subtitle" data-i18n="calc.page_subtitle">配置您的使用场景，实时比较不同模型的成本效益。</p>
       </div>
       <div class="calc-header-right">
         <div class="calc-switcher-track">
           <div class="calc-switcher-thumb" id="switcherThumb"></div>
-          <a href="calculator.html" class="calc-switch-btn active">简单计算</a>
-          <a href="calculator-pro.html" class="calc-switch-btn">高级场景</a>
+          <a href="calculator.html" class="calc-switch-btn active" data-i18n="calc.switch_simple">简单计算</a>
+          <a href="calculator-pro.html" class="calc-switch-btn" data-i18n="calc.switch_pro">高级场景</a>
         </div>
       </div>
     </div>
@@ -54,22 +70,22 @@
     <div class="calc-content">
         <div class="calc-sidebar">
         <div class="calc-config-panel">
-          <h2 class="calc-panel-title">场景配置</h2>
+          <h2 class="calc-panel-title" data-i18n="calc.panel_config">场景配置</h2>
           
           <div class="calc-section">
-            <span class="calc-section-label">任务类型</span>
+            <span class="calc-section-label" data-i18n="calc.task_type">任务类型</span>
             <div class="calc-chips" id="taskTypeChips">
               <button class="calc-chip active" data-task="text">
                 <span class="material-symbols-outlined chip-icon">text_fields</span>
-                文本生成
+                <span data-i18n="calc.task_text">文本生成</span>
               </button>
               <button class="calc-chip" data-task="code">
                 <span class="material-symbols-outlined chip-icon">code</span>
-                代码助手
+                <span data-i18n="calc.task_code">代码助手</span>
               </button>
               <button class="calc-chip" data-task="vision">
                 <span class="material-symbols-outlined chip-icon">visibility</span>
-                视觉/多模态
+                <span data-i18n="calc.task_vision">视觉/多模态</span>
               </button>
             </div>
           </div>
@@ -77,7 +93,7 @@
           <div class="calc-section">
             <div class="calc-slider-group">
               <div class="calc-slider-header">
-                <label class="calc-slider-label">平均输入 Tokens</label>
+                <label class="calc-slider-label" data-i18n="calc.label_input_tokens">平均输入 Tokens</label>
                 <span class="calc-slider-value" id="inputTokenValue">4,096</span>
               </div>
               <input type="range" class="calc-slider" id="inputTokens" min="0" max="128000" value="4096" step="256">
@@ -89,7 +105,7 @@
 
             <div class="calc-slider-group">
               <div class="calc-slider-header">
-                <label class="calc-slider-label">平均输出 Tokens</label>
+                <label class="calc-slider-label" data-i18n="calc.label_output_tokens">平均输出 Tokens</label>
                 <span class="calc-slider-value" id="outputTokenValue">1,024</span>
               </div>
               <input type="range" class="calc-slider" id="outputTokens" min="0" max="32000" value="1024" step="128">
@@ -101,7 +117,7 @@
 
             <div class="calc-slider-group">
               <div class="calc-slider-header">
-                <label class="calc-slider-label">每日请求数</label>
+                <label class="calc-slider-label" data-i18n="calc.label_daily_requests">每日请求数</label>
                 <span class="calc-slider-value" id="dailyRequestsValue">50,000</span>
               </div>
               <input type="range" class="calc-slider" id="dailyRequests" min="100" max="1000000" value="50000" step="1000">
@@ -115,18 +131,18 @@
           <div class="calc-divider"></div>
 
           <div class="calc-estimation">
-            <span class="calc-est-label">预估月度成本</span>
+            <span class="calc-est-label" data-i18n="calc.est_monthly_cost">预估月度成本</span>
             <div class="calc-est-value">
               <span class="calc-currency">$</span>
               <span class="calc-amount" id="totalCost">0.00</span>
             </div>
             <div class="calc-est-breakdown">
               <div class="calc-breakdown-row">
-                <span class="calc-breakdown-label">输入成本</span>
+                <span class="calc-breakdown-label" data-i18n="calc.input_cost">输入成本</span>
                 <span class="calc-breakdown-value" id="inputCost">$0.00</span>
               </div>
               <div class="calc-breakdown-row">
-                <span class="calc-breakdown-label">输出成本</span>
+                <span class="calc-breakdown-label" data-i18n="calc.output_cost">输出成本</span>
                 <span class="calc-breakdown-value" id="outputCost">$0.00</span>
               </div>
             </div>
@@ -136,8 +152,8 @@
         <div class="calc-tip-card">
           <span class="material-symbols-outlined tip-icon">auto_awesome</span>
           <div class="tip-content">
-            <h4 class="tip-title">优化建议</h4>
-            <p class="tip-text" id="tipText">使用支持缓存的模型可以降低最多45%的输入token成本。</p>
+            <h4 class="tip-title" data-i18n="calc.tip_title">优化建议</h4>
+            <p class="tip-text" id="tipText" data-i18n="calc.tip_default">使用支持缓存的模型可以降低最多45%的输入token成本。</p>
           </div>
         </div>
       </div>
@@ -145,19 +161,19 @@
       <div class="calc-models">
         <div class="calc-models-header">
           <h2 class="calc-models-title">
-            支持的模型
+            <span data-i18n="calc.models_title">支持的模型</span>
             <span class="calc-model-count" id="modelCount">0</span>
           </h2>
           <div class="calc-sort-group">
             <select class="calc-sort-select" id="sortSelect">
-              <option value="cost">按成本排序</option>
-              <option value="score">按评分排序</option>
-              <option value="name">按名称排序</option>
+              <option value="cost" data-i18n="calc.sort_cost">按成本排序</option>
+              <option value="score" data-i18n="calc.sort_score">按评分排序</option>
+              <option value="name" data-i18n="calc.sort_name">按名称排序</option>
             </select>
             <div class="calc-search-box">
               <span class="material-symbols-outlined calc-search-icon">search</span>
-              <input type="text" class="calc-search-input" id="modelSearch" placeholder="搜索模型、供应商...">
-              <button class="calc-clear-btn" id="clearSearch" aria-label="清除搜索">
+              <input type="text" class="calc-search-input" id="modelSearch" placeholder="搜索模型、供应商..." data-i18n-attr="placeholder:calc.search_placeholder">
+              <button class="calc-clear-btn" id="clearSearch" aria-label="清除搜索" data-i18n-attr="aria-label:calc.clear_search">
                 <span class="material-symbols-outlined" style="font-size:16px;">close</span>
               </button>
             </div>
@@ -165,20 +181,20 @@
         </div>
 
         <div class="calc-model-list-header">
-          <div class="calc-col calc-col-model">模型 & 供应商</div>
-          <div class="calc-col calc-col-perf">性能指标</div>
-          <div class="calc-col calc-col-cost">预估月成本</div>
-          <div class="calc-col calc-col-action">操作</div>
+          <div class="calc-col calc-col-model" data-i18n="calc.col_model">模型 & 供应商</div>
+          <div class="calc-col calc-col-perf" data-i18n="calc.col_perf">性能指标</div>
+          <div class="calc-col calc-col-cost" data-i18n="calc.col_cost">预估月成本</div>
+          <div class="calc-col calc-col-action" data-i18n="calc.col_action">操作</div>
         </div>
 
         <div class="calc-model-list" id="modelList">
           <div class="calc-loading" id="calcLoading">
             <div class="calc-spinner"></div>
-            <p>加载模型数据...</p>
+            <p data-i18n="calc.loading">加载模型数据...</p>
           </div>
           <div class="calc-empty" id="calcEmpty" style="display:none;">
             <span class="material-symbols-outlined calc-empty-icon">search_off</span>
-            <p>未找到匹配的模型</p>
+            <p data-i18n="calc.empty">未找到匹配的模型</p>
           </div>
         </div>
 
@@ -188,10 +204,11 @@
   </main>
 
   <footer class="footer">
-    <p>© 2026 AIX未来视野. 保留所有权利。</p>
+    <p data-i18n="site.footer_rights">© 2026 AIX未来视野. 保留所有权利。</p>
   </footer>
 
   <script src="js/config.js"></script>
+  <script src="js/i18n.js"></script>
   <script src="js/calculator.js"></script>
 </body>
 </html>

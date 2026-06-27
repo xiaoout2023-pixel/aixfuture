@@ -18,19 +18,35 @@
       </a>
       <div class="nav-links">
         <div class="nav-dropdown">
-          <a href="/" class="nav-link nav-link-with-arrow active">大模型专区 <span class="material-symbols-outlined nav-arrow">expand_more</span></a>
+          <a href="/" class="nav-link nav-link-with-arrow active">
+            <span data-i18n="nav.zone_llm">大模型专区</span>
+            <span class="material-symbols-outlined nav-arrow">expand_more</span>
+          </a>
           <div class="nav-dropdown-menu">
             <a href="models.html" class="nav-dropdown-link">
               <span class="material-symbols-outlined">inventory_2</span>
-              <span>模型库</span>
+              <span data-i18n="nav.models">模型库</span>
             </a>
             <a href="calculator.html" class="nav-dropdown-link">
               <span class="material-symbols-outlined">calculate</span>
-              <span>成本计算</span>
+              <span data-i18n="nav.calculator">成本计算</span>
             </a>
           </div>
         </div>
-        <a href="embodied.html" class="nav-link">具身智能专区</a>
+        <a href="embodied.html" class="nav-link" data-i18n="nav.embodied">具身智能专区</a>
+      </div>
+      <div class="nav-actions">
+        <div class="lang-switcher">
+          <button class="lang-current">
+            <span class="material-symbols-outlined">language</span>
+            <span class="lang-current-code">中</span>
+            <span class="material-symbols-outlined lang-arrow">expand_more</span>
+          </button>
+          <div class="lang-menu">
+            <a href="#" class="lang-option" data-lang="zh-CN">中文</a>
+            <a href="#" class="lang-option" data-lang="en">English</a>
+          </div>
+        </div>
       </div>
     </div>
   </nav>
@@ -39,10 +55,10 @@
     <header class="zone-hero">
       <div class="zone-hero-tag">
         <span class="material-symbols-outlined">auto_awesome</span>
-        <span>大模型专区</span>
+        <span data-i18n="index.hero_tag">大模型专区</span>
       </div>
-      <h1 class="zone-hero-title">探索 <span class="text-gradient">大模型</span> 的无限可能</h1>
-      <p class="zone-hero-subtitle">聚合全球顶尖 AI 大模型，从模型库筛选到成本测算，一站式解决你的模型选型问题。</p>
+      <h1 class="zone-hero-title" data-i18n-html="index.hero_title_full">探索 <span class="text-gradient">大模型</span> 的无限可能</h1>
+      <p class="zone-hero-subtitle" data-i18n="index.hero_subtitle">聚合全球顶尖 AI 大模型，从模型库筛选到成本测算，一站式解决你的模型选型问题。</p>
     </header>
 
     <section class="zone-cards">
@@ -51,11 +67,11 @@
           <span class="material-symbols-outlined">inventory_2</span>
         </div>
         <div class="zone-card-body">
-          <h2 class="zone-card-title">模型库</h2>
-          <p class="zone-card-desc">浏览、筛选、对比全球主流大模型，了解能力评分、上下文长度、定价等关键信息。</p>
+          <h2 class="zone-card-title" data-i18n="index.card_models_title">模型库</h2>
+          <p class="zone-card-desc" data-i18n="index.card_models_desc">浏览、筛选、对比全球主流大模型，了解能力评分、上下文长度、定价等关键信息。</p>
         </div>
         <div class="zone-card-footer">
-          <span class="zone-card-action">进入模型库</span>
+          <span class="zone-card-action" data-i18n="index.card_models_action">进入模型库</span>
           <span class="material-symbols-outlined">arrow_forward</span>
         </div>
       </a>
@@ -65,11 +81,11 @@
           <span class="material-symbols-outlined">calculate</span>
         </div>
         <div class="zone-card-body">
-          <h2 class="zone-card-title">成本计算</h2>
-          <p class="zone-card-desc">输入调用量与 Token 数，一键估算多模型调用成本，辅助你做出最具性价比的选择。</p>
+          <h2 class="zone-card-title" data-i18n="index.card_calc_title">成本计算</h2>
+          <p class="zone-card-desc" data-i18n="index.card_calc_desc">输入调用量与 Token 数，一键估算多模型调用成本，辅助你做出最具性价比的选择。</p>
         </div>
         <div class="zone-card-footer">
-          <span class="zone-card-action">开始计算</span>
+          <span class="zone-card-action" data-i18n="index.card_calc_action">开始计算</span>
           <span class="material-symbols-outlined">arrow_forward</span>
         </div>
       </a>
@@ -78,8 +94,9 @@
 
   <footer class="page-footer">
     <div class="footer-inner">
-      <p>© 2026 AIX未来视野 · 大模型专区</p>
+      <p data-i18n="site.footer_llm">© 2026 AIX未来视野 · 大模型专区</p>
     </div>
   </footer>
+  <script src="js/i18n.js"></script>
 </body>
 </html>

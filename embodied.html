@@ -18,19 +18,35 @@
       </a>
       <div class="nav-links">
         <div class="nav-dropdown">
-          <a href="/" class="nav-link nav-link-with-arrow">大模型专区 <span class="material-symbols-outlined nav-arrow">expand_more</span></a>
+          <a href="/" class="nav-link nav-link-with-arrow">
+            <span data-i18n="nav.zone_llm">大模型专区</span>
+            <span class="material-symbols-outlined nav-arrow">expand_more</span>
+          </a>
           <div class="nav-dropdown-menu">
             <a href="models.html" class="nav-dropdown-link">
               <span class="material-symbols-outlined">inventory_2</span>
-              <span>模型库</span>
+              <span data-i18n="nav.models">模型库</span>
             </a>
             <a href="calculator.html" class="nav-dropdown-link">
               <span class="material-symbols-outlined">calculate</span>
-              <span>成本计算</span>
+              <span data-i18n="nav.calculator">成本计算</span>
             </a>
           </div>
         </div>
-        <a href="embodied.html" class="nav-link active">具身智能专区</a>
+        <a href="embodied.html" class="nav-link active" data-i18n="nav.embodied">具身智能专区</a>
+      </div>
+      <div class="nav-actions">
+        <div class="lang-switcher">
+          <button class="lang-current">
+            <span class="material-symbols-outlined">language</span>
+            <span class="lang-current-code">中</span>
+            <span class="material-symbols-outlined lang-arrow">expand_more</span>
+          </button>
+          <div class="lang-menu">
+            <a href="#" class="lang-option" data-lang="zh-CN">中文</a>
+            <a href="#" class="lang-option" data-lang="en">English</a>
+          </div>
+        </div>
       </div>
     </div>
   </nav>
@@ -39,34 +55,34 @@
     <header class="zone-hero">
       <div class="zone-hero-tag zone-hero-tag-orange">
         <span class="material-symbols-outlined">precision_manufacturing</span>
-        <span>具身智能专区</span>
+        <span data-i18n="embodied.hero_tag">具身智能专区</span>
       </div>
-      <h1 class="zone-hero-title"><span class="text-gradient">具身智能</span> · 让 AI 拥有身体</h1>
-      <p class="zone-hero-subtitle">聚合机器人、感知、控制、世界模型等具身智能相关资源，敬请期待更精彩的内容。</p>
+      <h1 class="zone-hero-title" data-i18n-html="embodied.hero_title_full"><span class="text-gradient">具身智能</span> · 让 AI 拥有身体</h1>
+      <p class="zone-hero-subtitle" data-i18n="embodied.hero_subtitle">聚合机器人、感知、控制、世界模型等具身智能相关资源，敬请期待更精彩的内容。</p>
     </header>
 
     <section class="zone-placeholder">
       <div class="placeholder-icon">
         <span class="material-symbols-outlined">rocket_launch</span>
       </div>
-      <h2 class="placeholder-title">内容筹备中</h2>
-      <p class="placeholder-desc">我们正在精心整理具身智能相关的数据采集、产品资料和分析内容，敬请期待。</p>
+      <h2 class="placeholder-title" data-i18n="embodied.placeholder_title">内容筹备中</h2>
+      <p class="placeholder-desc" data-i18n="embodied.placeholder_desc">我们正在精心整理具身智能相关的数据采集、产品资料和分析内容，敬请期待。</p>
       <div class="placeholder-features">
         <div class="placeholder-feature-item">
           <span class="material-symbols-outlined">sensors</span>
-          <span>感知与控制</span>
+          <span data-i18n="embodied.feature_sensors">感知与控制</span>
         </div>
         <div class="placeholder-feature-item">
           <span class="material-symbols-outlined">smart_toy</span>
-          <span>机器人产品</span>
+          <span data-i18n="embodied.feature_robot">机器人产品</span>
         </div>
         <div class="placeholder-feature-item">
           <span class="material-symbols-outlined">public</span>
-          <span>世界模型</span>
+          <span data-i18n="embodied.feature_world">世界模型</span>
         </div>
         <div class="placeholder-feature-item">
           <span class="material-symbols-outlined">memory</span>
-          <span>数据采集</span>
+          <span data-i18n="embodied.feature_data">数据采集</span>
         </div>
       </div>
     </section>
@@ -74,8 +90,9 @@
 
   <footer class="page-footer">
     <div class="footer-inner">
-      <p>© 2026 AIX未来视野 · 具身智能专区</p>
+      <p data-i18n="site.footer_embodied">© 2026 AIX未来视野 · 具身智能专区</p>
     </div>
   </footer>
+  <script src="js/i18n.js"></script>
 </body>
 </html>

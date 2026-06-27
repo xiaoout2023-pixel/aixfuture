@@ -1,8 +1,16 @@
 (function () {
   'use strict';
 
+  function tt(key, fallback) {
+    try {
+      if (typeof t === 'function') return t(key, fallback);
+    } catch (e) {}
+    return fallback != null ? fallback : key;
+  }
+
   var API_BASE = window.AIX_CONFIG.apiBase + '/api';
   var providersData = [];
+  var lastModelsItems = [];
   var currentPage = 1;
   var totalPages = 1;
   var totalItems = 0;
@@ -129,8 +137,12 @@
         hideLoading();
 
         if (items.length === 0) {
-          showEmpty(searchQuery ? '未找到与 "' + searchQuery + '" 相关的模型' : '未找到匹配的模型');
+          var emptyMsg = searchQuery
+            ? tt('models.empty_search', '未找到与 "{q}" 相关的模型').replace('{q}', searchQuery)
+            : tt('models.empty', '未找到匹配的模型');
+          showEmpty(emptyMsg);
         } else {
+          lastModelsItems = items;
           renderModels(items);
           renderPagination();
           updateResultCount();
@@ -139,7 +151,7 @@
       .catch(function (err) {
         log('ERROR', 'Data fetch failed: ' + (err.message || err));
         hideLoading();
-        showEmpty('数据加载失败，请稍后重试');
+        showEmpty(tt('models.load_error', '数据加载失败，请稍后重试'));
       });
   }
 
@@ -159,7 +171,7 @@
     if (emptyEl) {
       emptyEl.style.display = '';
       var p = emptyEl.querySelector('p');
-      if (p) p.textContent = msg || '未找到匹配的模型';
+      if (p) p.textContent = msg || tt('models.empty', '未找到匹配的模型');
     }
     if (paginationEl) paginationEl.style.display = 'none';
     if (resultCountEl) resultCountEl.textContent = '';
@@ -169,7 +181,10 @@
     if (!resultCountEl) return;
     var start = (currentPage - 1) * PAGE_SIZE + 1;
     var end = Math.min(currentPage * PAGE_SIZE, totalItems);
-    resultCountEl.textContent = '共 ' + totalItems + ' 个模型，当前显示 ' + start + '-' + end;
+    resultCountEl.textContent = tt('models.result_count_range', '共 {total} 个模型，当前显示 {start}-{end}')
+      .replace('{total}', totalItems)
+      .replace('{start}', start)
+      .replace('{end}', end);
   }
 
   function updateProviderFilters() {
@@ -195,13 +210,13 @@
     if (total > COLLAPSE_COUNT) {
       if (providerExpanded) {
         html += '<button type="button" class="provider-toggle-btn" id="providerToggleBtn">';
-        html += '<span class="toggle-icon-up">▲</span> 收起';
+        html += '<span class="toggle-icon-up">▲</span> ' + escapeHtml(tt('models.collapse', '收起'));
         html += '</button>';
       } else {
         html += '<div class="provider-summary">';
-        html += '<span class="provider-total-text">共 ' + total + ' 个供应商</span>';
+        html += '<span class="provider-total-text">' + escapeHtml(tt('models.provider_count', '共 {total} 个供应商').replace('{total}', total)) + '</span>';
         html += '<button type="button" class="provider-toggle-btn" id="providerToggleBtn">';
-        html += '展开全部 <span class="toggle-icon-down">▼</span>';
+        html += escapeHtml(tt('models.expand_all', '展开全部')) + ' <span class="toggle-icon-down">▼</span>';
         html += '</button>';
         html += '</div>';
       }
@@ -431,12 +446,12 @@
 
     if (model.context_length) {
       var ctx = formatContextLength(model.context_length);
-      parts.push(ctx + ' 上下文');
+      parts.push(ctx + ' ' + tt('models.ctx_label', '上下文'));
     }
 
     var evalData = model.evaluation || {};
     if (evalData.aa_intelligence_index != null) {
-      parts.push('综合评分 ' + evalData.aa_intelligence_index);
+      parts.push(tt('models.score_label', '综合评分') + ' ' + evalData.aa_intelligence_index);
     }
 
     return parts.join(' | ');
@@ -451,7 +466,9 @@
   function formatDate(dateStr) {
     if (!dateStr) return '';
     var d = new Date(dateStr);
-    return d.getFullYear() + '年' + (d.getMonth() + 1) + '月';
+    return tt('models.date_format', '{y}年{m}月')
+      .replace('{y}', d.getFullYear())
+      .replace('{m}', (d.getMonth() + 1));
   }
 
   function getTagClass(tag) {
@@ -471,6 +488,20 @@
   function escapeAttr(str) {
     return String(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
+
+  document.addEventListener('languagechange', function () {
+    try {
+      log('I18N', 'Language changed, re-rendering models page');
+      if (lastModelsItems && lastModelsItems.length > 0) {
+        renderModels(lastModelsItems);
+      }
+      renderPagination();
+      updateResultCount();
+      updateProviderFilters();
+    } catch (e) {
+      log('ERROR', 'languagechange handler failed: ' + (e.message || e));
+    }
+  });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

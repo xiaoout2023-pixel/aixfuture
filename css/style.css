@@ -1107,6 +1107,114 @@ body::selection {
   opacity: 0.6;
 }
 
+/* ========================================
+   语言切换器
+   ======================================== */
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-left: var(--spacing-md);
+}
+
+.lang-switcher {
+  position: relative;
+  display: inline-flex;
+}
+
+.lang-current {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--color-surface-container);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-full);
+  color: var(--color-on-surface-variant);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--font-body);
+}
+
+.lang-current:hover {
+  background: var(--color-surface-container-high);
+  color: var(--color-on-surface);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.lang-current .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.lang-current-code {
+  min-width: 18px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.lang-arrow {
+  font-size: 16px !important;
+  transition: transform 0.2s ease;
+}
+
+.lang-switcher.open .lang-arrow {
+  transform: rotate(180deg);
+}
+
+.lang-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 140px;
+  background: var(--color-surface-container);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-xs);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px);
+  transition: all 0.2s ease;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lang-switcher.open .lang-menu {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.lang-option {
+  display: block;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  color: var(--color-on-surface-variant);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.lang-option:hover {
+  background: var(--color-surface-container-high);
+  color: var(--color-on-surface);
+}
+
+/* 当前活跃语言的标记 */
+.lang-option[data-lang="zh-CN"]:hover {
+  color: var(--color-primary);
+}
+
+.lang-option[data-lang="en"]:hover {
+  color: var(--color-secondary);
+}
+
 
 .page-btn.page-active {
   background: rgba(0, 255, 163, 0.1);

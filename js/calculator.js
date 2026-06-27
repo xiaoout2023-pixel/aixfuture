@@ -1,6 +1,13 @@
 (function () {
   'use strict';
 
+  function tt(key, fallback) {
+    try {
+      if (typeof t === 'function') return t(key, fallback);
+    } catch (e) {}
+    return fallback != null ? fallback : key;
+  }
+
   var API_BASE = window.AIX_CONFIG.apiBase + '/api';
   var modelsData = [];
   var filteredModels = [];
@@ -128,7 +135,7 @@
         loadingEl.style.display = 'none';
         if (emptyEl) {
           emptyEl.style.display = '';
-          emptyEl.querySelector('p').textContent = '数据加载失败: ' + err.message;
+          emptyEl.querySelector('p').textContent = tt('calc.load_error', '数据加载失败') + ': ' + err.message;
         }
       });
   }
@@ -338,20 +345,20 @@
     if (!tipTextEl) return;
 
     if (inputTokens > 10000) {
-      tipTextEl.textContent = '使用支持缓存的模型可以降低最多45%的输入token成本。';
+      tipTextEl.textContent = tt('calc.tip_cache', '使用支持缓存的模型可以降低最多45%的输入token成本。');
     } else if (outputTokens > 4000) {
-      tipTextEl.textContent = '批量处理请求可以减少API调用次数，优化成本。';
+      tipTextEl.textContent = tt('calc.tip_batch', '批量处理请求可以减少API调用次数，优化成本。');
     } else if (dailyRequests > 100000) {
-      tipTextEl.textContent = '高流量场景建议选择性价比更高的开源模型。';
+      tipTextEl.textContent = tt('calc.tip_high_traffic', '高流量场景建议选择性价比更高的开源模型。');
     } else {
-      tipTextEl.textContent = '选择更小的模型可以显著降低成本。';
+      tipTextEl.textContent = tt('calc.tip_small_model', '选择更小的模型可以显著降低成本。');
     }
   }
 
   function renderModels() {
     if (displayModels.length === 0) {
       if (emptyEl) emptyEl.style.display = '';
-      if (emptyEl) emptyEl.querySelector('p').textContent = searchQuery ? '未找到匹配的模型' : '当前任务类型没有可用模型';
+      if (emptyEl) emptyEl.querySelector('p').textContent = searchQuery ? tt('calc.empty', '未找到匹配的模型') : tt('calc.empty_task', '当前任务类型没有可用模型');
       return;
     }
 
@@ -390,7 +397,7 @@
       if (caps.image_gen) features.push('ImageGen');
       if (caps.audio) features.push('Audio');
       if (caps.tool_use) features.push('Tool');
-      if (m.context_length) features.push(contextWindow + ' Context');
+      if (m.context_length) features.push(contextWindow + ' ' + tt('calc.ctx_label', '上下文'));
       if (caps.reasoning) features.push('Reasoning');
 
       var evalData = m.evaluation || {};
@@ -413,7 +420,7 @@
       if (hasScore) {
         html += '<div class="calc-model-perf">';
         html += '<div class="calc-perf-header">';
-        html += '<span>综合评分</span>';
+        html += '<span>' + escapeHtml(tt('calc.score_label', '综合评分')) + '</span>';
         html += '<span class="calc-perf-value">' + score + '/100</span>';
         html += '</div>';
         html += '<div class="calc-perf-bar">';
@@ -428,7 +435,7 @@
       } else {
         html += '<div class="calc-model-perf">';
         html += '<div class="calc-perf-header">';
-        html += '<span>暂无评分</span>';
+        html += '<span>' + escapeHtml(tt('calc.no_score', '暂无评分')) + '</span>';
         html += '</div>';
         html += '<div class="calc-model-features">';
         for (var fi2 = 0; fi2 < features.length; fi2++) {
@@ -443,7 +450,7 @@
       html += '</div>';
 
       html += '<div class="calc-model-action">';
-      html += '<button class="calc-btn calc-btn-secondary" data-model-id="' + escapeHtml(m.model_id) + '">选择</button>';
+      html += '<button class="calc-btn calc-btn-secondary" data-model-id="' + escapeHtml(m.model_id) + '">' + escapeHtml(tt('calc.btn_select', '选择')) + '</button>';
       html += '</div>';
 
       html += '</div>';
@@ -460,7 +467,7 @@
         var card = buttons[j].closest('.calc-model-card');
         if (card) card.classList.add('selected');
         buttons[j].setAttribute('data-selected', 'true');
-        buttons[j].textContent = '已选择';
+        buttons[j].textContent = tt('calc.btn_selected', '已选择');
         buttons[j].className = 'calc-btn calc-btn-primary';
       }
 
@@ -474,7 +481,7 @@
           var b = cards[k].querySelector('.calc-btn');
           if (b) {
             b.setAttribute('data-selected', 'false');
-            b.textContent = '选择';
+            b.textContent = tt('calc.btn_select', '选择');
             b.className = 'calc-btn calc-btn-secondary';
           }
         }
@@ -484,7 +491,7 @@
           var clickedCard = this.closest('.calc-model-card');
           if (clickedCard) clickedCard.classList.add('selected');
           this.setAttribute('data-selected', 'true');
-          this.textContent = '已选择';
+          this.textContent = tt('calc.btn_selected', '已选择');
           this.className = 'calc-btn calc-btn-primary';
           recalcAll();
         } else {
@@ -583,6 +590,19 @@
       }
     }
   }
+
+  document.addEventListener('languagechange', function () {
+    try {
+      log('I18N', 'Language changed, re-rendering calculator page');
+      if (modelsData && modelsData.length > 0) {
+        renderModels();
+        renderPagination();
+      }
+      updateOptimizationTip();
+    } catch (e) {
+      log('ERROR', 'languagechange handler failed: ' + (e.message || e));
+    }
+  });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
