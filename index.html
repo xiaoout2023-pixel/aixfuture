@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AIX未来视野 - 多维度大模型排名</title>
+  <title>AIX未来视野 - 大模型专区</title>
   <link rel="icon" href="assets/AIX.jpg" type="image/jpeg">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap">
@@ -17,69 +17,69 @@
         AIX未来视野
       </a>
       <div class="nav-links">
-        <a href="/" class="nav-link active">排行榜</a>
-        <a href="models.html" class="nav-link">模型库</a>
-        <a href="calculator.html" class="nav-link">成本计算</a>
+        <div class="nav-dropdown">
+          <a href="/" class="nav-link nav-link-with-arrow active">大模型专区 <span class="material-symbols-outlined nav-arrow">expand_more</span></a>
+          <div class="nav-dropdown-menu">
+            <a href="models.html" class="nav-dropdown-link">
+              <span class="material-symbols-outlined">inventory_2</span>
+              <span>模型库</span>
+            </a>
+            <a href="calculator.html" class="nav-dropdown-link">
+              <span class="material-symbols-outlined">calculate</span>
+              <span>成本计算</span>
+            </a>
+          </div>
+        </div>
+        <a href="embodied.html" class="nav-link">具身智能专区</a>
       </div>
     </div>
   </nav>
 
-  <main class="main-content">
-    <header class="page-header">
-      <h1 class="page-title">多维度大模型<span class="text-gradient">排名</span></h1>
-      <p class="page-subtitle">聚合全球主流 AI 模型榜单，一表看清谁更强。</p>
+  <main class="main-content zone-main">
+    <header class="zone-hero">
+      <div class="zone-hero-tag">
+        <span class="material-symbols-outlined">auto_awesome</span>
+        <span>大模型专区</span>
+      </div>
+      <h1 class="zone-hero-title">探索 <span class="text-gradient">大模型</span> 的无限可能</h1>
+      <p class="zone-hero-subtitle">聚合全球顶尖 AI 大模型，从模型库筛选到成本测算，一站式解决你的模型选型问题。</p>
     </header>
 
-    <div class="content-layout">
-      <aside class="sidebar">
-        <div class="sidebar-card">
-          <h3 class="sidebar-title">排行榜类型</h3>
-          <ul class="board-list" id="boardList"></ul>
+    <section class="zone-cards">
+      <a href="models.html" class="zone-card">
+        <div class="zone-card-icon zone-card-icon-blue">
+          <span class="material-symbols-outlined">inventory_2</span>
         </div>
-      </aside>
-
-      <section class="leaderboard-section">
-        <div class="search-container">
-          <div class="search-box">
-            <span class="material-symbols-outlined search-icon">search</span>
-            <input type="text" id="searchInput" class="search-input" placeholder="搜索模型名称或厂商...">
-            <button id="clearSearch" class="clear-btn" style="display:none;" aria-label="清除搜索">
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
+        <div class="zone-card-body">
+          <h2 class="zone-card-title">模型库</h2>
+          <p class="zone-card-desc">浏览、筛选、对比全球主流大模型，了解能力评分、上下文长度、定价等关键信息。</p>
         </div>
-
-        <div class="update-info">
-          <div id="updateTime" class="update-badge" style="display:none;">
-            <span class="material-symbols-outlined">update</span>
-            <span id="updateText"></span>
-          </div>
+        <div class="zone-card-footer">
+          <span class="zone-card-action">进入模型库</span>
+          <span class="material-symbols-outlined">arrow_forward</span>
         </div>
+      </a>
 
-        <div class="table-header" id="tableHeader"></div>
-
-        <div class="leaderboard-container" id="leaderboardContainer">
-          <div id="loadingState" class="loading-state">
-            <div class="loading-spinner"></div>
-            <p>加载数据中...</p>
-          </div>
-          <div id="emptyState" class="empty-state" style="display:none;">
-            <span class="material-symbols-outlined empty-icon">search_off</span>
-            <p>未找到匹配的模型</p>
-          </div>
-          <div id="modelCards" class="model-cards" style="display:none;"></div>
+      <a href="calculator.html" class="zone-card">
+        <div class="zone-card-icon zone-card-icon-green">
+          <span class="material-symbols-outlined">calculate</span>
         </div>
-
-        <div id="leaderboardPagination" class="pagination" style="display:none;"></div>
-      </section>
-    </div>
+        <div class="zone-card-body">
+          <h2 class="zone-card-title">成本计算</h2>
+          <p class="zone-card-desc">输入调用量与 Token 数，一键估算多模型调用成本，辅助你做出最具性价比的选择。</p>
+        </div>
+        <div class="zone-card-footer">
+          <span class="zone-card-action">开始计算</span>
+          <span class="material-symbols-outlined">arrow_forward</span>
+        </div>
+      </a>
+    </section>
   </main>
 
-  <footer class="footer">
-    <p>© 2026 AIX未来视野. 保留所有权利。</p>
+  <footer class="page-footer">
+    <div class="footer-inner">
+      <p>© 2026 AIX未来视野 · 大模型专区</p>
+    </div>
   </footer>
-
-  <script src="js/config.js"></script>
-  <script src="js/main.js"></script>
 </body>
 </html>
