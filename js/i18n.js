@@ -112,6 +112,9 @@
     // 更新 <html lang="...">
     document.documentElement.lang = currentLang === 'en' ? 'en' : 'zh-CN';
 
+    // 移除 FOUC 隐藏类，让翻译后的内容可见
+    document.documentElement.classList.remove('i18n-pending');
+
     // 更新语言切换器显示
     var langDisplay = document.querySelector('.lang-current-code');
     if (langDisplay) langDisplay.textContent = currentLang === 'en' ? 'EN' : '中';
@@ -142,6 +145,13 @@
 
   function init() {
     currentLang = detectLanguage();
+
+    // 兜底：如果 3 秒后翻译还没应用，强制移除 FOUC 隐藏类
+    // 防止 i18n.js 加载失败或 JSON 加载失败导致页面永远空白
+    setTimeout(function () {
+      document.documentElement.classList.remove('i18n-pending');
+    }, 3000);
+
     loadLang(currentLang, function () {
       loaded = true;
       applyTranslations();
