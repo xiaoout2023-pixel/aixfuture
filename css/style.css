@@ -869,7 +869,7 @@ body::selection {
 
 .zone-hero {
   text-align: center;
-  margin-bottom: var(--spacing-xxl);
+  margin: 0 auto var(--spacing-xxl);
   max-width: 800px;
 }
 
