@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script>
-    // i18n bootstrap：避免英文模式下的中文闪烁(FOUC)
-    // 必须在 CSS 加载前执行，提前给 <html> 加 .i18n-pending 类
     (function() {
       try {
         var lang = localStorage.getItem('aix_lang');
@@ -21,7 +19,7 @@
       } catch (e) {}
     })();
   </script>
-  <title>AIX未来视野 - 具身智能专区</title>
+  <title>AIX未来视野 - 具身智能数据采集</title>
   <link rel="icon" href="assets/AIX.jpg" type="image/jpeg">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap">
@@ -69,41 +67,297 @@
     </div>
   </nav>
 
-  <main class="main-content zone-main">
+  <main class="main-content embodied-main">
+
+    <!-- Hero -->
     <header class="zone-hero">
       <div class="zone-hero-tag zone-hero-tag-orange">
         <span class="material-symbols-outlined">precision_manufacturing</span>
-        <span data-i18n="embodied.hero_tag">具身智能专区</span>
+        <span data-i18n="embodied.hero_tag">具身智能数据采集</span>
       </div>
-      <h1 class="zone-hero-title" data-i18n-html="embodied.hero_title_full"><span class="text-gradient">具身智能</span> · 让 AI 拥有身体</h1>
-      <p class="zone-hero-subtitle" data-i18n="embodied.hero_subtitle">聚合机器人、感知、控制、世界模型等具身智能相关资源，敬请期待更精彩的内容。</p>
+      <h1 class="zone-hero-title" data-i18n-html="embodied.hero_title_full">专业的 <span class="text-gradient">EGO 数据</span> 采集服务</h1>
+      <p class="zone-hero-subtitle" data-i18n="embodied.hero_subtitle">提供第一人称视角(EGO)多模态数据采集服务，覆盖办公、工厂、居家、食品等真实场景，助力具身智能模型训练。</p>
     </header>
 
-    <section class="zone-placeholder">
-      <div class="placeholder-icon">
-        <span class="material-symbols-outlined">rocket_launch</span>
-      </div>
-      <h2 class="placeholder-title" data-i18n="embodied.placeholder_title">内容筹备中</h2>
-      <p class="placeholder-desc" data-i18n="embodied.placeholder_desc">我们正在精心整理具身智能相关的数据采集、产品资料和分析内容，敬请期待。</p>
-      <div class="placeholder-features">
-        <div class="placeholder-feature-item">
-          <span class="material-symbols-outlined">sensors</span>
-          <span data-i18n="embodied.feature_sensors">感知与控制</span>
+    <!-- EGO 介绍 -->
+    <section class="embodied-section">
+      <div class="embodied-intro">
+        <div class="embodied-intro-text">
+          <h2 class="section-title" data-i18n="embodied.intro_title">什么是 EGO 数据？</h2>
+          <p class="section-desc" data-i18n="embodied.intro_desc">EGO（Egocentric）数据是以第一人称视角采集的多模态数据，包含视觉、深度、音频、IMU 等传感器信息。它是训练具身智能模型的核心数据源，广泛应用于机器人操作、人机交互、自动驾驶等领域。</p>
         </div>
-        <div class="placeholder-feature-item">
-          <span class="material-symbols-outlined">smart_toy</span>
-          <span data-i18n="embodied.feature_robot">机器人产品</span>
-        </div>
-        <div class="placeholder-feature-item">
-          <span class="material-symbols-outlined">public</span>
-          <span data-i18n="embodied.feature_world">世界模型</span>
-        </div>
-        <div class="placeholder-feature-item">
-          <span class="material-symbols-outlined">memory</span>
-          <span data-i18n="embodied.feature_data">数据采集</span>
+        <div class="embodied-intro-visual">
+          <div class="intro-visual-grid">
+            <div class="intro-visual-item">
+              <span class="material-symbols-outlined">visibility</span>
+              <span data-i18n="embodied.feature_sensors">感知与控制</span>
+            </div>
+            <div class="intro-visual-item">
+              <span class="material-symbols-outlined">smart_toy</span>
+              <span data-i18n="embodied.feature_robot">机器人产品</span>
+            </div>
+            <div class="intro-visual-item">
+              <span class="material-symbols-outlined">public</span>
+              <span data-i18n="embodied.feature_world">世界模型</span>
+            </div>
+            <div class="intro-visual-item">
+              <span class="material-symbols-outlined">memory</span>
+              <span data-i18n="embodied.feature_data">数据采集</span>
+            </div>
+          </div>
         </div>
       </div>
     </section>
+
+    <!-- 服务 -->
+    <section class="embodied-section">
+      <h2 class="section-title centered" data-i18n="embodied.service_title">我们的服务</h2>
+      <div class="service-cards">
+        <div class="service-card">
+          <div class="service-card-icon">
+            <span class="material-symbols-outlined">tune</span>
+          </div>
+          <h3 class="service-card-title" data-i18n="embodied.service_custom">定制化采集</h3>
+          <p class="service-card-desc" data-i18n="embodied.service_custom_desc">根据客户任务目标，组织场景、人员与设备，完成定制化版权数据采集。</p>
+        </div>
+        <div class="service-card">
+          <div class="service-card-icon">
+            <span class="material-symbols-outlined">database</span>
+          </div>
+          <h3 class="service-card-title" data-i18n="embodied.service_shared">共享数据资源</h3>
+          <p class="service-card-desc" data-i18n="embodied.service_shared_desc">已积累 5,000+ 小时可授权共享数据资源，覆盖多种真实场景，可根据需求筛选与授权。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 优势 -->
+    <section class="embodied-section">
+      <h2 class="section-title centered" data-i18n="embodied.advantages_title">为什么选择我们</h2>
+      <div class="advantage-grid">
+        <div class="advantage-card advantage-highlight">
+          <div class="advantage-stats">
+            <div class="stat-item">
+              <span class="stat-number stat-blue">200+</span>
+              <span class="stat-label" data-i18n="embodied.adv_1_team_label">稳定可调团队</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-number stat-green">300+</span>
+              <span class="stat-label" data-i18n="embodied.adv_1_pool_label">供应商及兼职资源池</span>
+            </div>
+          </div>
+          <div class="advantage-timeline">
+            <div class="timeline-track">
+              <div class="timeline-dot timeline-dot-orange"></div>
+              <div class="timeline-dot timeline-dot-purple"></div>
+              <div class="timeline-dot timeline-dot-red"></div>
+            </div>
+            <div class="timeline-labels">
+              <div class="timeline-label">
+                <span class="timeline-days">3天</span>
+                <span class="timeline-people">20人</span>
+                <span class="timeline-desc" data-i18n="embodied.adv_1_t1">小规模试采/试标</span>
+              </div>
+              <div class="timeline-label">
+                <span class="timeline-days">7天</span>
+                <span class="timeline-people">50人</span>
+                <span class="timeline-desc" data-i18n="embodied.adv_1_t2">多场景并行启动</span>
+              </div>
+              <div class="timeline-label">
+                <span class="timeline-days">15天</span>
+                <span class="timeline-people">200人</span>
+                <span class="timeline-desc" data-i18n="embodied.adv_1_t3">规模化批量执行</span>
+              </div>
+            </div>
+          </div>
+          <p class="advantage-card-desc" data-i18n="embodied.adv_1_desc">200+ 稳定可调团队，300+ 供应商及兼职资源池。3天可组织20人，7天50人，15天200人，支持紧急启动与规模化并行执行。</p>
+        </div>
+
+        <div class="advantage-card">
+          <div class="advantage-card-header">
+            <span class="material-symbols-outlined advantage-icon">storage</span>
+            <h3 class="advantage-card-title" data-i18n="embodied.adv_2_title">丰富数据资产</h3>
+          </div>
+          <div class="advantage-metrics">
+            <div class="metric-item">
+              <span class="metric-number metric-green">5,000+</span>
+              <span class="metric-unit" data-i18n="embodied.adv_2_hours">小时</span>
+              <span class="metric-label" data-i18n="embodied.adv_2_shared">可授权共享数据资源</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-number metric-blue">20,000+</span>
+              <span class="metric-unit" data-i18n="embodied.adv_2_hours">小时</span>
+              <span class="metric-label" data-i18n="embodied.adv_2_custom">定制化项目累计采集</span>
+            </div>
+          </div>
+          <p class="advantage-card-desc" data-i18n="embodied.adv_2_desc">5,000+ 小时可授权共享数据资源，20,000+ 小时定制化项目累计采集经验，可结合清洗、标注、质检形成完整交付包。</p>
+        </div>
+
+        <div class="advantage-card">
+          <div class="advantage-card-header">
+            <span class="material-symbols-outlined advantage-icon">verified</span>
+            <h3 class="advantage-card-title" data-i18n="embodied.adv_3_title">全流程质量控制</h3>
+          </div>
+          <p class="advantage-card-desc" data-i18n="embodied.adv_3_desc">7步标准化流程：需求拆解→标准制定→人员培训→小样试采→批量采集→清洗质检→结构化交付，质量不是最后挑数据，而是全流程控制。</p>
+        </div>
+
+        <div class="advantage-card">
+          <div class="advantage-card-header">
+            <span class="material-symbols-outlined advantage-icon">view_in_ar</span>
+            <h3 class="advantage-card-title" data-i18n="embodied.adv_4_title">多场景多模态覆盖</h3>
+          </div>
+          <p class="advantage-card-desc" data-i18n="embodied.adv_4_desc">支持单目/双目 EGO 采集，覆盖办公、工厂组装、食品加工、居家生活等真实场景，可同步 RGB、深度、IMU 等多模态数据。</p>
+        </div>
+
+        <div class="advantage-card">
+          <div class="advantage-card-header">
+            <span class="material-symbols-outlined advantage-icon">inventory_2</span>
+            <h3 class="advantage-card-title" data-i18n="embodied.adv_5_title">完整交付能力</h3>
+          </div>
+          <p class="advantage-card-desc" data-i18n="embodied.adv_5_desc">交付内容包括原始视频/图像/音频、清洗后数据、标注结果、元信息与清单、质检记录、交付说明文档，开箱即用。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 视频案例 -->
+    <section class="embodied-section">
+      <h2 class="section-title centered" data-i18n="embodied.videos_title">采集案例展示</h2>
+      <div class="video-grid">
+        <div class="video-card">
+          <div class="video-wrapper">
+            <video controls preload="metadata" playsinline>
+              <source src="assets/videos/office.mp4" type="video/mp4">
+            </video>
+          </div>
+          <div class="video-info">
+            <h4 data-i18n="embodied.video_office_title">办公场景</h4>
+            <p data-i18n="embodied.video_office_desc">单目 EGO 采集，办公桌面操作场景</p>
+          </div>
+        </div>
+        <div class="video-card">
+          <div class="video-wrapper">
+            <video controls preload="metadata" playsinline>
+              <source src="assets/videos/factory_assembly.mp4" type="video/mp4">
+            </video>
+          </div>
+          <div class="video-info">
+            <h4 data-i18n="embodied.video_factory_title">工厂组装</h4>
+            <p data-i18n="embodied.video_factory_desc">单目 EGO 采集，工厂流水线组装操作</p>
+          </div>
+        </div>
+        <div class="video-card">
+          <div class="video-wrapper">
+            <video controls preload="metadata" playsinline>
+              <source src="assets/videos/food_factory.mp4" type="video/mp4">
+            </video>
+          </div>
+          <div class="video-info">
+            <h4 data-i18n="embodied.video_food_title">食品加工</h4>
+            <p data-i18n="embodied.video_food_desc">单目 EGO 采集，食品厂分拣包装场景</p>
+          </div>
+        </div>
+        <div class="video-card">
+          <div class="video-wrapper">
+            <video controls preload="metadata" playsinline>
+              <source src="assets/videos/home.mp4" type="video/mp4">
+            </video>
+          </div>
+          <div class="video-info">
+            <h4 data-i18n="embodied.video_home_title">居家生活</h4>
+            <p data-i18n="embodied.video_home_desc">双目 EGO 采集，居家环境日常活动</p>
+          </div>
+        </div>
+        <div class="video-card">
+          <div class="video-wrapper">
+            <video controls preload="metadata" playsinline>
+              <source src="assets/videos/hot_glue.mp4" type="video/mp4">
+            </video>
+          </div>
+          <div class="video-info">
+            <h4 data-i18n="embodied.video_hotglue_title">热胶固定</h4>
+            <p data-i18n="embodied.video_hotglue_desc">双目 EGO 采集，精密手工操作场景</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 流程 -->
+    <section class="embodied-section">
+      <h2 class="section-title centered" data-i18n="embodied.process_title">质量控制与交付流程</h2>
+      <p class="section-subtitle centered" data-i18n="embodied.process_subtitle">质量不是最后挑数据，而是从标准制定、人员培训到过程抽检的全流程控制。</p>
+      <div class="process-flow">
+        <div class="process-step">
+          <div class="process-step-num process-num-1">1</div>
+          <h4 data-i18n="embodied.process_1">需求拆解</h4>
+          <p data-i18n="embodied.process_1_desc">场景、任务、设备、交付格式</p>
+        </div>
+        <div class="process-arrow"><span class="material-symbols-outlined">arrow_forward</span></div>
+        <div class="process-step">
+          <div class="process-step-num process-num-2">2</div>
+          <h4 data-i18n="embodied.process_2">标准制定</h4>
+          <p data-i18n="embodied.process_2_desc">采集SOP、命名规则、样例</p>
+        </div>
+        <div class="process-arrow"><span class="material-symbols-outlined">arrow_forward</span></div>
+        <div class="process-step">
+          <div class="process-step-num process-num-3">3</div>
+          <h4 data-i18n="embodied.process_3">人员培训</h4>
+          <p data-i18n="embodied.process_3_desc">设备佩戴、动作流程、注意事项</p>
+        </div>
+        <div class="process-arrow"><span class="material-symbols-outlined">arrow_forward</span></div>
+        <div class="process-step">
+          <div class="process-step-num process-num-4">4</div>
+          <h4 data-i18n="embodied.process_4">小样试采</h4>
+          <p data-i18n="embodied.process_4_desc">验证规则，提前发现问题</p>
+        </div>
+        <div class="process-arrow"><span class="material-symbols-outlined">arrow_forward</span></div>
+        <div class="process-step">
+          <div class="process-step-num process-num-5">5</div>
+          <h4 data-i18n="embodied.process_5">批量采集</h4>
+          <p data-i18n="embodied.process_5_desc">多批次执行，过程抽检</p>
+        </div>
+        <div class="process-arrow"><span class="material-symbols-outlined">arrow_forward</span></div>
+        <div class="process-step">
+          <div class="process-step-num process-num-6">6</div>
+          <h4 data-i18n="embodied.process_6">清洗质检</h4>
+          <p data-i18n="embodied.process_6_desc">无效片段、格式、完整性检查</p>
+        </div>
+        <div class="process-arrow"><span class="material-symbols-outlined">arrow_forward</span></div>
+        <div class="process-step">
+          <div class="process-step-num process-num-7">7</div>
+          <h4 data-i18n="embodied.process_7">结构化交付</h4>
+          <p data-i18n="embodied.process_7_desc">原始数据、元信息、说明文档</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 可交付内容 -->
+    <section class="embodied-section">
+      <h2 class="section-title centered" data-i18n="embodied.deliverables_title">可交付内容</h2>
+      <div class="deliverables-grid">
+        <div class="deliverable-tag deliverable-blue" data-i18n="embodied.deliver_raw">原始视频/图像/音频</div>
+        <div class="deliverable-tag deliverable-green" data-i18n="embodied.deliver_cleaned">清洗后数据</div>
+        <div class="deliverable-tag deliverable-orange" data-i18n="embodied.deliver_labeled">标注结果</div>
+        <div class="deliverable-tag deliverable-purple" data-i18n="embodied.deliver_meta">元信息与清单</div>
+        <div class="deliverable-tag deliverable-red" data-i18n="embodied.deliver_qc">质检记录</div>
+        <div class="deliverable-tag deliverable-indigo" data-i18n="embodied.deliver_doc">交付说明文档</div>
+      </div>
+    </section>
+
+    <!-- 联系我们 -->
+    <section class="embodied-section contact-section">
+      <h2 class="section-title centered" data-i18n="embodied.contact_title">联系我们</h2>
+      <p class="section-subtitle centered" data-i18n="embodied.contact_desc">有 EGO 数据采集需求？欢迎通过微信联系我们，我们将为您提供定制化方案。</p>
+      <div class="contact-card">
+        <div class="contact-wechat">
+          <span class="material-symbols-outlined contact-icon">chat</span>
+          <div class="contact-info">
+            <span class="contact-label" data-i18n="embodied.contact_wechat_label">微信号</span>
+            <span class="contact-value" id="wechatId">annyuu0725</span>
+          </div>
+          <button class="contact-copy-btn" id="copyWechat" data-i18n="embodied.contact_wechat_copy">复制微信号</button>
+        </div>
+      </div>
+    </section>
+
   </main>
 
   <footer class="page-footer">
@@ -111,6 +365,38 @@
       <p data-i18n="site.footer_embodied">© 2026 AIX未来视野 · 具身智能专区</p>
     </div>
   </footer>
+
   <script src="js/i18n.js"></script>
+  <script>
+    // 复制微信号
+    document.addEventListener('DOMContentLoaded', function() {
+      var copyBtn = document.getElementById('copyWechat');
+      if (copyBtn) {
+        copyBtn.addEventListener('click', function() {
+          var wechatId = document.getElementById('wechatId').textContent;
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(wechatId).then(function() {
+              copyBtn.textContent = window.t ? window.t('embodied.contact_copied', '已复制') : '已复制';
+              setTimeout(function() {
+                copyBtn.textContent = window.t ? window.t('embodied.contact_wechat_copy', '复制微信号') : '复制微信号';
+              }, 2000);
+            });
+          } else {
+            // fallback
+            var ta = document.createElement('textarea');
+            ta.value = wechatId;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            copyBtn.textContent = window.t ? window.t('embodied.contact_copied', '已复制') : '已复制';
+            setTimeout(function() {
+              copyBtn.textContent = window.t ? window.t('embodied.contact_wechat_copy', '复制微信号') : '复制微信号';
+            }, 2000);
+          }
+        });
+      }
+    });
+  </script>
 </body>
 </html>
