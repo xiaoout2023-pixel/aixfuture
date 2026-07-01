@@ -8,6 +8,12 @@
     return fallback != null ? fallback : key;
   }
 
+  function getScore(m) {
+    if (m.scores && m.scores.overall_score != null) return m.scores.overall_score;
+    if (m.evaluation && m.evaluation.aa_intelligence_index != null) return m.evaluation.aa_intelligence_index;
+    return null;
+  }
+
   var API_BASE = window.AIX_CONFIG.apiBase + '/api';
   var modelsData = [];
   var filteredModels = [];
@@ -274,7 +280,7 @@
       });
     } else if (currentSortBy === 'score') {
       displayModels.sort(function(a, b) {
-        return ((b.evaluation && b.evaluation.aa_intelligence_index) || 0) - ((a.evaluation && a.evaluation.aa_intelligence_index) || 0);
+        return (getScore(b) || 0) - (getScore(a) || 0);
       });
     } else if (currentSortBy === 'name') {
       displayModels.sort(function(a, b) {
@@ -400,9 +406,9 @@
       if (m.context_length) features.push(contextWindow + ' ' + tt('calc.ctx_label', '上下文'));
       if (caps.reasoning) features.push('Reasoning');
 
-      var evalData = m.evaluation || {};
-      var hasScore = evalData.aa_intelligence_index != null;
-      var score = hasScore ? Math.round(evalData.aa_intelligence_index) : null;
+      var scoreValue = getScore(m);
+      var hasScore = scoreValue != null;
+      var score = hasScore ? Math.round(scoreValue) : null;
 
       html += '<div class="calc-model-card' + (isCheapest ? ' recommended' : '') + '">';
       html += '<div class="calc-model-info">';

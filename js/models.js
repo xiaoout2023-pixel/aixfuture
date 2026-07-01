@@ -8,6 +8,12 @@
     return fallback != null ? fallback : key;
   }
 
+  function getScore(model) {
+    if (model.scores && model.scores.overall_score != null) return model.scores.overall_score;
+    if (model.evaluation && model.evaluation.aa_intelligence_index != null) return model.evaluation.aa_intelligence_index;
+    return null;
+  }
+
   var API_BASE = window.AIX_CONFIG.apiBase + '/api';
   var providersData = [];
   var lastModelsItems = [];
@@ -109,7 +115,7 @@
       if (apiAccess) url += '&provider_type=' + apiAccess;
     }
 
-    url += '&sort_by=aa_intelligence_index&sort_order=desc';
+    url += '&sort_by=overall_score&sort_order=desc';
 
     return url;
   }
@@ -449,9 +455,9 @@
       parts.push(ctx + ' ' + tt('models.ctx_label', '上下文'));
     }
 
-    var evalData = model.evaluation || {};
-    if (evalData.aa_intelligence_index != null) {
-      parts.push(tt('models.score_label', '综合评分') + ' ' + evalData.aa_intelligence_index);
+    var scoreValue = getScore(model);
+    if (scoreValue != null) {
+      parts.push(tt('models.score_label', '综合评分') + ' ' + scoreValue);
     }
 
     return parts.join(' | ');
