@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>
+    // i18n bootstrap：避免英文模式下的中文闪烁(FOUC)
+    // 必须在 CSS 加载前执行，提前给 <html> 加 .i18n-pending 类
+    (function() {
+      try {
+        var lang = localStorage.getItem('aix_lang');
+        if (!lang) {
+          var nav = (navigator.language || navigator.userLanguage || '').toLowerCase();
+          if (nav.indexOf('zh') === 0) lang = 'zh-CN';
+          else if (nav.indexOf('en') === 0) lang = 'en';
+          else lang = 'zh-CN';
+        }
+        if (lang === 'en') {
+          document.documentElement.classList.add('i18n-pending');
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <title>AIX未来视野 - EGO 数据标注工具</title>
+  <link rel="icon" href="assets/AIX.jpg" type="image/jpeg">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="/" class="logo-link">
+        <img src="assets/AIX.jpg" alt="AIX Logo" class="logo-img">
+        <span data-i18n="site.name">AIX未来视野</span>
+      </a>
+      <div class="nav-links">
+        <div class="nav-dropdown">
+          <a href="embodied.html" class="nav-link nav-link-with-arrow active">
+            <span data-i18n="nav.embodied">具身智能专区</span>
+            <span class="material-symbols-outlined nav-arrow">expand_more</span>
+          </a>
+          <div class="nav-dropdown-menu">
+            <a href="embodied.html" class="nav-dropdown-link">
+              <span class="material-symbols-outlined">precision_manufacturing</span>
+              <span data-i18n="nav.embodied_collect">数据采集服务</span>
+            </a>
+            <a href="annotate.html" class="nav-dropdown-link">
+              <span class="material-symbols-outlined">edit_note</span>
+              <span data-i18n="nav.annotate">数据标注工具</span>
+            </a>
+          </div>
+        </div>
+        <div class="nav-dropdown">
+          <a href="/" class="nav-link nav-link-with-arrow">
+            <span data-i18n="nav.zone_llm">大模型专区</span>
+            <span class="material-symbols-outlined nav-arrow">expand_more</span>
+          </a>
+          <div class="nav-dropdown-menu">
+            <a href="models.html" class="nav-dropdown-link">
+              <span class="material-symbols-outlined">inventory_2</span>
+              <span data-i18n="nav.models">模型库</span>
+            </a>
+            <a href="calculator.html" class="nav-dropdown-link">
+              <span class="material-symbols-outlined">calculate</span>
+              <span data-i18n="nav.calculator">成本计算</span>
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <div class="lang-switcher">
+          <button class="lang-current">
+            <span class="material-symbols-outlined">language</span>
+            <span class="lang-current-code">中</span>
+            <span class="material-symbols-outlined lang-arrow">expand_more</span>
+          </button>
+          <div class="lang-menu">
+            <a href="#" class="lang-option" data-lang="zh-CN">中文</a>
+            <a href="#" class="lang-option" data-lang="en">English</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-content annotate-main">
+
+    <!-- 页面头部 -->
+    <header class="annotate-header">
+      <div class="annotate-header-tag">
+        <span class="material-symbols-outlined">edit_note</span>
+        <span data-i18n="annotate.header_tag">EGO 数据标注工具</span>
+      </div>
+      <h1 class="page-title" data-i18n-html="annotate.title_full">EGO 数据 <span class="text-gradient">标注工具</span></h1>
+      <p class="page-subtitle" data-i18n="annotate.subtitle">上传 EGO 视频，逐帧完成手部检测、关键点、动作分割、手物交互标注，导出标准训练数据集。</p>
+    </header>
+
+    <!-- 步骤指示器 -->
+    <div class="annotate-steps" id="annotateSteps">
+      <div class="annotate-step-circle active" data-step="1">
+        <span class="annotate-step-num">1</span>
+        <span class="material-symbols-outlined annotate-step-check">check</span>
+        <span class="annotate-step-label" data-i18n="annotate.step_upload">上传</span>
+      </div>
+      <div class="annotate-step-line"></div>
+      <div class="annotate-step-circle" data-step="2">
+        <span class="annotate-step-num">2</span>
+        <span class="material-symbols-outlined annotate-step-check">check</span>
+        <span class="annotate-step-label" data-i18n="annotate.step_meta">元信息</span>
+      </div>
+      <div class="annotate-step-line"></div>
+      <div class="annotate-step-circle" data-step="3">
+        <span class="annotate-step-num">3</span>
+        <span class="material-symbols-outlined annotate-step-check">check</span>
+        <span class="annotate-step-label" data-i18n="annotate.step_annotate">标注</span>
+      </div>
+      <div class="annotate-step-line"></div>
+      <div class="annotate-step-circle" data-step="4">
+        <span class="annotate-step-num">4</span>
+        <span class="material-symbols-outlined annotate-step-check">check</span>
+        <span class="annotate-step-label" data-i18n="annotate.step_preview">预览</span>
+      </div>
+      <div class="annotate-step-line"></div>
+      <div class="annotate-step-circle" data-step="5">
+        <span class="annotate-step-num">5</span>
+        <span class="material-symbols-outlined annotate-step-check">check</span>
+        <span class="annotate-step-label" data-i18n="annotate.step_export">导出</span>
+      </div>
+    </div>
+
+    <!-- 步骤内容容器 -->
+    <div class="annotate-step-content">
+
+      <!-- 步骤 1：上传 -->
+      <div class="annotate-step-1 active" id="annotateStep1">
+        <div class="annotate-upload-zone" id="annotateUploadZone">
+          <span class="material-symbols-outlined annotate-upload-icon">cloud_upload</span>
+          <p class="annotate-upload-title" data-i18n="annotate.upload_title">拖拽视频文件到此处</p>
+          <p class="annotate-upload-hint" data-i18n="annotate.upload_hint">支持 MP4 / WebM / MOV 格式，最大 500MB</p>
+          <button type="button" class="annotate-btn annotate-btn-primary" id="annotateSelectFileBtn">
+            <span class="material-symbols-outlined">folder_open</span>
+            <span data-i18n="annotate.select_file">选择文件</span>
+          </button>
+          <input type="file" id="annotateFileInput" accept="video/*" hidden>
+        </div>
+        <div class="annotate-file-info" id="annotateFileInfo" hidden>
+          <div class="annotate-file-info-row">
+            <span class="material-symbols-outlined">movie</span>
+            <div class="annotate-file-info-text">
+              <span class="annotate-file-name" id="annotateFileName">—</span>
+              <span class="annotate-file-meta" id="annotateFileMeta">—</span>
+            </div>
+            <button type="button" class="annotate-btn annotate-btn-danger annotate-btn-sm" id="annotateRemoveFileBtn">
+              <span class="material-symbols-outlined">delete</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 步骤 2：元信息 -->
+      <div class="annotate-step-2" id="annotateStep2">
+        <div class="annotate-form-grid">
+          <div class="annotate-form-field">
+            <label for="annotateSceneType" data-i18n="annotate.meta_scene_type">场景类型</label>
+            <select id="annotateSceneType" class="annotate-input">
+              <option value="" data-i18n="annotate.meta_scene_placeholder">请选择场景</option>
+              <option value="office" data-i18n="annotate.scene_office">办公场景</option>
+              <option value="factory" data-i18n="annotate.scene_factory">工厂组装</option>
+              <option value="food" data-i18n="annotate.scene_food">食品加工</option>
+              <option value="home" data-i18n="annotate.scene_home">居家生活</option>
+              <option value="precision" data-i18n="annotate.scene_precision">精密操作</option>
+              <option value="other" data-i18n="annotate.scene_other">其他</option>
+            </select>
+          </div>
+          <div class="annotate-form-field">
+            <label for="annotateDevice" data-i18n="annotate.meta_device">采集设备</label>
+            <input type="text" id="annotateDevice" class="annotate-input" placeholder="如：GoPro Hero 11 / RealSense D455" data-i18n-attr="placeholder:annotate.meta_device_placeholder">
+          </div>
+          <div class="annotate-form-field">
+            <label for="annotateCollector" data-i18n="annotate.meta_collector">采集人</label>
+            <input type="text" id="annotateCollector" class="annotate-input" placeholder="采集人姓名" data-i18n-attr="placeholder:annotate.meta_collector_placeholder">
+          </div>
+          <div class="annotate-form-field">
+            <label for="annotateDate" data-i18n="annotate.meta_date">采集日期</label>
+            <input type="date" id="annotateDate" class="annotate-input">
+          </div>
+          <div class="annotate-form-field">
+            <label for="annotateFps" data-i18n="annotate.meta_fps">FPS</label>
+            <input type="number" id="annotateFps" class="annotate-input" min="1" max="240" value="30">
+          </div>
+          <div class="annotate-form-field">
+            <label for="annotateResolution" data-i18n="annotate.meta_resolution">分辨率</label>
+            <input type="text" id="annotateResolution" class="annotate-input" placeholder="自动检测" readonly data-i18n-attr="placeholder:annotate.meta_resolution_placeholder">
+          </div>
+          <div class="annotate-form-field annotate-form-field-full">
+            <label for="annotateRemark" data-i18n="annotate.meta_remark">备注</label>
+            <textarea id="annotateRemark" class="annotate-input annotate-textarea" rows="3" placeholder="场景描述、操作任务、特殊说明等" data-i18n-attr="placeholder:annotate.meta_remark_placeholder"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- 步骤 3：标注 -->
+      <div class="annotate-step-3" id="annotateStep3">
+        <!-- 顶部 Tab -->
+        <div class="annotate-tabs" id="annotateTabs">
+          <button type="button" class="annotate-tab active" data-tab="hand_detection">
+            <span class="material-symbols-outlined">back_hand</span>
+            <span data-i18n="annotate.tab_hand_detection">手部检测</span>
+          </button>
+          <button type="button" class="annotate-tab" data-tab="keypoints">
+            <span class="material-symbols-outlined">point_scan</span>
+            <span data-i18n="annotate.tab_keypoints">关键点</span>
+          </button>
+          <button type="button" class="annotate-tab" data-tab="action">
+            <span class="material-symbols-outlined">animation</span>
+            <span data-i18n="annotate.tab_action">动作分割</span>
+          </button>
+          <button type="button" class="annotate-tab" data-tab="hand_object">
+            <span class="material-symbols-outlined">pan_tool</span>
+            <span data-i18n="annotate.tab_hand_object">手物交互</span>
+          </button>
+        </div>
+
+        <!-- 工具栏 -->
+        <div class="annotate-toolbar" id="annotateToolbar">
+          <div class="annotate-toolbar-group">
+            <button type="button" class="annotate-toolbar-btn" id="annotatePlayBtn" title="播放/暂停 (空格)">
+              <span class="material-symbols-outlined">play_arrow</span>
+            </button>
+            <button type="button" class="annotate-toolbar-btn" id="annotatePrevFrameBtn" title="上一帧 (←)">
+              <span class="material-symbols-outlined">skip_previous</span>
+            </button>
+            <button type="button" class="annotate-toolbar-btn" id="annotateNextFrameBtn" title="下一帧 (→)">
+              <span class="material-symbols-outlined">skip_next</span>
+            </button>
+            <button type="button" class="annotate-toolbar-btn" id="annotateGoToBtn" title="跳转 (G)">
+              <span class="material-symbols-outlined">tag</span>
+            </button>
+            <button type="button" class="annotate-toolbar-btn" id="annotateSpeedBtn" title="倍速 (S)">
+              <span class="material-symbols-outlined">speed</span>
+              <span class="annotate-speed-label" id="annotateSpeedLabel">1x</span>
+            </button>
+            <button type="button" class="annotate-toolbar-btn" id="annotateFullscreenBtn" title="全屏 (F)">
+              <span class="material-symbols-outlined">fullscreen</span>
+            </button>
+          </div>
+          <div class="annotate-toolbar-group">
+            <span class="annotate-frame-label" id="annotateFrameLabel">Frame: 0 / 0</span>
+            <span class="annotate-time-label" id="annotateTimeLabel" style="margin-left:12px;font-variant-numeric:tabular-nums;font-size:12px;color:var(--color-on-surface-variant);">00:00:00.00 / 00:00:00.00</span>
+          </div>
+          <div class="annotate-toolbar-group">
+            <button type="button" class="annotate-btn annotate-btn-secondary annotate-btn-sm" id="importAnnotationsBtn" title="导入标注 (JSON)">
+              <span class="material-symbols-outlined">file_upload</span>
+              <span data-i18n="annotate.import">导入标注</span>
+            </button>
+            <button type="button" class="annotate-btn annotate-btn-danger annotate-btn-sm" id="annotateClearBtn">
+              <span class="material-symbols-outlined">delete_sweep</span>
+              <span data-i18n="annotate.clear_all">清空标注</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 进度条 -->
+        <div class="annotate-progress-container" id="annotateProgressContainer" style="padding:8px 16px;background:var(--color-surface-container);border-radius:8px;margin-top:8px;display:flex;align-items:center;gap:10px;">
+          <span class="material-symbols-outlined" style="font-size:18px;color:var(--color-on-surface-variant);">replay_10</span>
+          <input type="range" id="annotateProgress" min="0" max="1000" value="0" step="1" class="annotate-progress-input" style="flex:1;width:100%;cursor:pointer;">
+          <span class="material-symbols-outlined" style="font-size:18px;color:var(--color-on-surface-variant);">forward_10</span>
+        </div>
+
+        <!-- 工作区三栏布局 -->
+        <div class="annotate-workspace">
+          <!-- 左：视频+Canvas -->
+          <div class="annotate-canvas-area" id="annotateCanvasArea">
+            <video id="annotateVideo" class="annotate-video" playsinline></video>
+            <canvas id="annotateCanvas" class="annotate-canvas"></canvas>
+            <div class="annotate-empty-hint" id="annotateEmptyHint" hidden>
+              <span class="material-symbols-outlined">videocam_off</span>
+              <p data-i18n="annotate.no_video">未加载视频</p>
+            </div>
+          </div>
+
+          <!-- 右：工具面板 -->
+          <div class="annotate-panel" id="annotatePanel">
+            <div class="annotate-panel-header">
+              <h3 class="annotate-panel-title" id="annotatePanelTitle" data-i18n="annotate.panel_title_hand">手部检测</h3>
+              <span class="annotate-panel-count" id="annotatePanelCount">0</span>
+            </div>
+            <div class="annotate-panel-actions">
+              <button type="button" class="annotate-btn annotate-btn-primary annotate-btn-sm" id="annotateAddBtn">
+                <span class="material-symbols-outlined">add</span>
+                <span data-i18n="annotate.add_box">添加框</span>
+              </button>
+            </div>
+            <!-- 手部检测属性面板：遮挡属性（仅在选中框时显示） -->
+            <div id="handDetectionAttrPanel" class="annotate-attr-panel" style="display:none;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.1);background:var(--color-surface-container-low,rgba(255,255,255,0.03));">
+              <h4 style="margin:0 0 8px 0;font-size:12px;color:var(--color-on-surface-variant);font-weight:600;" data-i18n="annotate.attr_occlusion">遮挡属性</h4>
+              <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;color:var(--color-on-surface);">
+                  <input type="radio" name="occlusion" value="visible" style="cursor:pointer;"> <span data-i18n="annotate.occlusion_visible">Visible</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;color:var(--color-on-surface);">
+                  <input type="radio" name="occlusion" value="occluded" style="cursor:pointer;"> <span data-i18n="annotate.occlusion_occluded">Occluded</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;color:var(--color-on-surface);">
+                  <input type="radio" name="occlusion" value="truncated" style="cursor:pointer;"> <span data-i18n="annotate.occlusion_truncated">Truncated</span>
+                </label>
+              </div>
+              <p id="handDetectionAttrHint" style="margin:6px 0 0 0;font-size:11px;color:var(--color-on-surface-variant);"></p>
+            </div>
+            <!-- 阶段 6：动作分割面板（仅 action tab 显示） -->
+            <div id="actionPanel" class="annotate-action-panel" style="display:none;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.1);background:var(--color-surface-container-low,rgba(255,255,255,0.03));">
+              <div class="action-labels-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <h4 style="margin:0;font-size:12px;color:var(--color-on-surface-variant);font-weight:600;" data-i18n="annotate.labels">标签</h4>
+                <button type="button" id="addActionLabelBtn" class="annotate-btn annotate-btn-secondary annotate-btn-sm" style="font-size:11px;padding:2px 8px;" data-i18n="annotate.add_label">+ 添加</button>
+              </div>
+              <div class="action-labels-list" id="actionLabelsList" style="max-height:160px;overflow-y:auto;margin-bottom:10px;"></div>
+              <div class="action-segments-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <h4 style="margin:0;font-size:12px;color:var(--color-on-surface-variant);font-weight:600;" data-i18n="annotate.segments">时间段</h4>
+              </div>
+              <div class="action-segments-list" id="actionSegmentsList" style="max-height:200px;overflow-y:auto;"></div>
+            </div>
+            <!-- 阶段 5：关键点面板（仅 keypoints tab 显示） -->
+            <div id="keypointsPanel" class="annotate-keypoints-panel" style="display:none;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.1);background:var(--color-surface-container-low,rgba(255,255,255,0.03));">
+              <div class="keypoints-hand-selector" style="margin-bottom:8px;">
+                <label style="display:block;margin:0 0 4px 0;font-size:12px;color:var(--color-on-surface-variant);font-weight:600;" data-i18n="annotate.select_hand">选择手</label>
+                <select id="keypointHandSelect" style="width:100%;padding:6px 8px;background:var(--color-surface-container-high);color:var(--color-on-surface);border:1px solid rgba(255,255,255,0.1);border-radius:6px;font-size:13px;cursor:pointer;"></select>
+              </div>
+              <div class="keypoints-progress" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:12px;color:var(--color-on-surface-variant);">
+                <span data-i18n="annotate.progress">进度</span>
+                <span id="keypointProgress" style="color:var(--color-on-surface);font-variant-numeric:tabular-nums;font-weight:600;">0/21</span>
+              </div>
+              <div class="keypoints-next-hint" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:6px 8px;background:var(--color-surface-container-high);border-radius:6px;font-size:12px;">
+                <span style="color:var(--color-on-surface-variant);" data-i18n="annotate.next_point">下一个</span>
+                <span id="keypointNextHint" style="color:#00E5FF;font-weight:600;">-</span>
+              </div>
+              <div class="keypoints-actions" style="display:flex;gap:6px;margin-bottom:8px;">
+                <button type="button" id="copyPrevFrameBtn" class="annotate-btn annotate-btn-secondary annotate-btn-sm" style="flex:1;justify-content:center;font-size:12px;">
+                  <span class="material-symbols-outlined" style="font-size:14px;">content_copy</span>
+                  <span data-i18n="annotate.copy_prev">复制上一帧</span>
+                </button>
+                <button type="button" id="clearCurrentFrameBtn" class="annotate-btn annotate-btn-danger annotate-btn-sm" style="flex:1;justify-content:center;font-size:12px;">
+                  <span class="material-symbols-outlined" style="font-size:14px;">delete</span>
+                  <span data-i18n="annotate.clear_frame">清除当前帧</span>
+                </button>
+              </div>
+              <div class="keypoints-list" id="keypointsList" style="max-height:240px;overflow-y:auto;"></div>
+            </div>
+            <!-- 阶段 7：手物交互面板（仅 hand_object tab 显示） -->
+            <div id="handObjectPanel" class="annotate-handobject-panel" style="display:none;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.1);background:var(--color-surface-container-low,rgba(255,255,255,0.03));">
+              <div class="handobject-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <h4 style="margin:0;font-size:12px;color:var(--color-on-surface-variant);font-weight:600;" data-i18n="annotate.hand_object">手物交互</h4>
+                <button type="button" id="addRelationBtn" class="annotate-btn annotate-btn-secondary annotate-btn-sm" style="font-size:11px;padding:2px 8px;" data-i18n="annotate.add_relation">+ 添加关系</button>
+              </div>
+              <div class="handobject-objects" style="margin-bottom:10px;">
+                <h5 style="margin:0 0 4px 0;font-size:11px;color:var(--color-on-surface-variant);font-weight:600;" data-i18n="annotate.objects">物体</h5>
+                <div id="objectsList" style="max-height:160px;overflow-y:auto;"></div>
+              </div>
+              <div class="handobject-relations">
+                <h5 style="margin:0 0 4px 0;font-size:11px;color:var(--color-on-surface-variant);font-weight:600;" data-i18n="annotate.relations">关系</h5>
+                <div id="relationsList" style="max-height:240px;overflow-y:auto;"></div>
+              </div>
+              <p id="handObjectHint" style="margin:6px 0 0 0;font-size:11px;color:var(--color-on-surface-variant);"></p>
+            </div>
+            <div class="annotate-panel-list" id="annotatePanelList">
+              <div class="annotate-panel-empty" id="annotatePanelEmpty">
+                <span class="material-symbols-outlined">inbox</span>
+                <p data-i18n="annotate.panel_empty">暂无标注</p>
+              </div>
+            </div>
+            <div class="annotate-shortcut-hint" id="annotateShortcutHint">
+              <span data-i18n="annotate.shortcut_hint">快捷键：空格=播放 ←→=逐帧 G=跳转 S=倍速 F=全屏 Del=删除 1-4=切换Tab</span>
+            </div>
+          </div>
+
+          <!-- 底：时间轴 -->
+          <div class="annotate-timeline" id="annotateTimeline">
+            <canvas id="annotateTimelineCanvas" class="annotate-timeline-canvas"></canvas>
+            <div class="annotate-timeline-cursor" id="annotateTimelineCursor"></div>
+            <div class="annotate-timeline-marker" id="annotateTimelineMarker" hidden></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 步骤 4：预览（阶段 9：复用步骤 3 的 video+canvas，通过 CSS 全屏化） -->
+      <div class="annotate-step-4" id="annotateStep4">
+        <div class="annotate-preview" id="annotatePreview">
+          <!-- 预览控制条（fixed 定位在屏幕底部，body.preview-mode 下显示） -->
+          <div class="annotate-preview-controls" id="annotatePreviewControls">
+            <button type="button" class="annotate-btn annotate-btn-secondary annotate-preview-btn" id="annotatePreviewPlayBtn" title="播放/暂停" data-i18n-title="annotate.preview_play">
+              <span class="material-symbols-outlined">play_arrow</span>
+            </button>
+            <button type="button" class="annotate-btn annotate-btn-secondary annotate-preview-btn" id="annotatePreviewSpeedBtn" title="倍速" data-i18n-title="annotate.speed">
+              <span class="material-symbols-outlined">speed</span>
+              <span class="annotate-preview-speed-label" id="annotatePreviewSpeedLabel">1x</span>
+            </button>
+            <input type="range" id="annotatePreviewProgress" min="0" max="1000" value="0" step="1" class="annotate-progress-input annotate-preview-progress-input" title="进度">
+            <button type="button" class="annotate-btn annotate-btn-primary annotate-preview-btn" id="annotatePreviewBackBtn" title="返回标注" data-i18n-title="annotate.back_to_annotate">
+              <span class="material-symbols-outlined">arrow_back</span>
+              <span data-i18n="annotate.preview_back">返回标注</span>
+            </button>
+            <span class="annotate-preview-time" id="annotatePreviewTime">00:00:00.00 / 00:00:00.00</span>
+            <label class="annotate-preview-toggle">
+              <input type="checkbox" id="annotatePreviewShowHand" checked>
+              <span data-i18n="annotate.preview_show_hand">显示手部</span>
+            </label>
+            <label class="annotate-preview-toggle">
+              <input type="checkbox" id="annotatePreviewShowKeypoint" checked>
+              <span data-i18n="annotate.preview_show_keypoint">显示关键点</span>
+            </label>
+            <label class="annotate-preview-toggle">
+              <input type="checkbox" id="annotatePreviewShowAction" checked>
+              <span data-i18n="annotate.preview_show_action">显示动作段</span>
+            </label>
+            <label class="annotate-preview-toggle">
+              <input type="checkbox" id="annotatePreviewShowHandObject" checked>
+              <span data-i18n="annotate.preview_show_hand_object">显示手物交互</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- 步骤 5：导出 -->
+      <div class="annotate-step-5" id="annotateStep5">
+        <div class="annotate-export">
+          <div class="annotate-export-card">
+            <h2 class="annotate-export-title" data-i18n="annotate.export_title">导出标注数据</h2>
+            <p class="annotate-export-desc" data-i18n="annotate.export_desc">确认标注内容无误后，选择导出格式。</p>
+            <div class="annotate-stats" id="annotateStats">
+              <div class="annotate-stat">
+                <span class="annotate-stat-number" id="annotateStatHand">0</span>
+                <span class="annotate-stat-label" data-i18n="annotate.stat_hand">手部框</span>
+              </div>
+              <div class="annotate-stat">
+                <span class="annotate-stat-number" id="annotateStatKeypoint">0</span>
+                <span class="annotate-stat-label" data-i18n="annotate.stat_keypoint">关键点</span>
+              </div>
+              <div class="annotate-stat">
+                <span class="annotate-stat-number" id="annotateStatSegment">0</span>
+                <span class="annotate-stat-label" data-i18n="annotate.stat_segment">动作段</span>
+              </div>
+              <div class="annotate-stat">
+                <span class="annotate-stat-number" id="annotateStatRelation">0</span>
+                <span class="annotate-stat-label" data-i18n="annotate.stat_relation">手物关系</span>
+              </div>
+              <div class="annotate-stat">
+                <span class="annotate-stat-number" id="annotateStatObjects">0</span>
+                <span class="annotate-stat-label" data-i18n="annotate.stat_objects">物体框</span>
+              </div>
+              <div class="annotate-stat">
+                <span class="annotate-stat-number" id="annotateStatFrames">0</span>
+                <span class="annotate-stat-label" data-i18n="annotate.stat_frames">已标帧</span>
+              </div>
+              <div class="annotate-stat">
+                <span class="annotate-stat-number" id="annotateStatDuration">0s</span>
+                <span class="annotate-stat-label" data-i18n="annotate.stat_duration">时长</span>
+              </div>
+            </div>
+            <div class="annotate-export-actions">
+              <button type="button" class="annotate-btn annotate-btn-primary" id="exportHdf5Btn">
+                <span class="material-symbols-outlined">download</span>
+                <span data-i18n="annotate.export_hdf5">导出 HDF5</span>
+              </button>
+              <button type="button" class="annotate-btn annotate-btn-secondary" id="exportJsonBtn">
+                <span class="material-symbols-outlined">file_download</span>
+                <span data-i18n="annotate.export_json">导出 JSON</span>
+              </button>
+              <button type="button" class="annotate-btn annotate-btn-secondary" id="annotateExportCocoBtn">
+                <span class="material-symbols-outlined">data_object</span>
+                <span data-i18n="annotate.export_coco">导出 COCO</span>
+              </button>
+              <button type="button" class="annotate-btn annotate-btn-secondary" id="annotateExportCsvBtn">
+                <span class="material-symbols-outlined">table_view</span>
+                <span data-i18n="annotate.export_csv">导出 CSV</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 步骤导航按钮 -->
+    <div class="annotate-step-nav" id="annotateStepNav">
+      <button type="button" class="annotate-btn annotate-btn-secondary" id="annotatePrevBtn">
+        <span class="material-symbols-outlined">arrow_back</span>
+        <span data-i18n="annotate.prev_step">上一步</span>
+      </button>
+      <span class="annotate-step-nav-info" id="annotateStepNavInfo">1 / 5</span>
+      <button type="button" class="annotate-btn annotate-btn-primary" id="annotateNextBtn">
+        <span data-i18n="annotate.next_step">下一步</span>
+        <span class="material-symbols-outlined">arrow_forward</span>
+      </button>
+    </div>
+
+  </main>
+
+  <footer class="page-footer">
+    <div class="footer-inner">
+      <p data-i18n="site.footer_annotate">© 2026 AIX未来视野 · EGO 数据标注工具</p>
+    </div>
+  </footer>
+
+  <!-- 弹窗：通用提示（左/右手、动作标签等） -->
+  <div class="annotate-modal" id="annotateModal" hidden>
+    <div class="annotate-modal-overlay" id="annotateModalOverlay"></div>
+    <div class="annotate-modal-content" id="annotateModalContent">
+      <div class="annotate-modal-header">
+        <h3 class="annotate-modal-title" id="annotateModalTitle">提示</h3>
+        <button type="button" class="annotate-modal-close" id="annotateModalCloseBtn">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="annotate-modal-body" id="annotateModalBody">
+        <!-- 动态内容 -->
+      </div>
+      <div class="annotate-modal-footer" id="annotateModalFooter">
+        <button type="button" class="annotate-btn annotate-btn-secondary" id="annotateModalCancelBtn" data-i18n="annotate.modal_cancel">取消</button>
+        <button type="button" class="annotate-btn annotate-btn-primary" id="annotateModalConfirmBtn" data-i18n="annotate.modal_confirm">确认</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/annotate.js"></script>
+  <script src="js/annotate-canvas.js"></script>
+  <script src="js/annotate-export.js"></script>
+</body>
+</html>

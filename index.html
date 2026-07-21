@@ -35,7 +35,22 @@
         <span data-i18n="site.name">AIX未来视野</span>
       </a>
       <div class="nav-links">
-        <a href="embodied.html" class="nav-link" data-i18n="nav.embodied">具身智能专区</a>
+        <div class="nav-dropdown">
+          <a href="embodied.html" class="nav-link nav-link-with-arrow">
+            <span data-i18n="nav.embodied">具身智能专区</span>
+            <span class="material-symbols-outlined nav-arrow">expand_more</span>
+          </a>
+          <div class="nav-dropdown-menu">
+            <a href="embodied.html" class="nav-dropdown-link">
+              <span class="material-symbols-outlined">precision_manufacturing</span>
+              <span data-i18n="nav.embodied_collect">数据采集服务</span>
+            </a>
+            <a href="annotate.html" class="nav-dropdown-link">
+              <span class="material-symbols-outlined">edit_note</span>
+              <span data-i18n="nav.annotate">数据标注工具</span>
+            </a>
+          </div>
+        </div>
         <div class="nav-dropdown">
           <a href="/" class="nav-link nav-link-with-arrow active">
             <span data-i18n="nav.zone_llm">大模型专区</span>
