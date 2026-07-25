@@ -86,8 +86,84 @@
 
   <main class="main-content annotate-main">
 
+    <!-- ===== 项目化管理面板（首屏） ===== -->
+    <div class="annotate-project-panel" id="annotateProjectPanel">
+
+      <!-- 项目列表视图 -->
+      <section class="annotate-project-view annotate-project-list-view active" id="annotateProjectListView">
+        <div class="annotate-project-view-header">
+          <div class="annotate-project-view-title">
+            <h2 data-i18n="annotate.project.list_title">项目</h2>
+            <p data-i18n="annotate.project.list_subtitle">选择项目以管理视频、设备参数与标注</p>
+          </div>
+          <div class="annotate-project-view-actions">
+            <button type="button" class="annotate-btn annotate-btn-secondary" id="annotateDirectAnnotateBtn">
+              <span class="material-symbols-outlined">edit_note</span>
+              <span data-i18n="annotate.project.direct_annotate">直接标注（无项目）</span>
+            </button>
+            <button type="button" class="annotate-btn annotate-btn-primary" id="annotateNewProjectBtn">
+              <span class="material-symbols-outlined">create_new_folder</span>
+              <span data-i18n="annotate.project.new_project">新建项目</span>
+            </button>
+          </div>
+        </div>
+        <div class="annotate-project-grid" id="annotateProjectList">
+          <!-- 项目卡片由 renderProjectList() 动态渲染 -->
+        </div>
+        <div class="annotate-project-empty" id="annotateProjectListEmpty" hidden>
+          <span class="material-symbols-outlined">folder_open</span>
+          <p data-i18n="annotate.project.empty">暂无项目，点击"新建项目"开始</p>
+        </div>
+      </section>
+
+      <!-- 新建项目表单视图 -->
+      <section class="annotate-project-view annotate-project-form-view" id="annotateNewProjectFormView">
+        <div class="annotate-project-view-header">
+          <button type="button" class="annotate-btn annotate-btn-secondary annotate-btn-sm" id="annotateNewProjectBackBtn">
+            <span class="material-symbols-outlined">arrow_back</span>
+            <span data-i18n="annotate.project.back_to_list">返回项目列表</span>
+          </button>
+          <h2 data-i18n="annotate.project.new_project_title">新建项目</h2>
+        </div>
+        <div class="annotate-project-form">
+          <div class="annotate-form-field">
+            <label for="annotateProjectName" data-i18n="annotate.project.name">项目名称</label>
+            <input type="text" id="annotateProjectName" class="annotate-input" data-i18n-attr="placeholder:annotate.project.name_placeholder">
+          </div>
+          <div class="annotate-form-field">
+            <label for="annotateProjectDataSource" data-i18n="annotate.project.data_source">数据来源</label>
+            <input type="text" id="annotateProjectDataSource" class="annotate-input" data-i18n-attr="placeholder:annotate.project.data_source_placeholder">
+          </div>
+          <div class="annotate-form-field annotate-form-field-full">
+            <label for="annotateProjectRemark" data-i18n="annotate.project.remark">备注</label>
+            <textarea id="annotateProjectRemark" class="annotate-input annotate-textarea" rows="3" data-i18n-attr="placeholder:annotate.project.remark_placeholder"></textarea>
+          </div>
+          <div class="annotate-project-form-actions">
+            <button type="button" class="annotate-btn annotate-btn-secondary" id="annotateNewProjectCancelBtn" data-i18n="annotate.modal_cancel">取消</button>
+            <button type="button" class="annotate-btn annotate-btn-primary" id="annotateNewProjectSubmitBtn" data-i18n="annotate.project.create">创建项目</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 项目详情视图（由 renderProjectDetail() 动态填充） -->
+      <section class="annotate-project-view annotate-project-detail-view" id="annotateProjectDetailView">
+      </section>
+
+      <!-- 隐藏的文件输入（单视频 / 文件夹批量导入） -->
+      <input type="file" id="annotateProjectVideoInput" accept="video/*" hidden>
+      <input type="file" id="annotateProjectFolderInput" webkitdirectory multiple hidden>
+
+      <!-- 导入进度条 -->
+      <div class="annotate-project-import-progress" id="annotateProjectImportProgress" hidden>
+        <div class="annotate-project-import-progress-bar">
+          <div class="annotate-project-import-progress-fill" id="annotateProjectImportProgressFill"></div>
+        </div>
+        <span class="annotate-project-import-progress-text" id="annotateProjectImportProgressText">0 / 0</span>
+      </div>
+    </div>
+
     <!-- 页面头部 -->
-    <header class="annotate-header">
+    <header class="annotate-header" id="annotateHeader">
       <div class="annotate-header-tag">
         <span class="material-symbols-outlined">edit_note</span>
         <span data-i18n="annotate.header_tag">EGO 数据标注工具</span>
@@ -95,6 +171,26 @@
       <h1 class="page-title" data-i18n-html="annotate.title_full">EGO 数据 <span class="text-gradient">标注工具</span></h1>
       <p class="page-subtitle" data-i18n="annotate.subtitle">上传 EGO 视频，逐帧完成手部检测、关键点、动作分割、手物交互标注，导出标准训练数据集。</p>
     </header>
+
+    <!-- 批量标注导航条（仅批量标注模式显示） -->
+    <div class="annotate-batch-nav" id="annotateBatchNav" hidden>
+      <button type="button" class="annotate-btn annotate-btn-secondary annotate-btn-sm" id="annotateBatchPrevBtn" title="上一个视频">
+        <span class="material-symbols-outlined">chevron_left</span>
+        <span data-i18n="annotate.batch_nav_prev">上一个</span>
+      </button>
+      <div class="annotate-batch-nav-info">
+        <span class="annotate-batch-nav-name" id="annotateBatchNavName">—</span>
+        <span class="annotate-batch-nav-progress" id="annotateBatchNavProgress">0 / 0</span>
+        <span class="annotate-batch-nav-status" id="annotateBatchNavStatus">—</span>
+      </div>
+      <button type="button" class="annotate-btn annotate-btn-primary annotate-btn-sm" id="annotateBatchNextBtn" title="下一个视频">
+        <span data-i18n="annotate.batch_nav_next">下一个</span>
+        <span class="material-symbols-outlined">chevron_right</span>
+      </button>
+      <button type="button" class="annotate-btn annotate-btn-danger annotate-btn-sm" id="annotateBatchExitBtn" title="退出批量标注">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
 
     <!-- 步骤指示器 -->
     <div class="annotate-steps" id="annotateSteps">
@@ -158,44 +254,50 @@
         </div>
       </div>
 
-      <!-- 步骤 2：元信息 -->
+      <!-- 步骤 2：元信息（阶段 5：替换为 meta_info 8 个字段） -->
       <div class="annotate-step-2" id="annotateStep2">
         <div class="annotate-form-grid">
           <div class="annotate-form-field">
-            <label for="annotateSceneType" data-i18n="annotate.meta_scene_type">场景类型</label>
-            <select id="annotateSceneType" class="annotate-input">
-              <option value="" data-i18n="annotate.meta_scene_placeholder">请选择场景</option>
-              <option value="office" data-i18n="annotate.scene_office">办公场景</option>
-              <option value="factory" data-i18n="annotate.scene_factory">工厂组装</option>
-              <option value="food" data-i18n="annotate.scene_food">食品加工</option>
-              <option value="home" data-i18n="annotate.scene_home">居家生活</option>
-              <option value="precision" data-i18n="annotate.scene_precision">精密操作</option>
-              <option value="other" data-i18n="annotate.scene_other">其他</option>
+            <label for="annotateMetaDataSource" data-i18n="annotate.meta_info.data_source">数据来源 (data_source)</label>
+            <input type="text" id="annotateMetaDataSource" class="annotate-input" data-i18n-attr="placeholder:annotate.meta_info.data_source_placeholder">
+          </div>
+          <div class="annotate-form-field">
+            <label for="annotateMetaTrajectoryIndex" data-i18n="annotate.meta_info.trajectory_index">轨迹编号 (trajectory_index)</label>
+            <input type="text" id="annotateMetaTrajectoryIndex" class="annotate-input" placeholder="traj_001" data-i18n-attr="placeholder:annotate.meta_info.trajectory_index_placeholder">
+          </div>
+          <div class="annotate-form-field">
+            <label for="annotateMetaFps" data-i18n="annotate.meta_info.fps">FPS</label>
+            <input type="number" id="annotateMetaFps" class="annotate-input" min="1" max="240" step="any" value="30">
+          </div>
+          <div class="annotate-form-field">
+            <label for="annotateMetaNumFrames" data-i18n="annotate.meta_info.num_frames">总帧数 (num_frames)</label>
+            <input type="number" id="annotateMetaNumFrames" class="annotate-input" min="0" step="1" value="0">
+          </div>
+          <div class="annotate-form-field">
+            <label for="annotateMetaFrameName" data-i18n="annotate.meta_info.frame_name">相机名称列表 (frame_name)</label>
+            <input type="text" id="annotateMetaFrameName" class="annotate-input" placeholder="cam_0, cam_1, ..." data-i18n-attr="placeholder:annotate.meta_info.frame_name_placeholder">
+          </div>
+          <div class="annotate-form-field">
+            <label for="annotateMetaInstructionSubCamera" data-i18n="annotate.meta_info.instruction_sub_camera">主相机 (instruction_sub_camera)</label>
+            <input type="text" id="annotateMetaInstructionSubCamera" class="annotate-input" placeholder="cam_0" data-i18n-attr="placeholder:annotate.meta_info.instruction_sub_camera_placeholder">
+          </div>
+          <div class="annotate-form-field">
+            <label for="annotateMetaTaskSuccess" data-i18n="annotate.meta_info.task_success">任务成功 (task_success)</label>
+            <label class="annotate-checkbox-wrap">
+              <input type="checkbox" id="annotateMetaTaskSuccess" checked>
+              <span data-i18n="annotate.meta_info.task_success_default">默认 True</span>
+            </label>
+          </div>
+          <div class="annotate-form-field">
+            <label for="annotateMetaTaskHorizon" data-i18n="annotate.meta_info.task_horizon">任务时长类型 (task_horizon)</label>
+            <select id="annotateMetaTaskHorizon" class="annotate-input">
+              <option value="NA" data-i18n="annotate.meta_info.task_horizon_na">NA</option>
+              <option value="short" data-i18n="annotate.meta_info.task_horizon_short">short</option>
+              <option value="long" data-i18n="annotate.meta_info.task_horizon_long">long</option>
             </select>
           </div>
-          <div class="annotate-form-field">
-            <label for="annotateDevice" data-i18n="annotate.meta_device">采集设备</label>
-            <input type="text" id="annotateDevice" class="annotate-input" placeholder="如：GoPro Hero 11 / RealSense D455" data-i18n-attr="placeholder:annotate.meta_device_placeholder">
-          </div>
-          <div class="annotate-form-field">
-            <label for="annotateCollector" data-i18n="annotate.meta_collector">采集人</label>
-            <input type="text" id="annotateCollector" class="annotate-input" placeholder="采集人姓名" data-i18n-attr="placeholder:annotate.meta_collector_placeholder">
-          </div>
-          <div class="annotate-form-field">
-            <label for="annotateDate" data-i18n="annotate.meta_date">采集日期</label>
-            <input type="date" id="annotateDate" class="annotate-input">
-          </div>
-          <div class="annotate-form-field">
-            <label for="annotateFps" data-i18n="annotate.meta_fps">FPS</label>
-            <input type="number" id="annotateFps" class="annotate-input" min="1" max="240" value="30">
-          </div>
-          <div class="annotate-form-field">
-            <label for="annotateResolution" data-i18n="annotate.meta_resolution">分辨率</label>
-            <input type="text" id="annotateResolution" class="annotate-input" placeholder="自动检测" readonly data-i18n-attr="placeholder:annotate.meta_resolution_placeholder">
-          </div>
-          <div class="annotate-form-field annotate-form-field-full">
-            <label for="annotateRemark" data-i18n="annotate.meta_remark">备注</label>
-            <textarea id="annotateRemark" class="annotate-input annotate-textarea" rows="3" placeholder="场景描述、操作任务、特殊说明等" data-i18n-attr="placeholder:annotate.meta_remark_placeholder"></textarea>
+          <div class="annotate-form-field annotate-form-field-full annotate-meta-info-hint">
+            <p data-i18n="annotate.meta_info.hint">项目模式下，data_source / trajectory_index / frame_name / instruction_sub_camera 从项目配置自动带入；fps / num_frames 由视频自动检测。</p>
           </div>
         </div>
       </div>
@@ -523,6 +625,7 @@
 
   <script src="js/config.js"></script>
   <script src="js/i18n.js"></script>
+  <script src="js/annotate-process.js"></script>
   <script src="js/annotate.js"></script>
   <script src="js/annotate-canvas.js"></script>
   <script src="js/annotate-export.js"></script>

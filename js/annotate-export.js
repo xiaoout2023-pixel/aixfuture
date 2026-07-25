@@ -123,7 +123,11 @@
         totalFrames = st.totalFrames || 0;
       } catch (e) {}
       try {
-        var fps = (st.fps || (st.meta && st.meta.fps) || 30);
+        // 阶段 5：优先使用 meta_info.fps，兼容旧 meta.fps
+        var fps = (st.fps
+          || (st.meta_info && st.meta_info.fps)
+          || (st.meta && st.meta.fps)
+          || 30);
         if (st.videoDuration) {
           durationSec = Math.round((st.videoDuration) * 10) / 10;
         } else if (totalFrames > 0 && fps > 0) {
@@ -194,19 +198,62 @@
         return result;
       }
 
-      // 检查必填元信息（采集人、采集日期）
-      var meta = st.meta || {};
-      if (!meta.collector || String(meta.collector).trim() === '') {
-        result.missingMeta.push('collector');
+      // 阶段 5：检查 meta_info 8 个必填字段（按 deliverable.md 定义）
+      var mi = st.meta_info || {};
+      var miFps = Number(mi.fps || 0);
+      var miNumFrames = parseInt(mi.num_frames || 0, 10);
+      var miFrameName = Array.isArray(mi.frame_name) ? mi.frame_name : [];
+      var miTrajectory = String(mi.trajectory_index || '').trim();
+      var miDataSource = String(mi.data_source || '').trim();
+      var miSubCam = String(mi.instruction_sub_camera || '').trim();
+      var miHorizon = String(mi.task_horizon || '');
+
+      // data_source：非空 string
+      if (miDataSource === '') {
+        result.missingMeta.push('data_source');
       }
-      if (!meta.date || String(meta.date).trim() === '') {
-        result.missingMeta.push('date');
+      // trajectory_index：非空 string
+      if (miTrajectory === '') {
+        result.missingMeta.push('trajectory_index');
       }
+      // fps：> 0
+      if (!(miFps > 0)) {
+        result.missingMeta.push('fps');
+      }
+      // num_frames：int ≥ 1
+      if (!(miNumFrames >= 1)) {
+        result.missingMeta.push('num_frames');
+      }
+      // frame_name：长度 ≥ 1
+      if (miFrameName.length < 1) {
+        result.missingMeta.push('frame_name');
+      } else {
+        // 元素互不重复
+        var seen = {};
+        var hasDup = false;
+        for (var fi = 0; fi < miFrameName.length; fi++) {
+          var nm = String(miFrameName[fi] || '').trim();
+          if (nm === '' || seen[nm]) { hasDup = true; break; }
+          seen[nm] = true;
+        }
+        if (hasDup) {
+          result.missingMeta.push('frame_name(unique)');
+        }
+      }
+      // instruction_sub_camera：必须存在于 frame_name 中
+      if (miSubCam === '' || miFrameName.indexOf(miSubCam) === -1) {
+        result.missingMeta.push('instruction_sub_camera');
+      }
+      // task_horizon：必须是 short / long / NA
+      if (miHorizon !== 'short' && miHorizon !== 'long' && miHorizon !== 'NA') {
+        result.missingMeta.push('task_horizon');
+      }
+      // task_success：bool（默认 True，只要不是 false 都视为 True，不报错）
 
       if (result.missingMeta.length > 0) {
         result.reason = tt('annotate.export_meta_incomplete', '元信息不完整') +
           ' (' + result.missingMeta.join(', ') + ')';
-        log('VALIDATE', 'validateExport: missing meta: ' + result.missingMeta.join(','));
+        log('VALIDATE', 'validateExport: missing meta_info: ' + result.missingMeta.join(','));
         return result;
       }
 
@@ -222,6 +269,7 @@
   }
 
   // ===== Task 10.2：buildExportJson() - 从 state 构建导出 JSON =====
+  // 阶段 5：导出结构由 meta → meta_info（按 deliverable.md 8 字段定义）
   function buildExportJson() {
     try {
       var st = getState();
@@ -230,38 +278,29 @@
         throw new Error('state unavailable');
       }
 
-      var meta = st.meta || {};
-      var fps = meta.fps || st.fps || 30;
-      var resolution = (Array.isArray(meta.resolution) && meta.resolution.length === 2)
-        ? [meta.resolution[0] || 0, meta.resolution[1] || 0]
-        : (Array.isArray(st.videoResolution) && st.videoResolution.length === 2
-          ? [st.videoResolution[0] || 0, st.videoResolution[1] || 0]
-          : [0, 0]);
+      // 优先使用 state.meta_info，缺失时从 state.fps / state.totalFrames 兜底
+      var mi = (st.meta_info && typeof st.meta_info === 'object') ? st.meta_info : {};
+      var legacyMeta = (st.meta && typeof st.meta === 'object') ? st.meta : {};
 
-      var durationSec = 0;
-      try {
-        if (st.videoDuration) {
-          durationSec = Math.round(st.videoDuration * 10) / 10;
-        } else if (st.totalFrames > 0 && fps > 0) {
-          durationSec = Math.round((st.totalFrames / fps) * 10) / 10;
-        }
-      } catch (e) {
-        log('WARN', 'buildExportJson: compute duration failed: ' + (e.message || e));
-      }
+      var fps = Number(mi.fps != null ? mi.fps : (st.fps || legacyMeta.fps || 30));
+      if (!(fps > 0)) fps = 30;
+      var numFrames = parseInt(mi.num_frames != null ? mi.num_frames : (st.totalFrames || 0), 10);
+      if (!(numFrames >= 0)) numFrames = 0;
+      var frameName = Array.isArray(mi.frame_name) ? mi.frame_name.slice() : [];
+      var taskSuccess = (mi.task_success !== false); // 默认 true
+      var taskHorizon = (mi.task_horizon === 'short' || mi.task_horizon === 'long' || mi.task_horizon === 'NA')
+        ? mi.task_horizon : 'NA';
 
-      var totalFrames = st.totalFrames || 0;
-
-      // 构建导出 meta（按 spec.md 定义）
-      var exportMeta = {
-        scene_type: meta.scene_type || 'other',
-        device: meta.device || 'other',
-        collector: String(meta.collector || ''),
-        date: String(meta.date || ''),
+      // 阶段 5：导出 meta_info（按 deliverable.md 定义）
+      var exportMetaInfo = {
+        data_source: String(mi.data_source != null ? mi.data_source : (legacyMeta.scene_type || '')).trim(),
+        trajectory_index: String(mi.trajectory_index != null ? mi.trajectory_index : '').trim(),
         fps: fps,
-        resolution: resolution,
-        duration_sec: durationSec,
-        total_frames: totalFrames,
-        remark: String(meta.remark || '')
+        num_frames: numFrames,
+        frame_name: frameName,
+        instruction_sub_camera: String(mi.instruction_sub_camera != null ? mi.instruction_sub_camera : '').trim(),
+        task_success: taskSuccess,
+        task_horizon: taskHorizon
       };
 
       // 深拷贝各标注数组（避免外部修改）
@@ -277,7 +316,7 @@
       var objects = deepCloneArray(st.annotations.objects);
 
       var exportJson = {
-        meta: exportMeta,
+        meta_info: exportMetaInfo,
         annotations: {
           hand_detection: handDetection,
           hand_keypoints: handKeypoints,
@@ -287,7 +326,7 @@
         }
       };
 
-      log('BUILD', 'buildExportJson: meta=' + JSON.stringify(exportMeta) +
+      log('BUILD', 'buildExportJson: meta_info=' + JSON.stringify(exportMetaInfo) +
         ' hand_detection=' + handDetection.length +
         ' hand_keypoints=' + handKeypoints.length +
         ' segments=' + actionSeg.segments.length +

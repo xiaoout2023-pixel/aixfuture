@@ -37,13 +37,451 @@
 
   // ===== 常量 =====
   var STORAGE_KEY = 'aix_annotate_state';
+  var PROJECTS_STORAGE_KEY = 'aix_ego_projects'; // 阶段 1：项目数据独立存储
   var TOTAL_STEPS = 5;
+  var PROJECT_TOTAL_STEPS = 4; // 阶段 5：项目模式下 4 步（元信息/标注/预览/导出）
   var TAB_KEYS = ['hand_detection', 'keypoints', 'action', 'hand_object'];
   var PLAYBACK_SPEEDS = [1, 2, 0.5, 0.25];
   var SUPPORTED_VIDEO_EXTS = ['mp4', 'mov', 'avi'];
   var MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
+  var DEFAULT_THUMBNAIL = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 90"><rect width="160" height="90" fill="#2a2f3a"/><text x="80" y="48" font-family="sans-serif" font-size="12" fill="#849588" text-anchor="middle">No Thumbnail</text></svg>'
+  );
+
+  // ===== File System Access API 封装（视频文件句柄 / 工作目录句柄持久化） =====
+  // Chrome/Edge 支持 showOpenFilePicker / showDirectoryPicker，可持久化
+  // FileSystemFileHandle / FileSystemDirectoryHandle 到 IndexedDB，
+  // 刷新后通过 requestPermission 恢复；Firefox/Safari 不支持，降级到 <input type="file">
+  var FS_ACCESS_SUPPORTED = typeof window !== 'undefined' && typeof window.showOpenFilePicker === 'function';
+  var DIR_PICKER_SUPPORTED = typeof window !== 'undefined' && typeof window.showDirectoryPicker === 'function';
+  var FS_DB_NAME = 'aix_ego_db';
+  var FS_STORE_NAME = 'file_handles';
+
+  // 打开/创建 IndexedDB
+  // 仅创建 file_handles store（用于原始视频句柄与工作目录句柄）。
+  // 重构后不再使用 processed_videos store；旧 DB 中若已存在该 store 会被保留但不再读写。
+  function fsOpenDB() {
+    return new Promise(function (resolve, reject) {
+      try {
+        if (typeof indexedDB === 'undefined') {
+          reject(new Error('IndexedDB not supported'));
+          return;
+        }
+        var req = indexedDB.open(FS_DB_NAME, 2);
+        req.onupgradeneeded = function (e) {
+          try {
+            var db = e.target.result;
+            if (!db.objectStoreNames.contains(FS_STORE_NAME)) {
+              db.createObjectStore(FS_STORE_NAME);
+            }
+          } catch (err) {
+            log('ERROR', 'fsOpenDB onupgradeneeded failed: ' + (err.message || err));
+          }
+        };
+        req.onsuccess = function (e) { resolve(e.target.result); };
+        req.onerror = function (e) {
+          log('ERROR', 'fsOpenDB onerror: ' + (e.target.error && e.target.error.message));
+          reject(e.target.error || new Error('IndexedDB open failed'));
+        };
+      } catch (err) {
+        log('ERROR', 'fsOpenDB exception: ' + (err.message || err));
+        reject(err);
+      }
+    });
+  }
+
+  // 保存 handle 到 IndexedDB
+  function fsSaveHandle(key, handle) {
+    return fsOpenDB().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        try {
+          var tx = db.transaction(FS_STORE_NAME, 'readwrite');
+          var store = tx.objectStore(FS_STORE_NAME);
+          store.put(handle, key);
+          tx.oncomplete = function () {
+            db.close();
+            log('FS', 'Saved handle for key=' + key);
+            resolve(true);
+          };
+          tx.onerror = function (e) {
+            db.close();
+            log('ERROR', 'fsSaveHandle tx onerror: ' + (e.target.error && e.target.error.message));
+            reject(e.target.error || new Error('save handle failed'));
+          };
+          tx.onabort = function (e) {
+            db.close();
+            reject((e.target && e.target.error) || new Error('save handle aborted'));
+          };
+        } catch (err) {
+          try { db.close(); } catch (_) {}
+          log('ERROR', 'fsSaveHandle exception: ' + (err.message || err));
+          reject(err);
+        }
+      });
+    });
+  }
+
+  // 从 IndexedDB 读取 handle
+  function fsLoadHandle(key) {
+    return fsOpenDB().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        try {
+          var tx = db.transaction(FS_STORE_NAME, 'readonly');
+          var store = tx.objectStore(FS_STORE_NAME);
+          var req = store.get(key);
+          req.onsuccess = function (e) {
+            resolve(e.target.result || null);
+          };
+          req.onerror = function (e) {
+            log('ERROR', 'fsLoadHandle req onerror: ' + (e.target.error && e.target.error.message));
+            reject(e.target.error || new Error('load handle failed'));
+          };
+          tx.oncomplete = function () { try { db.close(); } catch (_) {} };
+          tx.onabort = function () { try { db.close(); } catch (_) {} };
+        } catch (err) {
+          try { db.close(); } catch (_) {}
+          log('ERROR', 'fsLoadHandle exception: ' + (err.message || err));
+          reject(err);
+        }
+      });
+    });
+  }
+
+  // 删除 IndexedDB 中的 handle
+  function fsDeleteHandle(key) {
+    return fsOpenDB().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        try {
+          var tx = db.transaction(FS_STORE_NAME, 'readwrite');
+          var store = tx.objectStore(FS_STORE_NAME);
+          store.delete(key);
+          tx.oncomplete = function () {
+            db.close();
+            log('FS', 'Deleted handle for key=' + key);
+            resolve(true);
+          };
+          tx.onerror = function (e) {
+            db.close();
+            log('ERROR', 'fsDeleteHandle tx onerror: ' + (e.target.error && e.target.error.message));
+            reject(e.target.error || new Error('delete handle failed'));
+          };
+          tx.onabort = function () { db.close(); reject(new Error('delete handle aborted')); };
+        } catch (err) {
+          try { db.close(); } catch (_) {}
+          log('ERROR', 'fsDeleteHandle exception: ' + (err.message || err));
+          reject(err);
+        }
+      });
+    });
+  }
+
+  // 验证/请求文件句柄权限
+  // readWrite=true 请求读写权限，false 只读
+  function fsVerifyPermission(handle, readWrite) {
+    try {
+      if (!handle || typeof handle.queryPermission !== 'function') {
+        return Promise.resolve(false);
+      }
+      var opts = { mode: readWrite ? 'readwrite' : 'read' };
+      return Promise.resolve(handle.queryPermission(opts)).then(function (permState) {
+        if (permState === 'granted') return true;
+        // 'prompt' 状态下可调用 requestPermission 触发用户授权弹窗
+        if (permState === 'prompt' && typeof handle.requestPermission === 'function') {
+          return Promise.resolve(handle.requestPermission(opts)).then(function (state2) {
+            return state2 === 'granted';
+          });
+        }
+        return false;
+      });
+    } catch (err) {
+      log('ERROR', 'fsVerifyPermission exception: ' + (err.message || err));
+      return Promise.resolve(false);
+    }
+  }
+
+  // handle → File（含权限验证）
+  // 返回 Promise<File|null>，权限拒绝或失败时返回 null
+  function fsHandleToFile(handle) {
+    if (!handle) return Promise.resolve(null);
+    return fsVerifyPermission(handle, false).then(function (ok) {
+      if (!ok) {
+        log('FS', 'Permission denied for handle');
+        return null;
+      }
+      return handle.getFile();
+    }).catch(function (err) {
+      log('ERROR', 'fsHandleToFile failed: ' + (err.message || err));
+      return null;
+    });
+  }
+
+  // ===== 工作目录管理（File System Access API） =====
+  // 工作目录句柄存 IndexedDB：key = 'project_{projectId}_workdir'
+  // 预处理视频写入 {工作目录}/processed/{原文件名去扩展名}_processed.webm
+
+  // 生成预处理文件名：{原文件名去扩展名}_processed.webm
+  function buildProcessedFileName(originalFileName) {
+    try {
+      var base = String(originalFileName || 'video');
+      var dotIdx = base.lastIndexOf('.');
+      if (dotIdx > 0) base = base.substring(0, dotIdx);
+      // 清理文件系统非法字符
+      base = base.replace(/[\\/:*?"<>|]/g, '_');
+      return base + '_processed.webm';
+    } catch (e) {
+      return 'video_processed.webm';
+    }
+  }
+
+  // 工作目录句柄的 IndexedDB key（批次级）
+  function workDirKey(projectId, batchId) {
+    return 'project_' + projectId + '_batch_' + batchId + '_workdir';
+  }
+
+  // 从 IndexedDB 恢复工作目录句柄（不验证权限）
+  // 返回 Promise<FileSystemDirectoryHandle|null>
+  function getProjectWorkDirHandle(projectId, batchId) {
+    try {
+      if (!projectId || !batchId) return Promise.resolve(null);
+      return fsLoadHandle(workDirKey(projectId, batchId)).then(function (handle) {
+        return handle || null;
+      }).catch(function (err) {
+        log('ERROR', 'getProjectWorkDirHandle failed: ' + (err.message || err));
+        return null;
+      });
+    } catch (e) {
+      log('ERROR', 'getProjectWorkDirHandle exception: ' + (e.message || e));
+      return Promise.resolve(null);
+    }
+  }
+
+  // 调用 showDirectoryPicker 选择批次工作目录，保存句柄到 IndexedDB
+  function setBatchWorkDir(project, batch) {
+    try {
+      if (!project || !batch) {
+        log('WARN', 'setBatchWorkDir: project or batch is null');
+        return;
+      }
+      if (!DIR_PICKER_SUPPORTED) {
+        log('WARN', 'setBatchWorkDir: showDirectoryPicker unsupported');
+        showToast(tt('annotate.project.browser_not_support_dir',
+          '当前浏览器不支持选择目录，请使用 Chrome/Edge'));
+        return;
+      }
+      log('WORKDIR', 'setBatchWorkDir: opening directory picker for batch ' + batch.id);
+      window.showDirectoryPicker({ mode: 'readwrite' }).then(function (dirHandle) {
+        if (!dirHandle) {
+          log('WARN', 'setBatchWorkDir: no dirHandle returned');
+          return;
+        }
+        var key = workDirKey(project.id, batch.id);
+        fsSaveHandle(key, dirHandle).then(function () {
+          batch.work_dir_name = dirHandle.name;
+          saveProjects();
+          // 局部刷新批次面板
+          if (state.currentProject && state.currentProject.id === project.id) {
+            refreshBatchPanel(project);
+          }
+          var msg = tt('annotate.project.work_dir_saved', '工作目录已设置：{name}')
+            .split('{name}').join(dirHandle.name);
+          showToast(msg);
+          log('WORKDIR', 'set work dir for batch ' + batch.id + ': ' + dirHandle.name);
+        }).catch(function (err) {
+          log('ERROR', 'setBatchWorkDir: fsSaveHandle failed: ' + (err.message || err));
+          showToast(tt('annotate.project.process_save_failed',
+            '保存到文件系统失败，已降级下载'));
+        });
+      }).catch(function (err) {
+        var msg = err && err.message ? err.message : String(err);
+        if (msg.indexOf('aborted') !== -1 || msg.indexOf('Abort') !== -1) {
+          log('WORKDIR', 'setBatchWorkDir: user cancelled');
+          return;
+        }
+        log('ERROR', 'setBatchWorkDir: showDirectoryPicker failed: ' + msg);
+        showToast(tt('annotate.project.browser_not_support_dir',
+          '当前浏览器不支持选择目录，请使用 Chrome/Edge'));
+      });
+    } catch (e) {
+      log('ERROR', 'setBatchWorkDir exception: ' + (e.message || e));
+      showToast(tt('annotate.project.process_save_failed',
+        '保存到文件系统失败，已降级下载'));
+    }
+  }
+
+  // 将预处理 Blob 写入批次工作目录的 processed/ 子文件夹
+  // 成功 resolve({ path, filename, dirName })，失败 reject(err)
+  function saveProcessedBlobToWorkDir(projectId, batchId, blob, originalFileName) {
+    return new Promise(function (resolve, reject) {
+      try {
+        if (!projectId || !batchId) {
+          reject(new Error('work_dir_not_set'));
+          return;
+        }
+        getProjectWorkDirHandle(projectId, batchId).then(function (dirHandle) {
+          if (!dirHandle) {
+            reject(new Error('work_dir_not_set'));
+            return;
+          }
+          // 请求读写权限
+          fsVerifyPermission(dirHandle, true).then(function (ok) {
+            if (!ok) {
+              log('ERROR', 'saveProcessedBlobToWorkDir: permission denied');
+              reject(new Error('permission_denied'));
+              return;
+            }
+            var filename = buildProcessedFileName(originalFileName);
+            var relPath = 'processed/' + filename;
+            // 创建 processed/ 子文件夹
+            dirHandle.getDirectoryHandle('processed', { create: true }).then(function (procDir) {
+              procDir.getFileHandle(filename, { create: true }).then(function (fileHandle) {
+                fileHandle.createWritable().then(function (writable) {
+                  writable.write(blob).then(function () {
+                    return writable.close();
+                  }).then(function () {
+                    log('WORKDIR', 'saved processed blob: ' + relPath +
+                      ' size=' + (blob && blob.size || 0));
+                    resolve({ path: relPath, filename: filename, dirName: dirHandle.name });
+                  }).catch(function (err) {
+                    log('ERROR', 'saveProcessedBlobToWorkDir write/close failed: ' + (err.message || err));
+                    reject(err);
+                  });
+                }).catch(function (err) {
+                  log('ERROR', 'saveProcessedBlobToWorkDir createWritable failed: ' + (err.message || err));
+                  reject(err);
+                });
+              }).catch(function (err) {
+                log('ERROR', 'saveProcessedBlobToWorkDir getFileHandle failed: ' + (err.message || err));
+                reject(err);
+              });
+            }).catch(function (err) {
+              log('ERROR', 'saveProcessedBlobToWorkDir getDirectoryHandle failed: ' + (err.message || err));
+              reject(err);
+            });
+          }).catch(function (err) {
+            log('ERROR', 'saveProcessedBlobToWorkDir permission check failed: ' + (err.message || err));
+            reject(err);
+          });
+        }).catch(function (err) {
+          reject(err);
+        });
+      } catch (e) {
+        log('ERROR', 'saveProcessedBlobToWorkDir exception: ' + (e.message || e));
+        reject(e);
+      }
+    });
+  }
+
+  // 从工作目录的 processed/ 子文件夹读取预处理文件
+  // relPath 形如 'processed/xxx_processed.webm'
+  // 成功 resolve(File)，失败 reject(err)
+  function loadProcessedFileFromWorkDir(projectId, relPath) {
+    return new Promise(function (resolve, reject) {
+      try {
+        if (!projectId || !relPath) {
+          reject(new Error('invalid_args'));
+          return;
+        }
+        getProjectWorkDirHandle(projectId).then(function (dirHandle) {
+          if (!dirHandle) {
+            reject(new Error('work_dir_not_set'));
+            return;
+          }
+          fsVerifyPermission(dirHandle, false).then(function (ok) {
+            if (!ok) {
+              log('ERROR', 'loadProcessedFileFromWorkDir: permission denied');
+              reject(new Error('permission_denied'));
+              return;
+            }
+            var parts = String(relPath).split('/').filter(Boolean);
+            if (parts.length < 2) {
+              reject(new Error('invalid_path'));
+              return;
+            }
+            var subDirName = parts[0];
+            var fileName = parts[parts.length - 1];
+            dirHandle.getDirectoryHandle(subDirName, { create: false }).then(function (subDir) {
+              subDir.getFileHandle(fileName, { create: false }).then(function (fileHandle) {
+                fileHandle.getFile().then(function (file) {
+                  log('WORKDIR', 'loaded processed file: ' + relPath + ' size=' + (file.size || 0));
+                  resolve(file);
+                }).catch(function (err) {
+                  log('ERROR', 'loadProcessedFileFromWorkDir getFile failed: ' + (err.message || err));
+                  reject(err);
+                });
+              }).catch(function (err) {
+                log('ERROR', 'loadProcessedFileFromWorkDir getFileHandle failed: ' + (err.message || err));
+                reject(err);
+              });
+            }).catch(function (err) {
+              log('ERROR', 'loadProcessedFileFromWorkDir getDirectoryHandle failed: ' + (err.message || err));
+              reject(err);
+            });
+          }).catch(function (err) {
+            reject(err);
+          });
+        }).catch(function (err) {
+          reject(err);
+        });
+      } catch (e) {
+        log('ERROR', 'loadProcessedFileFromWorkDir exception: ' + (e.message || e));
+        reject(e);
+      }
+    });
+  }
+
+  // 删除批次工作目录中 processed/ 子文件夹下的预处理文件
+  // relPath 形如 'processed/xxx_processed.webm'
+  // 始终 resolve(bool)，失败/不存在返回 false（不抛错，避免阻塞删除流程）
+  function deleteProcessedFileFromWorkDir(projectId, batchId, relPath) {
+    return new Promise(function (resolve) {
+      try {
+        if (!projectId || !batchId || !relPath) {
+          resolve(false);
+          return;
+        }
+        getProjectWorkDirHandle(projectId, batchId).then(function (dirHandle) {
+          if (!dirHandle) {
+            resolve(false);
+            return;
+          }
+          fsVerifyPermission(dirHandle, true).then(function (ok) {
+            if (!ok) {
+              resolve(false);
+              return;
+            }
+            var parts = String(relPath).split('/').filter(Boolean);
+            if (parts.length < 2) {
+              resolve(false);
+              return;
+            }
+            var subDirName = parts[0];
+            var fileName = parts[parts.length - 1];
+            dirHandle.getDirectoryHandle(subDirName, { create: false }).then(function (subDir) {
+              subDir.removeEntry(fileName).then(function () {
+                log('WORKDIR', 'deleted processed file: ' + relPath);
+                resolve(true);
+              }).catch(function (err) {
+                // 文件不存在视为已删除
+                log('WARN', 'deleteProcessedFileFromWorkDir removeEntry failed (likely not exist): ' + (err.message || err));
+                resolve(false);
+              });
+            }).catch(function (err) {
+              log('WARN', 'deleteProcessedFileFromWorkDir getDirectoryHandle failed: ' + (err.message || err));
+              resolve(false);
+            });
+          }).catch(function () { resolve(false); });
+        }).catch(function () { resolve(false); });
+      } catch (e) {
+        log('ERROR', 'deleteProcessedFileFromWorkDir exception: ' + (e.message || e));
+        resolve(false);
+      }
+    });
+  }
 
   // ===== 全局状态 =====
+  // 视频多选（项目详情面板）
+  var selectedVideoIds = new Set();
+
   var state = {
     currentStep: 1,            // 1=上传, 2=元信息, 3=标注, 4=预览, 5=导出
     currentFrame: 0,
@@ -66,6 +504,25 @@
       resolution: [0, 0],
       remark: ''
     },
+    // ===== 阶段 1/5：项目管理 + meta_info 字段 =====
+    mode: 'project',           // 'project'（项目模式，4 步） | 'direct'（直接标注，5 步）
+    projects: [],              // 项目列表（与 localStorage aix_ego_projects 同步）
+    currentProject: null,      // 当前选中的项目对象（运行时引用，不持久化到 aix_annotate_state）
+    currentVideo: null,        // 当前选中视频对象（运行时引用）
+    project_id: null,          // 当前项目 ID
+    video_id: null,            // 当前视频 ID
+    device_config: null,       // 当前设备配置（来自项目）
+    // 阶段 5：meta_info（8 个字段，按 deliverable.md 定义）
+    meta_info: {
+      data_source: '',
+      trajectory_index: '',
+      fps: 30,
+      num_frames: 0,
+      frame_name: [],           // string[]
+      instruction_sub_camera: '',
+      task_success: true,
+      task_horizon: 'NA'
+    },
     activeTab: 'hand_detection',  // hand_detection / keypoints / action / hand_object
     annotations: {
       hand_detection: [],
@@ -76,7 +533,9 @@
     },
     selectedIds: { hand: null, keypoint: null, segment: null, relation: null, object: null },
     history: [],                    // 撤销栈
-    historyIndex: -1                // 重做栈指针（-1 表示无历史）
+    historyIndex: -1,               // 重做栈指针（-1 表示无历史）
+    // 批量标注上下文（仅批量标注模式有效）
+    batchAnnotateContext: null      // { projectId, batchId, videoIds: [], currentIndex: 0 }
   };
 
   // ===== DOM 缓存 =====
@@ -168,7 +627,49 @@
     relationsList: null,
     handObjectHint: null,
     // 阶段 8：导入标注按钮
-    importAnnotationsBtn: null
+    importAnnotationsBtn: null,
+    // 阶段 1：项目面板相关 DOM
+    projectPanel: null,
+    projectListView: null,
+    projectDetailView: null,
+    newProjectFormView: null,
+    projectList: null,
+    projectListEmpty: null,
+    newProjectBtn: null,
+    directAnnotateBtn: null,
+    newProjectBackBtn: null,
+    newProjectSubmitBtn: null,
+    newProjectCancelBtn: null,
+    projectNameInput: null,
+    projectDataSourceInput: null,
+    projectRemarkInput: null,
+    projectVideoInput: null,
+    projectFolderInput: null,
+    projectImportProgress: null,
+    projectImportProgressFill: null,
+    projectImportProgressText: null,
+    // 阶段 5：meta_info 表单字段
+    metaDataSourceInput: null,
+    metaTrajectoryIndexInput: null,
+    metaFpsInput: null,
+    metaNumFramesInput: null,
+    metaFrameNameInput: null,
+    metaInstructionSubCameraInput: null,
+    metaTaskSuccessInput: null,
+    metaTaskHorizonInput: null,
+    // 标注模式容器（首屏外的 header / steps / step-content / step-nav）
+    annotateHeader: null,
+    annotateStepsEl: null,
+    annotateStepContent: null,
+    annotateStepNav: null,
+    // 批量标注导航条
+    batchNav: null,
+    batchNavName: null,
+    batchNavProgress: null,
+    batchNavStatus: null,
+    batchPrevBtn: null,
+    batchNextBtn: null,
+    batchExitBtn: null
   };
 
   // ===== 日志函数 =====
@@ -305,6 +806,48 @@
     dom.handObjectHint = qs('handObjectHint');
     // 阶段 8：导入标注按钮
     dom.importAnnotationsBtn = qs('importAnnotationsBtn');
+    // 阶段 1：项目面板 DOM
+    dom.projectPanel = qs('annotateProjectPanel');
+    dom.projectListView = qs('annotateProjectListView');
+    dom.projectDetailView = qs('annotateProjectDetailView');
+    dom.newProjectFormView = qs('annotateNewProjectFormView');
+    dom.projectList = qs('annotateProjectList');
+    dom.projectListEmpty = qs('annotateProjectListEmpty');
+    dom.newProjectBtn = qs('annotateNewProjectBtn');
+    dom.directAnnotateBtn = qs('annotateDirectAnnotateBtn');
+    dom.newProjectBackBtn = qs('annotateNewProjectBackBtn');
+    dom.newProjectSubmitBtn = qs('annotateNewProjectSubmitBtn');
+    dom.newProjectCancelBtn = qs('annotateNewProjectCancelBtn');
+    dom.projectNameInput = qs('annotateProjectName');
+    dom.projectDataSourceInput = qs('annotateProjectDataSource');
+    dom.projectRemarkInput = qs('annotateProjectRemark');
+    dom.projectVideoInput = qs('annotateProjectVideoInput');
+    dom.projectFolderInput = qs('annotateProjectFolderInput');
+    dom.projectImportProgress = qs('annotateProjectImportProgress');
+    dom.projectImportProgressFill = qs('annotateProjectImportProgressFill');
+    dom.projectImportProgressText = qs('annotateProjectImportProgressText');
+    // 阶段 5：meta_info 表单字段（HTML 中待添加）
+    dom.metaDataSourceInput = qs('annotateMetaDataSource');
+    dom.metaTrajectoryIndexInput = qs('annotateMetaTrajectoryIndex');
+    dom.metaFpsInput = qs('annotateMetaFps');
+    dom.metaNumFramesInput = qs('annotateMetaNumFrames');
+    dom.metaFrameNameInput = qs('annotateMetaFrameName');
+    dom.metaInstructionSubCameraInput = qs('annotateMetaInstructionSubCamera');
+    dom.metaTaskSuccessInput = qs('annotateMetaTaskSuccess');
+    dom.metaTaskHorizonInput = qs('annotateMetaTaskHorizon');
+    // 标注模式容器
+    dom.annotateHeader = qs('annotateHeader') || document.querySelector('.annotate-header');
+    dom.annotateStepsEl = dom.steps; // annotateSteps 已缓存
+    dom.annotateStepContent = document.querySelector('.annotate-step-content');
+    dom.annotateStepNav = qs('annotateStepNav');
+    // 批量标注导航条
+    dom.batchNav = qs('annotateBatchNav');
+    dom.batchNavName = qs('annotateBatchNavName');
+    dom.batchNavProgress = qs('annotateBatchNavProgress');
+    dom.batchNavStatus = qs('annotateBatchNavStatus');
+    dom.batchPrevBtn = qs('annotateBatchPrevBtn');
+    dom.batchNextBtn = qs('annotateBatchNextBtn');
+    dom.batchExitBtn = qs('annotateBatchExitBtn');
   }
 
   // ===== 步骤导航 =====
@@ -314,9 +857,14 @@
         log('WARN', 'goToStep invalid step: ' + step);
         return;
       }
+      // 阶段 5：项目模式下不允许进入步骤 1（上传）
+      if (state.mode === 'project' && step === 1) {
+        log('WARN', 'goToStep: step 1 (upload) is not allowed in project mode');
+        step = 2; // 重定向到元信息
+      }
       var prevStep = state.currentStep;
       state.currentStep = step;
-      log('STEP', 'goToStep: ' + prevStep + ' -> ' + step);
+      log('STEP', 'goToStep: ' + prevStep + ' -> ' + step + ' (mode=' + state.mode + ')');
 
       // 阶段 9：进入/退出预览模式
       // 进入步骤 4：开启预览模式
@@ -341,16 +889,23 @@
         }
       }
 
-      // 更新导航信息
+      // 更新导航信息（阶段 5：项目模式显示 N/4，直接模式显示 N/5）
       if (dom.stepNavInfo) {
-        dom.stepNavInfo.textContent = step + ' / ' + TOTAL_STEPS;
+        if (state.mode === 'project') {
+          // 项目模式：步骤 2-5 映射为 1-4
+          var displayStep = step - 1;
+          dom.stepNavInfo.textContent = displayStep + ' / ' + PROJECT_TOTAL_STEPS;
+        } else {
+          dom.stepNavInfo.textContent = step + ' / ' + TOTAL_STEPS;
+        }
       }
 
-      // 上一步按钮禁用状态
+      // 上一步按钮禁用状态（阶段 5：项目模式下步骤 2 视为第一步）
+      var minStep = (state.mode === 'project') ? 2 : 1;
       if (dom.prevBtn) {
-        dom.prevBtn.disabled = (step === 1);
-        dom.prevBtn.style.opacity = (step === 1) ? '0.5' : '1';
-        dom.prevBtn.style.cursor = (step === 1) ? 'not-allowed' : 'pointer';
+        dom.prevBtn.disabled = (step === minStep);
+        dom.prevBtn.style.opacity = (step === minStep) ? '0.5' : '1';
+        dom.prevBtn.style.cursor = (step === minStep) ? 'not-allowed' : 'pointer';
       }
 
       // 下一步按钮文案（最后一步改为「完成」语义，本阶段保留"下一步"文案）
@@ -452,14 +1007,28 @@
     try {
       if (!dom.steps) return;
       var circles = qsa('.annotate-step-circle', dom.steps);
+      var lines = qsa('.annotate-step-line', dom.steps);
       for (var i = 0; i < circles.length; i++) {
         var circle = circles[i];
         var stepNum = parseInt(circle.getAttribute('data-step'), 10);
+        // 阶段 5：项目模式下隐藏步骤 1（上传）及其后的连接线
+        if (state.mode === 'project' && stepNum === 1) {
+          circle.style.display = 'none';
+          if (lines[i - 1]) lines[i - 1].style.display = 'none';
+          continue;
+        }
+        circle.style.display = '';
         circle.classList.remove('active', 'completed');
         if (stepNum < state.currentStep) {
           circle.classList.add('completed');
         } else if (stepNum === state.currentStep) {
           circle.classList.add('active');
+        }
+      }
+      // 还原连接线显示（直接模式下）
+      if (state.mode !== 'project') {
+        for (var j = 0; j < lines.length; j++) {
+          lines[j].style.display = '';
         }
       }
     } catch (e) {
@@ -1261,6 +1830,10 @@
         state.historyIndex++;
       }
       log('HISTORY', 'push, index=' + state.historyIndex + ' size=' + state.history.length);
+      // 触发标注自动保存（debounce，仅项目模式）
+      if (state.mode === 'project') {
+        persistCurrentAnnotationsToVideo(false);
+      }
     } catch (e) {
       log('ERROR', 'pushHistory failed: ' + (e.message || e));
     }
@@ -1288,6 +1861,10 @@
       log('HISTORY', 'undo to index=' + state.historyIndex);
       triggerRedraw();
       saveToLocalStorage();
+      // undo 后触发标注自动保存（仅项目模式）
+      if (state.mode === 'project') {
+        persistCurrentAnnotationsToVideo(false);
+      }
     } catch (e) {
       log('ERROR', 'undo failed: ' + (e.message || e));
     }
@@ -1315,6 +1892,10 @@
       log('HISTORY', 'redo to index=' + state.historyIndex);
       triggerRedraw();
       saveToLocalStorage();
+      // redo 后触发标注自动保存（仅项目模式）
+      if (state.mode === 'project') {
+        persistCurrentAnnotationsToVideo(false);
+      }
     } catch (e) {
       log('ERROR', 'redo failed: ' + (e.message || e));
     }
@@ -1332,14 +1913,17 @@
       if (dom.modalBody) dom.modalBody.innerHTML = opts.body || '';
       if (dom.modalConfirmBtn) {
         dom.modalConfirmBtn.textContent = opts.confirmText || tt('annotate.modal_confirm', '确认');
-        // 每次显示重置（避免 showHandSelectionModal 隐藏后影响下次弹窗）
-        dom.modalConfirmBtn.style.display = '';
+        // 强制显示确认按钮（清除之前可能被隐藏的样式）
+        dom.modalConfirmBtn.style.display = 'inline-block';
+        dom.modalConfirmBtn.style.visibility = 'visible';
+        dom.modalConfirmBtn.style.opacity = '1';
       }
       if (dom.modalCancelBtn) {
         dom.modalCancelBtn.textContent = opts.cancelText || tt('annotate.modal_cancel', '取消');
         dom.modalCancelBtn.style.display = opts.hideCancel ? 'none' : '';
       }
       dom.modalConfirmCallback = typeof opts.onConfirm === 'function' ? opts.onConfirm : null;
+      dom.modalCancelCallback = typeof opts.onCancel === 'function' ? opts.onCancel : null;
       dom.modal.removeAttribute('hidden');
       log('MODAL', 'show: ' + (opts.title || ''));
     } catch (e) {
@@ -1352,6 +1936,7 @@
       if (!dom.modal) return;
       dom.modal.setAttribute('hidden', '');
       dom.modalConfirmCallback = null;
+      dom.modalCancelCallback = null;
       log('MODAL', 'hide');
     } catch (e) {
       log('ERROR', 'hideModal failed: ' + (e.message || e));
@@ -1375,11 +1960,18 @@
         meta: state.meta,
         activeTab: state.activeTab,
         annotations: state.annotations,
-        selectedIds: state.selectedIds
+        selectedIds: state.selectedIds,
+        // 阶段 5：新增 mode 和 meta_info 持久化
+        mode: state.mode,
+        meta_info: state.meta_info,
+        project_id: state.project_id,
+        video_id: state.video_id,
+        // 批量标注上下文持久化（刷新可恢复）
+        batchAnnotateContext: state.batchAnnotateContext
       };
       var json = JSON.stringify(serializable);
       localStorage.setItem(STORAGE_KEY, json);
-      log('SAVE', 'state saved, size=' + json.length + ' bytes');
+      log('SAVE', 'state saved, size=' + json.length + ' bytes (mode=' + state.mode + ')');
       return true;
     } catch (e) {
       var msg = e && e.message ? e.message : String(e);
@@ -1443,6 +2035,14 @@
         for (var mk in overlay[k]) {
           if (Object.prototype.hasOwnProperty.call(overlay[k], mk)) {
             result[k][mk] = overlay[k][mk];
+          }
+        }
+      } else if (k === 'meta_info' && typeof overlay[k] === 'object' && overlay[k] !== null) {
+        // 阶段 5：meta_info 深合并
+        result[k] = result[k] || {};
+        for (var mik in overlay[k]) {
+          if (Object.prototype.hasOwnProperty.call(overlay[k], mik)) {
+            result[k][mik] = overlay[k][mik];
           }
         }
       } else if (k === 'selectedIds' && typeof overlay[k] === 'object' && overlay[k] !== null) {
@@ -1810,14 +2410,14 @@
       // 上传区域
       if (dom.fileSelectBtn) {
         dom.fileSelectBtn.addEventListener('click', function () {
-          if (dom.fileInput) dom.fileInput.click();
+          openVideoPicker();
         });
       }
       if (dom.uploadZone) {
         dom.uploadZone.addEventListener('click', function (e) {
           // 避免点击内部按钮触发两次
           if (e.target === dom.fileSelectBtn || dom.fileSelectBtn && dom.fileSelectBtn.contains(e.target)) return;
-          if (dom.fileInput) dom.fileInput.click();
+          openVideoPicker();
         });
         // 拖拽事件（Task 2.1：实际加载逻辑）
         dom.uploadZone.addEventListener('dragover', function (e) {
@@ -1995,7 +2595,17 @@
 
       // 弹窗
       if (dom.modalCloseBtn) dom.modalCloseBtn.addEventListener('click', hideModal);
-      if (dom.modalCancelBtn) dom.modalCancelBtn.addEventListener('click', hideModal);
+      if (dom.modalCancelBtn) dom.modalCancelBtn.addEventListener('click', function() {
+        try {
+          if (typeof dom.modalCancelCallback === 'function') {
+            dom.modalCancelCallback();
+          }
+          hideModal();
+        } catch (e) {
+          log('ERROR', 'modal cancel callback failed: ' + (e.message || e));
+          hideModal();
+        }
+      });
       if (dom.modalOverlay) dom.modalOverlay.addEventListener('click', hideModal);
       if (dom.modalConfirmBtn) {
         dom.modalConfirmBtn.addEventListener('click', function () {
@@ -2021,6 +2631,11 @@
 
       // 元信息表单双向绑定
       bindMetaForm();
+      // 阶段 5：meta_info 表单双向绑定（项目模式专用）
+      bindMetaInfoForm();
+
+      // ===== 阶段 1-4：项目面板事件绑定 =====
+      bindProjectEvents();
 
       // 快捷键
       bindShortcuts();
@@ -2205,6 +2820,102 @@
     }
   }
 
+  // ===== 阶段 1-4：项目面板事件绑定 =====
+  function bindProjectEvents() {
+    try {
+      // 新建项目按钮
+      if (dom.newProjectBtn) {
+        dom.newProjectBtn.addEventListener('click', function () {
+          try {
+            showNewProjectFormView();
+          } catch (e) {
+            log('ERROR', 'newProjectBtn click failed: ' + (e.message || e));
+          }
+        });
+      }
+      // 直接标注按钮（降级入口）
+      if (dom.directAnnotateBtn) {
+        dom.directAnnotateBtn.addEventListener('click', function () {
+          try {
+            enterDirectAnnotateMode();
+          } catch (e) {
+            log('ERROR', 'directAnnotateBtn click failed: ' + (e.message || e));
+          }
+        });
+      }
+      // 新建项目表单 - 返回按钮
+      if (dom.newProjectBackBtn) {
+        dom.newProjectBackBtn.addEventListener('click', function () {
+          try {
+            showProjectListView();
+          } catch (e) {
+            log('ERROR', 'newProjectBackBtn click failed: ' + (e.message || e));
+          }
+        });
+      }
+      // 新建项目表单 - 取消按钮
+      if (dom.newProjectCancelBtn) {
+        dom.newProjectCancelBtn.addEventListener('click', function () {
+          try {
+            showProjectListView();
+          } catch (e) {
+            log('ERROR', 'newProjectCancelBtn click failed: ' + (e.message || e));
+          }
+        });
+      }
+      // 新建项目表单 - 提交按钮
+      if (dom.newProjectSubmitBtn) {
+        dom.newProjectSubmitBtn.addEventListener('click', function () {
+          try {
+            submitNewProjectForm();
+          } catch (e) {
+            log('ERROR', 'newProjectSubmitBtn click failed: ' + (e.message || e));
+          }
+        });
+      }
+      // 新建项目表单 - 回车提交
+      if (dom.projectRemarkInput) {
+        dom.projectRemarkInput.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            submitNewProjectForm();
+          }
+        });
+      }
+      // 单视频导入文件输入
+      if (dom.projectVideoInput) {
+        dom.projectVideoInput.addEventListener('change', function (e) {
+          try {
+            var target = e.target || e.srcElement;
+            var files = target && target.files;
+            if (files && files.length > 0) {
+              handleProjectVideoImport(files);
+            }
+          } catch (err) {
+            log('ERROR', 'projectVideoInput change failed: ' + (err.message || err));
+          }
+        });
+      }
+      // 文件夹批量导入
+      if (dom.projectFolderInput) {
+        dom.projectFolderInput.addEventListener('change', function (e) {
+          try {
+            var target = e.target || e.srcElement;
+            var files = target && target.files;
+            if (files && files.length > 0) {
+              handleProjectVideoImport(files);
+            }
+          } catch (err) {
+            log('ERROR', 'projectFolderInput change failed: ' + (err.message || err));
+          }
+        });
+      }
+      log('INIT', 'Project events bound');
+    } catch (e) {
+      log('ERROR', 'bindProjectEvents failed: ' + (e.message || e));
+    }
+  }
+
   function bindMetaForm() {
     try {
       var fields = [
@@ -2312,12 +3023,60 @@
     }
   }
 
+  // ===== 触发视频文件选择（FS Access API 优先，降级到 <input type="file">） =====
+  function openVideoPicker() {
+    try {
+      if (FS_ACCESS_SUPPORTED) {
+        log('FILE', 'openVideoPicker: using showOpenFilePicker');
+        window.showOpenFilePicker({
+          types: [{ description: 'Video', accept: { 'video/*': ['.mp4', '.mov', '.avi'] } }],
+          multiple: false
+        }).then(function (handles) {
+          var fileHandle = handles && handles[0];
+          if (!fileHandle) {
+            log('WARN', 'openVideoPicker: no handle returned');
+            return;
+          }
+          return fileHandle.getFile().then(function (file) {
+            // handleKey 命名：项目模式 project_{id}_video_{id}，直接模式 direct_video
+            var handleKey = state.project_id
+              ? ('project_' + state.project_id + '_video_' + (state.video_id || ''))
+              : 'direct_video';
+            handleFileSelect(file, fileHandle, handleKey);
+          });
+        }).catch(function (err) {
+          // 用户取消选择（AbortError）不报错
+          if (err && err.name === 'AbortError') {
+            log('FILE', 'openVideoPicker: user aborted selection');
+            return;
+          }
+          log('ERROR', 'openVideoPicker: showOpenFilePicker failed: ' + (err.message || err));
+          showToast(tt('annotate.err_load_failed', '选择文件失败: ' + (err.message || err)));
+        });
+      } else {
+        // 不支持 FS Access API，走原 <input type="file"> 流程
+        if (dom.fileInput) dom.fileInput.click();
+      }
+    } catch (e) {
+      log('ERROR', 'openVideoPicker failed: ' + (e.message || e));
+      // 兜底降级到 input
+      try { if (dom.fileInput) dom.fileInput.click(); } catch (_) {}
+    }
+  }
+
   // ===== 文件选择处理（Task 2.1：完整实现视频加载） =====
-  function handleFileSelect(file) {
+  function handleFileSelect(file, fileHandle, handleKey) {
     try {
       if (!file) {
         log('WARN', 'handleFileSelect: no file');
         return;
+      }
+
+      // 保存文件句柄到 IndexedDB（用于刷新后恢复，仅 FS Access API 支持）
+      if (fileHandle && handleKey && FS_ACCESS_SUPPORTED) {
+        fsSaveHandle(handleKey, fileHandle).catch(function (err) {
+          log('WARN', 'handleFileSelect: fsSaveHandle failed, key=' + handleKey + ' err=' + (err.message || err));
+        });
       }
 
       // 文件名 / 扩展名
@@ -2720,6 +3479,16 @@
             updateFrameDisplay();
             // 重置文件信息显示
             updateFileInfoUI();
+
+            // 删除 IndexedDB 中持久化的文件句柄（与当前视频对应）
+            if (FS_ACCESS_SUPPORTED) {
+              var delKey = state.project_id
+                ? ('project_' + state.project_id + '_video_' + (state.video_id || ''))
+                : 'direct_video';
+              fsDeleteHandle(delKey).catch(function (err) {
+                log('WARN', 'removeFile: fsDeleteHandle failed, key=' + delKey + ' err=' + (err.message || err));
+              });
+            }
 
             log('FILE', 'Removed');
             hideModal();
@@ -5820,11 +6589,32 @@
         log('ERROR', 'renderActionPanel in renderInitial failed: ' + (eAP.message || eAP));
       }
 
-      // 文件信息回填（仅元信息，不含 videoUrl 运行时字段）
-      if (state.videoFileName && dom.fileName) {
+      // 文件信息回填（仅当 videoUrl 存在时才显示，避免刷新后显示旧文件但无法播放）
+      if (state.videoUrl && state.videoFile && state.videoFileName && dom.fileName) {
         dom.fileName.textContent = state.videoFileName;
         updateFileInfoUI();
         if (dom.fileInfo) dom.fileInfo.removeAttribute('hidden');
+        if (dom.uploadZone) dom.uploadZone.setAttribute('hidden', '');
+      } else if (state.videoFileName && !state.videoUrl) {
+        if (FS_ACCESS_SUPPORTED) {
+          // FS Access 支持：保留 videoFileName，等待异步恢复流程加载视频文件
+          log('INIT', 'videoFileName exists, videoUrl null, FS Access enabled — pending restore');
+          if (dom.fileName) dom.fileName.textContent = state.videoFileName;
+          updateFileInfoUI();
+          if (dom.fileInfo) dom.fileInfo.removeAttribute('hidden');
+          if (dom.uploadZone) dom.uploadZone.setAttribute('hidden', '');
+        } else {
+          // 不支持 FS Access：清空旧文件名，显示上传区（原逻辑）
+          log('INIT', 'videoFileName exists but videoUrl is null (page refreshed), clearing stale state');
+          state.videoFileName = '';
+          state.videoFileSize = 0;
+          state.videoDuration = 0;
+          state.videoResolution = [0, 0];
+          state.totalFrames = 0;
+          if (dom.fileInfo) dom.fileInfo.setAttribute('hidden', '');
+          if (dom.uploadZone) dom.uploadZone.removeAttribute('hidden');
+          if (dom.fileName) dom.fileName.textContent = '';
+        }
       }
 
       log('INIT', 'Initial render complete');
@@ -5886,22 +6676,5207 @@
         log('INIT', 'No saved state, using defaults');
       }
 
+      // 阶段 1：加载项目列表（独立 localStorage key）
+      loadProjects();
+      // 恢复 currentProject 引用（如果有 project_id）
+      if (state.project_id) {
+        var restoredProject = findProjectById(state.project_id);
+        if (restoredProject) {
+          state.currentProject = restoredProject;
+          // 恢复 device_config 引用
+          state.device_config = restoredProject.device_config || createDefaultDeviceConfig();
+          // 恢复 currentVideo 引用（如果有 video_id）
+          if (state.video_id) {
+            var restoredVideo = findVideoInProject(restoredProject, state.video_id);
+            if (restoredVideo) {
+              state.currentVideo = restoredVideo;
+            }
+          }
+        }
+      }
+
       // 渲染初始 UI
       renderInitial();
 
       // 绑定事件
       bindEvents();
+      // 绑定批量标注导航条事件
+      bindBatchAnnotateNavEvents();
 
       // 注册 Canvas 钩子（onDrawComplete / onAnnotationEdited）
       registerCanvasHooks();
 
-      log('INIT', 'Annotate page ready, currentStep=' + state.currentStep + ' activeTab=' + state.activeTab);
+      // 阶段 1：首屏显示项目面板（默认）
+      // 无论 state.mode 如何，默认都显示项目面板，让用户选择项目或直接标注
+      // 只有当 URL 带 project_id 参数时，才直接进入标注模式
+      var urlParams = new URLSearchParams(window.location.search);
+      var urlProjectId = urlParams.get('project_id');
+      var urlVideoId = urlParams.get('video_id');
+
+      if (urlProjectId && state.project_id && state.currentStep > 1) {
+        // URL 指定了项目且之前在标注中：恢复标注界面
+        hideProjectPanelAndShowAnnotate();
+        ensureVideoReselectPrompt();
+        // 若恢复了批量标注上下文，显示导航条
+        if (state.batchAnnotateContext) {
+          updateBatchAnnotateNav();
+        }
+      } else {
+        // 默认显示项目面板
+        showProjectPanel();
+        showProjectListView();
+        // 非标注模式时清理批量标注上下文（避免残留）
+        if (state.batchAnnotateContext) {
+          state.batchAnnotateContext = null;
+          hideBatchAnnotateNav();
+        }
+      }
+
+      // 尝试从 IndexedDB 恢复视频文件（File System Access API）
+      // 仅当 FS Access 支持且有持久化的文件名但无运行时 URL 时触发
+      if (FS_ACCESS_SUPPORTED && state.videoFileName && !state.videoUrl) {
+        var restoreKey = state.project_id
+          ? ('project_' + state.project_id + '_video_' + (state.video_id || ''))
+          : 'direct_video';
+        log('RESTORE', 'init: attempting restore, key=' + restoreKey + ' fileName=' + state.videoFileName);
+        showToast(tt('annotate.restore_in_progress', '正在恢复视频文件...'));
+        fsLoadHandle(restoreKey).then(function (handle) {
+          if (!handle) {
+            log('RESTORE', 'No saved file handle for key=' + restoreKey);
+            showToast(tt('annotate.project.reselect_video_hint', '请在下方上传区重新选择该视频文件以加载播放器'));
+            return;
+          }
+          log('RESTORE', 'Found file handle, requesting permission...');
+          return fsHandleToFile(handle).then(function (file) {
+            if (!file) {
+              log('RESTORE', 'Permission denied or file unavailable');
+              showToast(tt('annotate.restore_permission_denied', '无法恢复视频文件，请重新选择（权限被拒绝）'));
+              return;
+            }
+            log('RESTORE', 'File restored: ' + file.name);
+            handleFileSelect(file, handle, restoreKey);
+            var restoredMsg = tt('annotate.video_restored', '已恢复视频文件: ' + file.name);
+            restoredMsg = restoredMsg.split('{name}').join(file.name);
+            showToast(restoredMsg);
+          });
+        }).catch(function (err) {
+          log('ERROR', 'Restore video failed: ' + (err.message || err));
+          showToast(tt('annotate.restore_permission_denied', '无法恢复视频文件，请重新选择'));
+        });
+      }
+
+      log('INIT', 'Annotate page ready, currentStep=' + state.currentStep + ' activeTab=' + state.activeTab + ' mode=' + state.mode);
     } catch (e) {
       log('ERROR', 'init failed: ' + (e.message || e));
       // 致命错误时尝试提示用户
       try {
         showToast('标注工具初始化失败: ' + (e.message || e));
       } catch (_) {}
+    }
+  }
+
+  // ==========================================================================
+  // 阶段 1：项目管理（createProject / deleteProject / selectProject / 持久化 / 渲染）
+  // ==========================================================================
+
+  // ===== 工具：生成唯一 ID（时间戳 + 随机后缀） =====
+  function genId(prefix) {
+    try {
+      var ts = Date.now().toString(36);
+      var rand = Math.random().toString(36).substring(2, 8);
+      return (prefix || 'id') + '_' + ts + rand;
+    } catch (e) {
+      log('ERROR', 'genId failed: ' + (e.message || e));
+      return (prefix || 'id') + '_' + Date.now();
+    }
+  }
+
+  // ===== 工具：生成有序 ID（batch_001 / traj_001） =====
+  function genSequentialId(prefix, existingList) {
+    try {
+      var max = 0;
+      var list = Array.isArray(existingList) ? existingList : [];
+      for (var i = 0; i < list.length; i++) {
+        var item = list[i];
+        if (item && typeof item.id === 'string') {
+          var m = item.id.match(new RegExp('^' + prefix + '_(\\d+)$'));
+          if (m && m[1]) {
+            var n = parseInt(m[1], 10);
+            if (n > max) max = n;
+          }
+        }
+      }
+      var next = max + 1;
+      return prefix + '_' + String(next).padStart(3, '0');
+    } catch (e) {
+      log('ERROR', 'genSequentialId failed: ' + (e.message || e));
+      return prefix + '_001';
+    }
+  }
+
+  // ===== 创建默认 device_config =====
+  function createDefaultDeviceConfig() {
+    return {
+      intrinsic: { fx: 0, fy: 0, cx: 0, cy: 0, distortion: [0, 0, 0, 0, 0] },
+      extrinsic: {
+        R: [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+        T: [0, 0, 0]
+      },
+      frame_name: [],
+      instruction_sub_camera: ''
+    };
+  }
+
+  // ===== saveProjects：保存项目列表到 localStorage（独立 key） =====
+  function saveProjects() {
+    try {
+      var json = JSON.stringify(state.projects || []);
+      localStorage.setItem(PROJECTS_STORAGE_KEY, json);
+      log('PROJECT', 'saveProjects: ' + (state.projects || []).length + ' projects, size=' + json.length + ' bytes');
+      return true;
+    } catch (e) {
+      var msg = e && e.message ? e.message : String(e);
+      log('ERROR', 'saveProjects failed: ' + msg);
+      if (e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014)) {
+        showToast(tt('annotate.project.save_quota', '项目存储空间已满，请删除部分项目或导出后清理'));
+      } else {
+        showToast(tt('annotate.project.save_failed', '项目保存失败: ') + msg);
+      }
+      return false;
+    }
+  }
+
+  // ===== loadProjects：从 localStorage 加载项目列表 =====
+  function loadProjects() {
+    try {
+      var raw = localStorage.getItem(PROJECTS_STORAGE_KEY);
+      if (!raw) {
+        log('PROJECT', 'loadProjects: no saved projects');
+        state.projects = [];
+        return [];
+      }
+      var parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) {
+        log('WARN', 'loadProjects: saved data is not an array, reset to []');
+        state.projects = [];
+        return [];
+      }
+      state.projects = parsed;
+      log('PROJECT', 'loadProjects: loaded ' + parsed.length + ' projects, size=' + raw.length + ' bytes');
+      return parsed;
+    } catch (e) {
+      log('ERROR', 'loadProjects failed: ' + (e.message || e));
+      state.projects = [];
+      return [];
+    }
+  }
+
+  // ===== createProject：创建新项目 =====
+  function createProject(name, dataSource, remark) {
+    try {
+      var trimmedName = String(name || '').trim();
+      var trimmedDs = String(dataSource || '').trim();
+      if (!trimmedName) {
+        log('WARN', 'createProject: name is empty');
+        showToast(tt('annotate.project.err_name_required', '项目名称必填'));
+        return null;
+      }
+      if (!trimmedDs) {
+        log('WARN', 'createProject: data_source is empty');
+        showToast(tt('annotate.project.err_data_source_required', '数据来源必填'));
+        return null;
+      }
+      var now = new Date();
+      var project = {
+        id: genId('proj'),
+        name: trimmedName,
+        data_source: trimmedDs,
+        remark: String(remark || '').trim(),
+        created_at: now.toISOString(),
+        videos: [],
+        batches: [],
+        device_config: createDefaultDeviceConfig(),
+        work_dir_name: '' // 工作目录名称（显示用）；句柄存 IndexedDB key=project_{id}_workdir
+      };
+      state.projects.push(project);
+      saveProjects();
+      log('PROJECT', 'createProject: id=' + project.id + ' name=' + project.name + ' data_source=' + project.data_source);
+      return project;
+    } catch (e) {
+      log('ERROR', 'createProject failed: ' + (e.message || e));
+      showToast(tt('annotate.project.create_failed', '创建项目失败: ') + (e.message || e));
+      return null;
+    }
+  }
+
+  // ===== deleteProject：删除项目（二次确认） =====
+  function deleteProject(projectId) {
+    try {
+      var project = findProjectById(projectId);
+      if (!project) {
+        log('WARN', 'deleteProject: project not found, id=' + projectId);
+        return;
+      }
+      showModal({
+        title: tt('annotate.project.delete_title', '删除项目'),
+        body: '<p>' + tt('annotate.project.delete_body',
+          '确认删除项目「{name}」及其所有视频、批次、设备配置？此操作不可撤销。')
+          .replace('{name}', escapeHtml(project.name)) + '</p>',
+        confirmText: tt('annotate.project.delete_btn', '删除'),
+        cancelText: tt('annotate.modal_cancel', '取消'),
+        onConfirm: function () {
+          try {
+            var idx = findProjectIndexById(projectId);
+            if (idx >= 0) {
+              var project = state.projects[idx];
+              // Bug 4 修复：清理项目中所有视频的文件句柄（IndexedDB）
+              if (project && Array.isArray(project.videos) && FS_ACCESS_SUPPORTED) {
+                for (var v = 0; v < project.videos.length; v++) {
+                  var vid = project.videos[v];
+                  if (vid && vid._restoreKey) {
+                    try {
+                      (function (key) {
+                        fsDeleteHandle(key).catch(function (err) {
+                          log('WARN', 'deleteProject: fsDeleteHandle video failed, key=' + key +
+                            ' err=' + (err.message || err));
+                        });
+                      })(vid._restoreKey);
+                    } catch (e2) {
+                      log('WARN', 'deleteProject: fsDeleteHandle video exception: ' + (e2.message || e2));
+                    }
+                  }
+                }
+                log('PROJECT', 'deleteProject: cleaned ' + project.videos.length + ' video handle(s)');
+              }
+              state.projects.splice(idx, 1);
+              saveProjects();
+              renderProjectList();
+              log('PROJECT', 'deleteProject: deleted id=' + projectId);
+              showToast(tt('annotate.project.deleted', '项目已删除'));
+              // 清理所有批次的工作目录句柄（批次级，不阻塞删除流程）
+              if (project && Array.isArray(project.batches)) {
+                for (var bi = 0; bi < project.batches.length; bi++) {
+                  var batch = project.batches[bi];
+                  if (batch && batch.id) {
+                    try {
+                      (function (bid) {
+                        fsDeleteHandle(workDirKey(projectId, bid)).catch(function (err) {
+                          log('WARN', 'deleteProject: fsDeleteHandle batch workdir failed, batch=' + bid +
+                            ' err=' + (err.message || err));
+                        });
+                      })(batch.id);
+                    } catch (e2) {
+                      log('WARN', 'deleteProject: fsDeleteHandle batch workdir exception: ' + (e2.message || e2));
+                    }
+                  }
+                }
+                log('PROJECT', 'deleteProject: cleaned ' + project.batches.length + ' batch workdir handle(s)');
+              }
+              // 如果删除的是当前项目，返回项目列表
+              if (state.currentProject && state.currentProject.id === projectId) {
+                state.currentProject = null;
+                showProjectListView();
+              }
+            }
+            hideModal();
+          } catch (e) {
+            log('ERROR', 'deleteProject onConfirm failed: ' + (e.message || e));
+            hideModal();
+          }
+        }
+      });
+    } catch (e) {
+      log('ERROR', 'deleteProject failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== selectProject：进入项目详情面板 =====
+  function selectProject(projectId) {
+    try {
+      var project = findProjectById(projectId);
+      if (!project) {
+        log('WARN', 'selectProject: project not found, id=' + projectId);
+        return;
+      }
+      state.currentProject = project;
+      log('PROJECT', 'selectProject: id=' + project.id + ' name=' + project.name);
+      renderProjectDetail(project);
+      showProjectDetailView();
+    } catch (e) {
+      log('ERROR', 'selectProject failed: ' + (e.message || e));
+      showToast(tt('annotate.project.select_failed', '进入项目失败: ') + (e.message || e));
+    }
+  }
+
+  // ===== 工具：根据 ID 查找项目 =====
+  function findProjectById(id) {
+    try {
+      var list = state.projects || [];
+      for (var i = 0; i < list.length; i++) {
+        if (list[i] && list[i].id === id) return list[i];
+      }
+    } catch (e) {
+      log('ERROR', 'findProjectById failed: ' + (e.message || e));
+    }
+    return null;
+  }
+
+  function findProjectIndexById(id) {
+    try {
+      var list = state.projects || [];
+      for (var i = 0; i < list.length; i++) {
+        if (list[i] && list[i].id === id) return i;
+      }
+    } catch (e) {
+      log('ERROR', 'findProjectIndexById failed: ' + (e.message || e));
+    }
+    return -1;
+  }
+
+  // ===== 工具：在当前项目中查找视频 =====
+  function findVideoInProject(project, videoId) {
+    try {
+      if (!project || !Array.isArray(project.videos)) return null;
+      for (var i = 0; i < project.videos.length; i++) {
+        if (project.videos[i] && project.videos[i].id === videoId) return project.videos[i];
+      }
+    } catch (e) {
+      log('ERROR', 'findVideoInProject failed: ' + (e.message || e));
+    }
+    return null;
+  }
+
+  // ===== 工具：HTML 转义（防 XSS） =====
+  function escapeHtml(str) {
+    try {
+      var s = String(str == null ? '' : str);
+      return s
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    } catch (e) {
+      return String(str || '');
+    }
+  }
+
+  // ===== 工具：格式化日期时间显示 =====
+  function formatDateTime(isoStr) {
+    try {
+      if (!isoStr) return '—';
+      var d = new Date(isoStr);
+      if (isNaN(d.getTime())) return isoStr;
+      var yyyy = d.getFullYear();
+      var mm = String(d.getMonth() + 1).padStart(2, '0');
+      var dd = String(d.getDate()).padStart(2, '0');
+      var hh = String(d.getHours()).padStart(2, '0');
+      var mi = String(d.getMinutes()).padStart(2, '0');
+      return yyyy + '-' + mm + '-' + dd + ' ' + hh + ':' + mi;
+    } catch (e) {
+      return isoStr || '—';
+    }
+  }
+
+  // ===== renderProjectList：渲染项目列表 =====
+  function renderProjectList() {
+    try {
+      if (!dom.projectList) {
+        log('WARN', 'renderProjectList: projectList element not found');
+        return;
+      }
+      var projects = state.projects || [];
+      // 清空列表
+      dom.projectList.innerHTML = '';
+
+      // 空状态
+      if (projects.length === 0) {
+        if (dom.projectListEmpty) dom.projectListEmpty.removeAttribute('hidden');
+        log('PROJECT', 'renderProjectList: empty');
+        return;
+      }
+      if (dom.projectListEmpty) dom.projectListEmpty.setAttribute('hidden', '');
+
+      for (var i = 0; i < projects.length; i++) {
+        var project = projects[i];
+        var card = document.createElement('div');
+        card.className = 'annotate-project-card';
+        card.setAttribute('data-project-id', project.id);
+
+        var videoCount = Array.isArray(project.videos) ? project.videos.length : 0;
+        var batchCount = Array.isArray(project.batches) ? project.batches.length : 0;
+
+        card.innerHTML =
+          '<div class="annotate-project-card-header">' +
+            '<span class="material-symbols-outlined annotate-project-card-icon">folder</span>' +
+            '<div class="annotate-project-card-info">' +
+              '<h3 class="annotate-project-card-name">' + escapeHtml(project.name) + '</h3>' +
+              '<span class="annotate-project-card-source">' + escapeHtml(project.data_source) + '</span>' +
+            '</div>' +
+            '<button type="button" class="annotate-btn annotate-btn-danger annotate-btn-sm annotate-project-card-delete" data-action="delete" title="' +
+              tt('annotate.project.delete_title', '删除项目') + '">' +
+              '<span class="material-symbols-outlined">delete</span>' +
+            '</button>' +
+          '</div>' +
+          '<div class="annotate-project-card-meta">' +
+            '<span class="annotate-project-card-meta-item">' +
+              '<span class="material-symbols-outlined">videocam</span>' +
+              '<span>' + videoCount + ' ' + tt('annotate.project.videos_unit', '条轨迹') + '</span>' +
+            '</span>' +
+            '<span class="annotate-project-card-meta-item">' +
+              '<span class="material-symbols-outlined">layers</span>' +
+              '<span>' + batchCount + ' ' + tt('annotate.project.batches_unit', '个批次') + '</span>' +
+            '</span>' +
+            '<span class="annotate-project-card-meta-item">' +
+              '<span class="material-symbols-outlined">schedule</span>' +
+              '<span>' + formatDateTime(project.created_at) + '</span>' +
+            '</span>' +
+          '</div>';
+
+        // 点击卡片进入项目详情（排除删除按钮）
+        (function (pid, delBtn) {
+          card.addEventListener('click', function (e) {
+            try {
+              if (delBtn && (e.target === delBtn || delBtn.contains(e.target))) return;
+              selectProject(pid);
+            } catch (err) {
+              log('ERROR', 'project card click failed: ' + (err.message || err));
+            }
+          });
+          if (delBtn) {
+            delBtn.addEventListener('click', function (e) {
+              try {
+                e.stopPropagation();
+                deleteProject(pid);
+              } catch (err) {
+                log('ERROR', 'project delete click failed: ' + (err.message || err));
+              }
+            });
+          }
+        })(project.id, card.querySelector('.annotate-project-card-delete'));
+
+        dom.projectList.appendChild(card);
+      }
+      log('PROJECT', 'renderProjectList: rendered ' + projects.length + ' projects');
+    } catch (e) {
+      log('ERROR', 'renderProjectList failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 渲染工作目录设置区 HTML =====
+  // 显示当前工作目录名称 + 设置/更改按钮；浏览器不支持时禁用按钮并提示
+  function renderWorkDirSectionHtml(project) {
+    try {
+      var dirName = (project && project.work_dir_name) ? project.work_dir_name : '';
+      var notSet = !dirName;
+      var disabledAttr = DIR_PICKER_SUPPORTED ? '' : ' disabled';
+      var btnIcon = notSet ? 'create_new_folder' : 'sync_alt';
+      var btnI18nKey = notSet ? 'annotate.project.set_work_dir' : 'annotate.project.change_work_dir';
+      var btnLabel = notSet
+        ? tt('annotate.project.set_work_dir', '设置工作目录')
+        : tt('annotate.project.change_work_dir', '更改');
+
+      var html =
+        '<div class="annotate-work-dir-section">' +
+          '<div class="annotate-work-dir-header">' +
+            '<span class="material-symbols-outlined">folder</span>' +
+            '<span class="annotate-work-dir-label" data-i18n="annotate.project.work_dir">' +
+              tt('annotate.project.work_dir', '工作目录') + '</span>' +
+            '<span class="annotate-work-dir-name' + (notSet ? ' not-set' : '') + '"' +
+              (notSet ? '' : ' title="' + escapeHtml(dirName) + '"') + '>' +
+              (notSet
+                ? tt('annotate.project.work_dir_not_set', '未设置')
+                : escapeHtml(dirName)) +
+            '</span>' +
+          '</div>' +
+          '<div class="annotate-work-dir-hint" data-i18n="annotate.project.work_dir_hint">' +
+            tt('annotate.project.work_dir_hint',
+              '预处理视频将输出到此目录的 processed/ 子文件夹') +
+          '</div>' +
+          '<div class="annotate-work-dir-actions">' +
+            '<button type="button" class="annotate-btn ' +
+              (notSet ? 'annotate-btn-primary' : 'annotate-btn-secondary') +
+              ' annotate-btn-sm" id="setWorkDirBtn"' + disabledAttr + '>' +
+              '<span class="material-symbols-outlined">' + btnIcon + '</span>' +
+              '<span data-i18n="' + btnI18nKey + '">' + btnLabel + '</span>' +
+            '</button>';
+      if (!DIR_PICKER_SUPPORTED) {
+        html +=
+            '<span class="annotate-work-dir-warn" data-i18n="annotate.project.browser_not_support_dir">' +
+              tt('annotate.project.browser_not_support_dir',
+                '当前浏览器不支持选择目录，请使用 Chrome/Edge') +
+            '</span>';
+      }
+      html +=
+          '</div>' +
+        '</div>';
+      return html;
+    } catch (e) {
+      log('ERROR', 'renderWorkDirSectionHtml failed: ' + (e.message || e));
+      return '';
+    }
+  }
+
+  // ===== renderProjectDetail：渲染项目详情面板 =====
+  function renderProjectDetail(project) {
+    try {
+      if (!dom.projectDetailView) {
+        log('WARN', 'renderProjectDetail: detail view element not found');
+        return;
+      }
+      if (!project) {
+        log('WARN', 'renderProjectDetail: project is null');
+        return;
+      }
+
+      var deviceConfigHtml = renderDeviceConfigFormHtml(project);
+      var batchHtml = renderBatchPanelHtml(project);
+      var wizardHtml = renderProcessWizard(project);
+
+      dom.projectDetailView.innerHTML =
+        '<div class="annotate-project-detail-header">' +
+          '<button type="button" class="annotate-btn annotate-btn-secondary annotate-btn-sm" id="projectDetailBackBtn">' +
+            '<span class="material-symbols-outlined">arrow_back</span>' +
+            '<span data-i18n="annotate.project.back_to_list">返回项目列表</span>' +
+          '</button>' +
+          '<div class="annotate-project-detail-info">' +
+            '<h2 class="annotate-project-detail-name">' + escapeHtml(project.name) + '</h2>' +
+            '<div class="annotate-project-detail-meta">' +
+              '<span class="annotate-project-detail-source">' +
+                '<span class="material-symbols-outlined">database</span>' +
+                escapeHtml(project.data_source) +
+              '</span>' +
+              (project.remark ? '<span class="annotate-project-detail-remark">' +
+                '<span class="material-symbols-outlined">notes</span>' +
+                escapeHtml(project.remark) + '</span>' : '') +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        wizardHtml +
+        '<div class="annotate-accordion">' +
+          // 折叠面板 1：批次管理（流程步骤 ①②③④ 都在这里完成）
+          '<div class="annotate-accordion-item">' +
+            '<button type="button" class="annotate-accordion-header" data-target="projectBatchPanel">' +
+              '<span class="material-symbols-outlined">layers</span>' +
+              '<span data-i18n="annotate.project.batch_title">批次管理</span>' +
+              '<span class="annotate-accordion-count" id="projectBatchesCount">' +
+                (Array.isArray(project.batches) ? project.batches.length : 0) + '</span>' +
+              '<span class="material-symbols-outlined annotate-accordion-arrow">expand_more</span>' +
+            '</button>' +
+            '<div class="annotate-accordion-body" id="projectBatchPanel">' + batchHtml + '</div>' +
+          '</div>' +
+          // 折叠面板 2：设备配置（辅助配置，默认折叠）
+          '<div class="annotate-accordion-item">' +
+            '<button type="button" class="annotate-accordion-header collapsed" data-target="projectDevicePanel">' +
+              '<span class="material-symbols-outlined">videocam</span>' +
+              '<span data-i18n="annotate.project.device_config_title">采集设备参数</span>' +
+              '<span class="material-symbols-outlined annotate-accordion-arrow">expand_more</span>' +
+            '</button>' +
+            '<div class="annotate-accordion-body collapsed" id="projectDevicePanel" style="display:none;">' + deviceConfigHtml + '</div>' +
+          '</div>' +
+        '</div>';
+
+      // 绑定返回按钮
+      var backBtn = qs('projectDetailBackBtn');
+      if (backBtn) {
+        backBtn.addEventListener('click', function () {
+          showProjectListView();
+        });
+      }
+      // 绑定折叠面板事件
+      bindAccordionEvents(dom.projectDetailView);
+      // 绑定视频导入按钮
+      var importSingleBtn = qs('importSingleVideoBtn');
+      if (importSingleBtn) {
+        importSingleBtn.addEventListener('click', function () {
+          try {
+            // 优先用 showOpenFilePicker 保存句柄；降级到 <input> 由函数内部处理
+            importSingleVideoToProject(state.currentProject);
+          } catch (e) {
+            log('ERROR', 'import single video click failed: ' + (e.message || e));
+          }
+        });
+      }
+      var importFolderBtn = qs('importFolderVideoBtn');
+      if (importFolderBtn) {
+        importFolderBtn.addEventListener('click', function () {
+          try {
+            // 优先用 showDirectoryPicker 保存每个视频句柄；降级到 <input webkitdirectory>
+            importVideosBatch(state.currentProject);
+          } catch (e) {
+            log('ERROR', 'import folder click failed: ' + (e.message || e));
+          }
+        });
+      }
+      // 绑定设备配置表单事件
+      bindDeviceConfigFormEvents(project);
+      // 绑定批次管理事件
+      bindBatchPanelEvents(project);
+      // 绑定视频列表事件（删除/开始标注/加入批次）
+      bindVideoListEvents(project);
+      // 绑定流程向导步骤点击事件
+      bindProcessWizard(project);
+
+      // 应用 i18n 到新渲染的 DOM
+      try {
+        if (typeof window.AIX_I18N !== 'undefined' && typeof window.AIX_I18N.applyTo === 'function') {
+          window.AIX_I18N.applyTo(dom.projectDetailView);
+        } else if (typeof t === 'function') {
+          // 兜底：手动遍历 data-i18n
+          applyI18nToFallback(dom.projectDetailView);
+        }
+      } catch (eI18n) {
+        log('WARN', 'renderProjectDetail: apply i18n failed: ' + (eI18n.message || eI18n));
+      }
+
+      log('PROJECT', 'renderProjectDetail: rendered for project ' + project.id);
+    } catch (e) {
+      log('ERROR', 'renderProjectDetail failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== renderProcessWizard：渲染流程向导条（5 步引导） =====
+  // 步骤：1=创建批次 2=设置工作目录 3=导入轨迹 4=预处理(可选) 5=开始标注
+  // 说明：工作目录为批次级，至少一个批次设置了工作目录即视为步骤 2 完成
+  function renderProcessWizard(project) {
+    try {
+      if (!project) return '';
+
+      var batches = (project && Array.isArray(project.batches)) ? project.batches : [];
+      var batchCount = batches.length;
+      var hasBatch = batchCount > 0;
+      // 工作目录为批次级：至少一个批次设置了 work_dir_name 即视为完成
+      var hasWorkDir = false;
+      for (var bi = 0; bi < batches.length; bi++) {
+        if (batches[bi] && batches[bi].work_dir_name) {
+          hasWorkDir = true;
+          break;
+        }
+      }
+      var videos = (project && Array.isArray(project.videos)) ? project.videos : [];
+      var videoCount = videos.length;
+      var hasVideos = videoCount > 0;
+      var hasProcessed = false;
+      for (var i = 0; i < videos.length; i++) {
+        if (videos[i] && videos[i].processed_file) {
+          hasProcessed = true;
+          break;
+        }
+      }
+
+      // 当前步骤：1=未创建批次，2=未设置工作目录，3=未导入轨迹，4=未预处理，5=已就绪
+      var currentStep;
+      if (!hasBatch) currentStep = 1;
+      else if (!hasWorkDir) currentStep = 2;
+      else if (!hasVideos) currentStep = 3;
+      else if (!hasProcessed) currentStep = 4;
+      else currentStep = 5;
+
+      // 步骤状态：done / current / skip / pending
+      var step1State = hasBatch ? 'done' : 'current';
+      var step2State = hasWorkDir ? 'done' : (hasBatch ? 'current' : 'pending');
+      var step3State = hasVideos ? 'done' : (hasWorkDir ? 'current' : 'pending');
+      // 步骤 4 可选：未完成一律显示为 skip（灰色），已完成为 done
+      var step4State = hasProcessed ? 'done' : 'skip';
+      // 步骤 5：有视频即可点击（current 高亮），无视频为 pending
+      var step5State = hasVideos ? 'current' : 'pending';
+
+      // 状态文案
+      var statusHasBatch = tt('annotate.project.wizard_status_has_batch', '已创建 {n} 个批次').replace('{n}', String(batchCount));
+      var statusSet = tt('annotate.project.wizard_status_set', '已设置');
+      var statusImported = tt('annotate.project.wizard_status_imported', '已导入 {n} 条轨迹').replace('{n}', String(videoCount));
+      var statusDone = tt('annotate.project.wizard_status_done', '已完成');
+      var statusSkip = tt('annotate.project.wizard_status_skip', '跳过');
+      var statusClick = tt('annotate.project.wizard_status_click', '点击开始');
+
+      function stepStatusText(stepIdx) {
+        if (stepIdx === 1) return step1State === 'done' ? ('✓ ' + statusHasBatch) : statusClick;
+        if (stepIdx === 2) return step2State === 'done' ? ('✓ ' + statusSet) : statusClick;
+        if (stepIdx === 3) return step3State === 'done' ? ('✓ ' + statusImported) : statusClick;
+        if (stepIdx === 4) return step4State === 'done' ? ('✓ ' + statusDone) : ('— ' + statusSkip);
+        return statusClick; // step 5
+      }
+
+      function stateClass(state) {
+        if (state === 'done') return 'annotate-wizard-step-done';
+        if (state === 'current') return 'annotate-wizard-step-current';
+        if (state === 'skip') return 'annotate-wizard-step-skip';
+        return 'annotate-wizard-step-pending';
+      }
+
+      function buildStep(stepIdx, state, title, target) {
+        var num = ['①', '②', '③', '④', '⑤'][stepIdx - 1];
+        var isCta = stepIdx === 5;
+        var cls = 'annotate-wizard-step ' + stateClass(state);
+        if (isCta) cls += ' annotate-wizard-step-cta';
+        var attrs = 'data-step="' + stepIdx + '"';
+        if (target) attrs += ' data-target="' + target + '"';
+        if (isCta) attrs += ' data-cta="1"';
+        return '<button type="button" class="' + cls + '" ' + attrs + '>' +
+          '<span class="annotate-wizard-step-num">' + num + '</span>' +
+          '<span class="annotate-wizard-step-body">' +
+            '<span class="annotate-wizard-step-title">' + escapeHtml(title) + '</span>' +
+            '<span class="annotate-wizard-step-status">' + escapeHtml(stepStatusText(stepIdx)) + '</span>' +
+          '</span>' +
+        '</button>';
+      }
+
+      var arrow = '<span class="annotate-wizard-arrow" aria-hidden="true">→</span>';
+
+      var html = '<div class="annotate-process-wizard">' +
+        '<div class="annotate-process-wizard-title">' +
+          '<span class="material-symbols-outlined">route</span>' +
+          '<span data-i18n="annotate.project.process_wizard_title">操作流程</span>' +
+        '</div>' +
+        '<div class="annotate-process-wizard-steps">' +
+          buildStep(1, step1State, tt('annotate.project.wizard_step_batch', '创建批次'), 'projectBatchPanel') +
+          arrow +
+          buildStep(2, step2State, tt('annotate.project.wizard_step_workdir', '设置工作目录'), 'projectBatchPanel') +
+          arrow +
+          buildStep(3, step3State, tt('annotate.project.wizard_step_import', '导入轨迹'), 'projectBatchPanel') +
+          arrow +
+          buildStep(4, step4State, tt('annotate.project.wizard_step_process', '预处理（可选）'), 'projectBatchPanel') +
+          arrow +
+          buildStep(5, step5State, tt('annotate.project.wizard_step_annotate', '开始标注'), null) +
+        '</div>' +
+      '</div>';
+
+      log('PROJECT', 'renderProcessWizard: currentStep=' + currentStep +
+        ' batches=' + batchCount + ' hasWorkDir=' + hasWorkDir +
+        ' videos=' + videoCount + ' processed=' + hasProcessed);
+      return html;
+    } catch (e) {
+      log('ERROR', 'renderProcessWizard failed: ' + (e.message || e));
+      return '';
+    }
+  }
+
+  // ===== bindProcessWizard：绑定流程向导步骤点击事件 =====
+  function bindProcessWizard(project) {
+    try {
+      if (!project) return;
+      var wizard = dom.projectDetailView ? dom.projectDetailView.querySelector('.annotate-process-wizard') : null;
+      if (!wizard) {
+        log('WARN', 'bindProcessWizard: wizard element not found');
+        return;
+      }
+      var steps = wizard.querySelectorAll('.annotate-wizard-step');
+      for (var i = 0; i < steps.length; i++) {
+        (function (step) {
+          step.addEventListener('click', function () {
+            try {
+              var stepIdx = parseInt(step.getAttribute('data-step'), 10) || 0;
+              var target = step.getAttribute('data-target');
+              var isCta = step.getAttribute('data-cta') === '1';
+
+              log('PROJECT', 'process wizard step clicked: ' + stepIdx);
+
+              if (isCta) {
+                // 步骤 ⑤：开始标注
+                var videos = (project && Array.isArray(project.videos)) ? project.videos : [];
+                if (videos.length > 0) {
+                  var firstVideo = videos[0];
+                  if (firstVideo && firstVideo.id) {
+                    log('PROJECT', 'wizard CTA: start annotate, videoId=' + firstVideo.id);
+                    if (typeof startAnnotateFromProject === 'function') {
+                      startAnnotateFromProject(project, firstVideo.id);
+                    } else {
+                      showToast(tt('annotate.project.wizard_no_video', '请先导入轨迹'));
+                    }
+                  } else {
+                    showToast(tt('annotate.project.wizard_no_video', '请先导入轨迹'));
+                  }
+                } else {
+                  showToast(tt('annotate.project.wizard_no_video', '请先导入轨迹'));
+                }
+                return;
+              }
+
+              // 步骤 ③（导入轨迹）：无批次时拦截，提示先创建批次并跳到步骤 ②
+              if (stepIdx === 3) {
+                var batches = (project && Array.isArray(project.batches)) ? project.batches : [];
+                if (batches.length === 0) {
+                  showToast(tt('annotate.project.wizard_no_batch_first',
+                    '请先创建批次，再导入轨迹'));
+                  var batchPanel = document.getElementById('projectBatchPanel');
+                  if (batchPanel) {
+                    var batchHeader = batchPanel.previousElementSibling;
+                    if (batchHeader && batchHeader.classList.contains('annotate-accordion-header') &&
+                        batchHeader.classList.contains('collapsed')) {
+                      try { batchHeader.click(); } catch (eClick) {}
+                    }
+                    try { batchPanel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+                    catch (eScroll) { batchPanel.scrollIntoView(); }
+                    try {
+                      batchPanel.classList.add('annotate-wizard-highlight');
+                      setTimeout(function () {
+                        try { batchPanel.classList.remove('annotate-wizard-highlight'); } catch (e) {}
+                      }, 1500);
+                    } catch (eHl) {}
+                  }
+                  return;
+                }
+              }
+
+              // 步骤 ①②③④：滚动到对应面板（先展开折叠面板）
+              if (target) {
+                var panel = document.getElementById(target);
+                if (!panel) {
+                  log('WARN', 'wizard: target panel not found: ' + target);
+                  return;
+                }
+                // 如果面板是折叠的，先展开
+                var accordionHeader = panel.previousElementSibling;
+                if (accordionHeader && accordionHeader.classList.contains('annotate-accordion-header') &&
+                    accordionHeader.classList.contains('collapsed')) {
+                  try {
+                    accordionHeader.click();
+                  } catch (eClick) {
+                    log('WARN', 'wizard: expand panel failed: ' + (eClick.message || eClick));
+                  }
+                }
+                // 滚动到面板
+                try {
+                  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } catch (eScroll) {
+                  panel.scrollIntoView();
+                }
+                // 短暂高亮面板
+                try {
+                  panel.classList.add('annotate-wizard-highlight');
+                  setTimeout(function () {
+                    try { panel.classList.remove('annotate-wizard-highlight'); } catch (e) {}
+                  }, 1500);
+                } catch (eHl) {}
+              }
+            } catch (e) {
+              log('ERROR', 'wizard step click failed: ' + (e.message || e));
+            }
+          });
+        })(steps[i]);
+      }
+      log('PROJECT', 'bindProcessWizard: bound ' + steps.length + ' steps');
+    } catch (e) {
+      log('ERROR', 'bindProcessWizard failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 兜底 i18n：手动应用 data-i18n 属性（无 i18n 模块时） =====
+  function applyI18nToFallback(root) {
+    try {
+      var els = (root || document).querySelectorAll('[data-i18n]');
+      for (var i = 0; i < els.length; i++) {
+        var key = els[i].getAttribute('data-i18n');
+        if (key) {
+          var val = tt(key, els[i].textContent || '');
+          els[i].textContent = val;
+        }
+      }
+    } catch (e) {
+      log('WARN', 'applyI18nToFallback failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 视图切换：项目列表 / 项目详情 / 新建项目表单 =====
+  function showProjectListView() {
+    try {
+      if (dom.projectListView) dom.projectListView.classList.add('active');
+      if (dom.projectDetailView) dom.projectDetailView.classList.remove('active');
+      if (dom.newProjectFormView) dom.newProjectFormView.classList.remove('active');
+      renderProjectList();
+      // 返回项目列表时隐藏批量标注导航条（若存在）
+      if (dom.batchNav) dom.batchNav.setAttribute('hidden', '');
+      log('VIEW', 'showProjectListView');
+    } catch (e) {
+      log('ERROR', 'showProjectListView failed: ' + (e.message || e));
+    }
+  }
+
+  function showProjectDetailView() {
+    try {
+      if (dom.projectListView) dom.projectListView.classList.remove('active');
+      if (dom.projectDetailView) dom.projectDetailView.classList.add('active');
+      if (dom.newProjectFormView) dom.newProjectFormView.classList.remove('active');
+      log('VIEW', 'showProjectDetailView');
+    } catch (e) {
+      log('ERROR', 'showProjectDetailView failed: ' + (e.message || e));
+    }
+  }
+
+  function showNewProjectFormView() {
+    try {
+      if (dom.projectListView) dom.projectListView.classList.remove('active');
+      if (dom.projectDetailView) dom.projectDetailView.classList.remove('active');
+      if (dom.newProjectFormView) dom.newProjectFormView.classList.add('active');
+      // 清空表单
+      if (dom.projectNameInput) dom.projectNameInput.value = '';
+      if (dom.projectDataSourceInput) dom.projectDataSourceInput.value = '';
+      if (dom.projectRemarkInput) dom.projectRemarkInput.value = '';
+      // 聚焦项目名输入
+      if (dom.projectNameInput) {
+        try { dom.projectNameInput.focus(); } catch (e) {}
+      }
+      log('VIEW', 'showNewProjectFormView');
+    } catch (e) {
+      log('ERROR', 'showNewProjectFormView failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 项目面板 / 标注模式容器显隐控制 =====
+  function showProjectPanel() {
+    try {
+      // 显示项目面板，隐藏标注模式容器
+      if (dom.projectPanel) dom.projectPanel.removeAttribute('hidden');
+      if (dom.annotateHeader) dom.annotateHeader.style.display = 'none';
+      if (dom.annotateStepsEl) dom.annotateStepsEl.style.display = 'none';
+      if (dom.annotateStepContent) dom.annotateStepContent.style.display = 'none';
+      if (dom.annotateStepNav) dom.annotateStepNav.style.display = 'none';
+      log('VIEW', 'showProjectPanel');
+    } catch (e) {
+      log('ERROR', 'showProjectPanel failed: ' + (e.message || e));
+    }
+  }
+
+  function hideProjectPanelAndShowAnnotate() {
+    try {
+      if (dom.projectPanel) dom.projectPanel.setAttribute('hidden', '');
+      if (dom.annotateHeader) dom.annotateHeader.style.display = '';
+      if (dom.annotateStepsEl) dom.annotateStepsEl.style.display = '';
+      if (dom.annotateStepContent) dom.annotateStepContent.style.display = '';
+      if (dom.annotateStepNav) dom.annotateStepNav.style.display = '';
+      log('VIEW', 'hideProjectPanelAndShowAnnotate');
+    } catch (e) {
+      log('ERROR', 'hideProjectPanelAndShowAnnotate failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 新建项目表单提交 =====
+  function submitNewProjectForm() {
+    try {
+      var name = dom.projectNameInput ? dom.projectNameInput.value : '';
+      var ds = dom.projectDataSourceInput ? dom.projectDataSourceInput.value : '';
+      var remark = dom.projectRemarkInput ? dom.projectRemarkInput.value : '';
+      log('PROJECT', 'submitNewProjectForm: name="' + name + '" data_source="' + ds + '"');
+      var project = createProject(name, ds, remark);
+      if (project) {
+        showToast(tt('annotate.project.created', '项目创建成功'));
+        // 进入项目详情
+        selectProject(project.id);
+      }
+    } catch (e) {
+      log('ERROR', 'submitNewProjectForm failed: ' + (e.message || e));
+    }
+  }
+
+  // ==========================================================================
+  // 阶段 2：视频导入与缩略图
+  // ==========================================================================
+
+  // ===== 渲染视频列表 HTML（项目详情面板内） =====
+  function renderVideoListHtml(project) {
+    try {
+      var videos = (project && Array.isArray(project.videos)) ? project.videos : [];
+      if (videos.length === 0) {
+        return '<div class="annotate-project-empty-mini">' +
+          '<span class="material-symbols-outlined">videocam_off</span>' +
+          '<p data-i18n="annotate.project.no_videos">' + tt('annotate.project.no_videos', '暂无轨迹，点击上方按钮导入') + '</p>' +
+        '</div>';
+      }
+      var html = '<div class="annotate-video-grid">';
+      for (var i = 0; i < videos.length; i++) {
+        var v = videos[i];
+        var thumb = v.thumbnail || DEFAULT_THUMBNAIL;
+        var resolution = (v.resolution && v.resolution.length === 2)
+          ? (v.resolution[0] + '×' + v.resolution[1]) : '—';
+        var duration = v.duration ? formatTime(v.duration) : '—';
+        var traj = v.trajectory_index || '';
+        var batchInfo = v.batch_id ? ('<span class="annotate-video-tag">' + escapeHtml(v.batch_id) + '</span>') : '';
+        var trajInfo = traj ? ('<span class="annotate-video-tag annotate-video-tag-traj">' + escapeHtml(traj) + '</span>') : '';
+        // 已预处理标签 + 相对路径（鼠标悬停显示完整路径提示）
+        var processedInfo = '';
+        if (v.processed_file) {
+          var relPath = String(v.processed_file);
+          var fullHint = (project && project.work_dir_name ? project.work_dir_name + '/' : '') + relPath;
+          processedInfo =
+            '<span class="annotate-video-tag annotate-video-tag-processed"' +
+              ' title="' + escapeHtml(fullHint) + '">' +
+              tt('annotate.project.processed_badge', '已预处理') +
+              '<span class="annotate-video-tag-path">' + escapeHtml(relPath) + '</span>' +
+            '</span>';
+        }
+        // 自定义标签
+        var customTagsHtml = '';
+        if (v.tags && typeof v.tags === 'object') {
+          var tagKeys = Object.keys(v.tags);
+          for (var tk = 0; tk < tagKeys.length; tk++) {
+            var k = tagKeys[tk];
+            var val = v.tags[k];
+            customTagsHtml += '<span class="annotate-video-tag annotate-video-tag-label">' +
+              escapeHtml(k) + ':' + escapeHtml(String(val)) + '</span>';
+          }
+        }
+        var isSelected = selectedVideoIds && selectedVideoIds.has(v.id);
+
+        html +=
+          '<div class="annotate-video-card' + (isSelected ? ' selected' : '') + '" data-video-id="' + escapeHtml(v.id) + '">' +
+            '<div class="annotate-video-checkbox">' +
+              '<input type="checkbox" class="annotate-video-select-cb" data-video-id="' + escapeHtml(v.id) + '"' + (isSelected ? ' checked' : '') + '>' +
+            '</div>' +
+            '<div class="annotate-video-thumb">' +
+              '<img src="' + thumb + '" alt="thumbnail" loading="lazy">' +
+              '<div class="annotate-video-duration">' + duration + '</div>' +
+              '<div class="annotate-video-overlay">' +
+                '<button type="button" class="annotate-btn annotate-btn-primary annotate-btn-sm annotate-video-annotate-btn" data-action="annotate">' +
+                  '<span class="material-symbols-outlined">edit_note</span>' +
+                  '<span data-i18n="annotate.project.start_annotate">开始标注</span>' +
+                '</button>' +
+              '</div>' +
+            '</div>' +
+            '<div class="annotate-video-info">' +
+              '<h4 class="annotate-video-name" title="' + escapeHtml(v.file_name) + '">' + escapeHtml(v.file_name) + '</h4>' +
+              '<div class="annotate-video-meta">' +
+                '<span>' + formatFileSize(v.file_size || 0) + '</span>' +
+                '<span>·</span>' +
+                '<span>' + resolution + '</span>' +
+                '<span>·</span>' +
+                '<span>' + (v.fps || 30) + ' fps</span>' +
+              '</div>' +
+              '<div class="annotate-video-tags">' + batchInfo + trajInfo + processedInfo + customTagsHtml + '</div>' +
+              '<div class="annotate-video-actions">' +
+                '<button type="button" class="annotate-btn annotate-btn-secondary annotate-btn-sm" data-action="tags">' +
+                  '<span class="material-symbols-outlined">label</span>' +
+                  '<span>' + tt('annotate.project.tags', '标签') + '</span>' +
+                '</button>' +
+                '<button type="button" class="annotate-btn annotate-btn-secondary annotate-btn-sm" data-action="process">' +
+                  '<span class="material-symbols-outlined">auto_fix_high</span>' +
+                  '<span data-i18n="annotate.project.process">' + tt('annotate.project.process', '预处理') + '</span>' +
+                '</button>' +
+                '<button type="button" class="annotate-btn annotate-btn-secondary annotate-btn-sm" data-action="batch">' +
+                  '<span class="material-symbols-outlined">add_to_photos</span>' +
+                  '<span data-i18n="annotate.project.add_to_batch">' + tt('annotate.project.add_to_batch', '加入批次') + '</span>' +
+                '</button>' +
+                '<button type="button" class="annotate-btn annotate-btn-danger annotate-btn-sm" data-action="delete" data-i18n-title="annotate.delete">' +
+                  '<span class="material-symbols-outlined">delete</span>' +
+                '</button>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+      }
+      html += '</div>';
+      return html;
+    } catch (e) {
+      log('ERROR', 'renderVideoListHtml failed: ' + (e.message || e));
+      return '<p class="annotate-project-empty-mini">' + escapeHtml('轨迹列表渲染失败: ' + (e.message || e)) + '</p>';
+    }
+  }
+
+  // ===== 处理单视频导入（来自 dom.projectVideoInput） =====
+  // 改造：文件已选好之后，再弹批次选择对话框，选完批次后才真正写入
+  function handleProjectVideoImport(fileList) {
+    try {
+      if (!fileList || fileList.length === 0) {
+        log('WARN', 'handleProjectVideoImport: no files');
+        return;
+      }
+      var files = Array.prototype.slice.call(fileList);
+      // 过滤视频文件
+      var videoFiles = [];
+      for (var i = 0; i < files.length; i++) {
+        var f = files[i];
+        if (isVideoFile(f)) {
+          videoFiles.push(f);
+        } else {
+          log('WARN', 'handleProjectVideoImport: skip non-video: ' + (f.name || 'unknown'));
+        }
+      }
+      if (videoFiles.length === 0) {
+        showToast(tt('annotate.err_unsupported_format', '不支持的格式，仅支持 MP4/MOV/AVI'));
+        return;
+      }
+      log('IMPORT', 'handleProjectVideoImport: ' + videoFiles.length + ' video files');
+
+      var project = state.currentProject;
+      if (!project) {
+        log('ERROR', 'handleProjectVideoImport: no current project');
+        showToast(tt('annotate.project.no_current_project', '请先选择项目'));
+        return;
+      }
+      var batches = (project && Array.isArray(project.batches)) ? project.batches : [];
+      if (batches.length === 0) {
+        showToast(tt('annotate.project.wizard_no_batch_first',
+          '请先创建批次，再导入轨迹'));
+        return;
+      }
+      // 弹出批次选择对话框
+      promptSelectBatchForImport(project, batches, function (selectedBatchId) {
+        try {
+          processBatchVideoFiles(project, videoFiles, null, selectedBatchId);
+        } catch (e) {
+          log('ERROR', 'handleProjectVideoImport processBatchVideoFiles failed: ' + (e.message || e));
+          showToast(tt('annotate.err_load_failed', '导入视频失败: ') + (e.message || e));
+        }
+      });
+    } catch (e) {
+      log('ERROR', 'handleProjectVideoImport failed: ' + (e.message || e));
+      showToast(tt('annotate.err_load_failed', '导入视频失败: ') + (e.message || e));
+    }
+  }
+
+  // ===== 判断是否为受支持的视频文件 =====
+  function isVideoFile(file) {
+    try {
+      if (!file || !file.name) return false;
+      var name = file.name;
+      var dotIdx = name.lastIndexOf('.');
+      var ext = dotIdx >= 0 ? name.substring(dotIdx + 1).toLowerCase() : '';
+      if (SUPPORTED_VIDEO_EXTS.indexOf(ext) >= 0) return true;
+      // 兼容 webm 等浏览器支持的格式（仅导入，不强制 mp4/mov/avi）
+      if (file.type && file.type.indexOf('video/') === 0) return true;
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // ===== 批量导入视频（用 showDirectoryPicker 优先，降级到 <input webkitdirectory>）=====
+  // 改动：用 File System Access API 的 showDirectoryPicker 代替 <input webkitdirectory>，
+  // 为每个视频文件保存 FileSystemFileHandle 到 IndexedDB，
+  // 批量预处理时通过 video._restoreKey 恢复句柄，无需重新选文件。
+  // 流程改造：导入前必须先选择目标批次，导入的视频自动归属该批次。
+  function importVideosBatch(project) {
+    try {
+      if (!project) {
+        log('WARN', 'importVideosBatch: no project');
+        showToast(tt('annotate.project.no_current_project', '请先选择项目'));
+        return;
+      }
+      // 校验：必须先创建至少一个批次
+      var batches = (project && Array.isArray(project.batches)) ? project.batches : [];
+      if (batches.length === 0) {
+        showToast(tt('annotate.project.wizard_no_batch_first',
+          '请先创建批次，再导入轨迹'));
+        log('IMPORT', 'importVideosBatch: no batch, abort');
+        // 跳转到批次面板
+        var batchPanel = document.getElementById('projectBatchPanel');
+        if (batchPanel) {
+          var batchHeader = batchPanel.previousElementSibling;
+          if (batchHeader && batchHeader.classList.contains('annotate-accordion-header') &&
+              batchHeader.classList.contains('collapsed')) {
+            try { batchHeader.click(); } catch (eClick) {}
+          }
+          try { batchPanel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+          catch (eScroll) { batchPanel.scrollIntoView(); }
+          try {
+            batchPanel.classList.add('annotate-wizard-highlight');
+            setTimeout(function () {
+              try { batchPanel.classList.remove('annotate-wizard-highlight'); } catch (e) {}
+            }, 1500);
+          } catch (eHl) {}
+        }
+        return;
+      }
+
+      // 工作目录未设置时，提示用户（不阻塞导入）
+      if (!project.work_dir_name) {
+        showToast(tt('annotate.project.work_dir_hint_on_import',
+          '建议先设置工作目录，以便后续预处理输出到本地文件'));
+        log('IMPORT', 'importVideosBatch: work_dir not set, showing hint');
+      }
+
+      // 弹出批次选择对话框（默认选最近创建的批次）
+      promptSelectBatchForImport(project, batches, function (selectedBatchId) {
+        try {
+          startImportWithBatch(project, selectedBatchId);
+        } catch (e) {
+          log('ERROR', 'importVideosBatch startImportWithBatch failed: ' + (e.message || e));
+          showToast(tt('annotate.err_load_failed', '导入视频失败: ') + (e.message || e));
+        }
+      });
+    } catch (e) {
+      log('ERROR', 'importVideosBatch failed: ' + (e.message || e));
+      showToast(tt('annotate.err_load_failed', '导入视频失败: ') + (e.message || e));
+    }
+  }
+
+  // ===== 弹出批次选择对话框（导入轨迹前） =====
+  // 按创建时间倒序，默认选最近创建的批次
+  function promptSelectBatchForImport(project, batches, onConfirm) {
+    try {
+      // 按 created_at 倒序（最近创建在前）
+      var sorted = batches.slice().sort(function (a, b) {
+        var ta = a && a.created_at ? new Date(a.created_at).getTime() : 0;
+        var tb = b && b.created_at ? new Date(b.created_at).getTime() : 0;
+        return tb - ta;
+      });
+      var defaultId = sorted[0] && sorted[0].id ? sorted[0].id : '';
+
+      // 构造下拉选项
+      var optionsHtml = '';
+      for (var i = 0; i < sorted.length; i++) {
+        var b = sorted[i];
+        var bid = escapeHtml(b.id || '');
+        var bname = escapeHtml(b.name || b.id || '');
+        var bcount = 0;
+        if (Array.isArray(b.video_ids)) bcount = b.video_ids.length;
+        var label = bname + ' (' + bcount + ' ' + tt('annotate.project.batch_unit_short', '条') + ')';
+        var sel = (b.id === defaultId) ? ' selected' : '';
+        optionsHtml += '<option value="' + bid + '"' + sel + '>' + escapeHtml(label) + '</option>';
+      }
+
+      var body =
+        '<div class="annotate-modal-form">' +
+          '<p class="annotate-modal-hint" data-i18n="annotate.project.import_batch_hint">' +
+            tt('annotate.project.import_batch_hint',
+              '请选择本次导入轨迹归属的批次，导入后可在批次管理中调整') +
+          '</p>' +
+          '<div class="annotate-modal-field">' +
+            '<label data-i18n="annotate.project.select_batch">' +
+              tt('annotate.project.select_batch', '选择批次') +
+            '</label>' +
+            '<select id="importBatchSelect" class="annotate-modal-select">' + optionsHtml + '</select>' +
+          '</div>' +
+        '</div>';
+
+      showModal({
+        title: tt('annotate.project.import_select_batch_title', '选择导入批次'),
+        body: body,
+        confirmText: tt('annotate.project.btn_continue_import', '继续导入'),
+        cancelText: tt('annotate.modal_cancel', '取消'),
+        onConfirm: function () {
+          try {
+            var sel = document.getElementById('importBatchSelect');
+            var bid = sel ? sel.value : '';
+            if (!bid) {
+              showToast(tt('annotate.project.select_batch_first', '请选择批次'));
+              return;
+            }
+            hideModal();
+            if (typeof onConfirm === 'function') onConfirm(bid);
+          } catch (e) {
+            log('ERROR', 'promptSelectBatchForImport onConfirm failed: ' + (e.message || e));
+          }
+        },
+        onCancel: function () {
+          try { hideModal(); } catch (e) {}
+        }
+      });
+    } catch (e) {
+      log('ERROR', 'promptSelectBatchForImport failed: ' + (e.message || e));
+      // 失败时降级：直接用第一个批次
+      if (batches[0] && batches[0].id && typeof onConfirm === 'function') {
+        onConfirm(batches[0].id);
+      }
+    }
+  }
+
+  // ===== 实际开始文件选择与导入流程（已选定批次） =====
+  function startImportWithBatch(project, batchId) {
+    try {
+      var videoExtensions = ['.mp4', '.mov', '.avi', '.webm', '.mkv'];
+
+      if (FS_ACCESS_SUPPORTED && typeof window.showDirectoryPicker === 'function') {
+        // Chrome/Edge：用 showDirectoryPicker，保存句柄到 IndexedDB
+        log('IMPORT', 'startImportWithBatch: using showDirectoryPicker, batchId=' + batchId);
+        window.showDirectoryPicker().then(function (dirHandle) {
+          // 遍历文件夹
+          var videoHandles = [];
+          var entries = dirHandle.values();
+          var collectNext = function () {
+            try {
+              entries.next().then(function (result) {
+                try {
+                  if (result.done) {
+                    log('IMPORT', 'startImportWithBatch: collected ' + videoHandles.length + ' video handles');
+                    processBatchVideoFiles(project, videoHandles, dirHandle, batchId);
+                    return;
+                  }
+                  var entry = result.value;
+                  if (entry && entry.kind === 'file') {
+                    var extMatch = entry.name.toLowerCase().match(/\.[^.]+$/);
+                    if (extMatch && videoExtensions.indexOf(extMatch[0]) !== -1) {
+                      videoHandles.push(entry); // entry 是 FileSystemFileHandle
+                    }
+                  }
+                  collectNext();
+                } catch (e) {
+                  log('ERROR', 'startImportWithBatch iterate step failed: ' + (e && e.message || e));
+                  collectNext();
+                }
+              }).catch(function (err) {
+                log('ERROR', 'startImportWithBatch iterate dir failed: ' + (err && err.message || err));
+                processBatchVideoFiles(project, videoHandles, dirHandle, batchId);
+              });
+            } catch (e) {
+              log('ERROR', 'startImportWithBatch collectNext exception: ' + (e && e.message || e));
+              processBatchVideoFiles(project, videoHandles, dirHandle, batchId);
+            }
+          };
+          collectNext();
+        }).catch(function (err) {
+          if (err && err.name === 'AbortError') {
+            log('IMPORT', 'startImportWithBatch: user aborted directory picker');
+            return;
+          }
+          log('ERROR', 'startImportWithBatch: showDirectoryPicker failed: ' + (err && err.message || err));
+          showToast(tt('annotate.err_load_failed', '选择文件夹失败: ' + (err && err.message || err)));
+        });
+      } else {
+        // 降级：<input webkitdirectory>（Firefox/Safari），不保存句柄
+        log('IMPORT', 'startImportWithBatch: fallback to <input webkitdirectory>');
+        var input = document.createElement('input');
+        input.type = 'file';
+        try { input.webkitdirectory = true; } catch (_) {}
+        input.multiple = true;
+        input.accept = 'video/*';
+        input.onchange = function () {
+          try {
+            var files = Array.prototype.slice.call(input.files || []);
+            var videoFiles = files.filter(function (f) {
+              var extMatch = f.name.toLowerCase().match(/\.[^.]+$/);
+              return extMatch && videoExtensions.indexOf(extMatch[0]) !== -1;
+            });
+            processBatchVideoFiles(project, videoFiles, null, batchId);
+          } catch (e) {
+            log('ERROR', 'startImportWithBatch fallback onchange failed: ' + (e.message || e));
+            showToast(tt('annotate.err_load_failed', '导入视频失败: ') + (e.message || e));
+          }
+        };
+        input.click();
+      }
+    } catch (e) {
+      log('ERROR', 'startImportWithBatch failed: ' + (e.message || e));
+      showToast(tt('annotate.err_load_failed', '导入视频失败: ') + (e.message || e));
+    }
+  }
+
+  // ===== 处理批量导入的视频文件列表 =====
+  // fileHandles: FileSystemFileHandle[]（showDirectoryPicker 路径）或 File[]（降级路径）
+  // dirHandle: 文件夹句柄（保留参数，目前未使用），可为 null
+  // batchId: 导入时归属的批次 ID（必传），导入的视频自动加入该批次
+  // 为每个视频保存 FileSystemFileHandle 到 IndexedDB，并记录 video._restoreKey
+  function processBatchVideoFiles(project, fileHandles, dirHandle, batchId) {
+    try {
+      if (!fileHandles || fileHandles.length === 0) {
+        showToast(tt('annotate.project.no_video_in_folder', '文件夹中未找到视频文件'));
+        log('WARN', 'processBatchVideoFiles: no video files');
+        return;
+      }
+      if (!project) {
+        log('ERROR', 'processBatchVideoFiles: no project');
+        return;
+      }
+      if (!batchId) {
+        log('ERROR', 'processBatchVideoFiles: no batchId');
+        showToast(tt('annotate.project.wizard_no_batch_first',
+          '请先创建批次，再导入轨迹'));
+        return;
+      }
+
+      var total = fileHandles.length;
+      var completed = 0;
+      log('IMPORT', 'processBatchVideoFiles: start, total=' + total + ' batchId=' + batchId);
+
+      // 显示进度条
+      if (dom.projectImportProgress) dom.projectImportProgress.removeAttribute('hidden');
+      updateImportProgress(0, total);
+
+      var idx = 0;
+      function next() {
+        try {
+          if (idx >= total) {
+            // 全部完成
+            log('IMPORT', 'processBatchVideoFiles: done, completed=' + completed);
+            if (dom.projectImportProgress) {
+              setTimeout(function () {
+                if (dom.projectImportProgress) dom.projectImportProgress.setAttribute('hidden', '');
+              }, 1000);
+            }
+            saveProjects();
+            // 重新渲染视频列表（项目详情面板内）
+            if (state.currentProject && state.currentProject.id === project.id) {
+              renderProjectDetail(project);
+            }
+            var doneMsg = tt('annotate.project.batch_import_done', '成功导入 {n} 条轨迹').replace('{n}', String(completed));
+            showToast(doneMsg);
+            return;
+          }
+          var item = fileHandles[idx];
+          idx++;
+          var fileHandle = null;
+          // 判断是 FileSystemFileHandle 还是 File
+          if (item && typeof item.getFile === 'function') {
+            fileHandle = item;
+          }
+          // 获取 File 对象（FileSystemFileHandle.getFile() 或 File 本身）
+          var getFilePromise = fileHandle ? fileHandle.getFile() : Promise.resolve(item);
+          getFilePromise.then(function (file) {
+            try {
+              if (!file) {
+                log('WARN', 'processBatchVideoFiles: null file at idx=' + (idx - 1));
+                updateImportProgress(completed, total);
+                next();
+                return;
+              }
+              var videoId = genId('vid');
+              var restoreKey = 'project_' + project.id + '_video_' + videoId;
+              // 保存文件句柄到 IndexedDB（仅 FS Access 支持）；失败不阻塞导入
+              var saveHandlePromise = (fileHandle && FS_ACCESS_SUPPORTED)
+                ? fsSaveHandle(restoreKey, fileHandle).catch(function (err) {
+                    log('WARN', 'processBatchVideoFiles: fsSaveHandle failed for ' + file.name + ': ' + (err && err.message || err));
+                  })
+                : Promise.resolve();
+              saveHandlePromise.then(function () {
+                try {
+                  // 创建视频对象
+                  var video = {
+                    id: videoId,
+                    file_name: file.name,
+                    file_size: file.size,
+                    thumbnail: DEFAULT_THUMBNAIL,
+                    duration: 0,
+                    resolution: [0, 0],
+                    fps: 30,
+                    num_frames: 0,
+                    trajectory_index: '',
+                    batch_id: batchId,    // 导入时自动归属选定批次
+                    tags: {}
+                  };
+                  // 有句柄则记录 _restoreKey，预处理时可直接恢复
+                  if (fileHandle) {
+                    video._restoreKey = restoreKey;
+                  }
+                  project.videos.push(video);
+                  // 同步把视频 ID 加入到批次的 video_ids 列表（去重）
+                  addVideoIdToBatch(project, batchId, videoId);
+                  completed++;
+                  updateImportProgress(completed, total, file.name);
+                  saveProjects();
+
+                  log('IMPORT', 'imported: ' + file.name + ' batchId=' + batchId +
+                    (fileHandle ? ' (with handle)' : ' (no handle)'));
+
+                  // 异步检测视频元信息 + 生成缩略图
+                  detectVideoMetaAndThumbnail(file, video, project, function () {
+                    next();
+                  });
+                } catch (e) {
+                  log('ERROR', 'processBatchVideoFiles inner failed: ' + (e.message || e));
+                  updateImportProgress(completed, total);
+                  next();
+                }
+              }).catch(function (err) {
+                log('ERROR', 'processBatchVideoFiles saveHandle then failed: ' + (err && err.message || err));
+                updateImportProgress(completed, total);
+                next();
+              });
+            } catch (e) {
+              log('ERROR', 'processBatchVideoFiles getFile callback failed: ' + (e.message || e));
+              updateImportProgress(completed, total);
+              next();
+            }
+          }).catch(function (err) {
+            log('ERROR', 'processBatchVideoFiles getFile failed: ' + (err && err.message || err));
+            updateImportProgress(completed, total);
+            next();
+          });
+        } catch (e) {
+          log('ERROR', 'processBatchVideoFiles next failed: ' + (e.message || e));
+          updateImportProgress(completed, total);
+          next();
+        }
+      }
+      next();
+    } catch (e) {
+      log('ERROR', 'processBatchVideoFiles failed: ' + (e.message || e));
+      showToast(tt('annotate.err_load_failed', '导入视频失败: ') + (e.message || e));
+    }
+  }
+
+  // ===== 单视频导入到项目（优先 showOpenFilePicker 保存句柄，降级到 input）=====
+  // 用 showOpenFilePicker 代替 click(dom.projectVideoInput)，以便保存 FileSystemFileHandle
+  // 流程改造：先选批次，再选文件
+  function importSingleVideoToProject(project) {
+    try {
+      if (!project) {
+        log('WARN', 'importSingleVideoToProject: no project');
+        showToast(tt('annotate.project.no_current_project', '请先选择项目'));
+        return;
+      }
+      // 校验批次
+      var batches = (project && Array.isArray(project.batches)) ? project.batches : [];
+      if (batches.length === 0) {
+        showToast(tt('annotate.project.wizard_no_batch_first',
+          '请先创建批次，再导入轨迹'));
+        // 跳转到批次面板
+        var batchPanel = document.getElementById('projectBatchPanel');
+        if (batchPanel) {
+          var batchHeader = batchPanel.previousElementSibling;
+          if (batchHeader && batchHeader.classList.contains('annotate-accordion-header') &&
+              batchHeader.classList.contains('collapsed')) {
+            try { batchHeader.click(); } catch (eClick) {}
+          }
+          try { batchPanel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+          catch (eScroll) { batchPanel.scrollIntoView(); }
+        }
+        return;
+      }
+      // 弹批次选择
+      promptSelectBatchForImport(project, batches, function (batchId) {
+        try {
+          startImportSingleWithBatch(project, batchId);
+        } catch (e) {
+          log('ERROR', 'importSingleVideoToProject startImportSingleWithBatch failed: ' + (e.message || e));
+          showToast(tt('annotate.err_load_failed', '导入视频失败: ') + (e.message || e));
+        }
+      });
+    } catch (e) {
+      log('ERROR', 'importSingleVideoToProject failed: ' + (e.message || e));
+      showToast(tt('annotate.err_load_failed', '导入视频失败: ') + (e.message || e));
+    }
+  }
+
+  // ===== 已选定批次的单视频导入流程 =====
+  function startImportSingleWithBatch(project, batchId) {
+    try {
+      if (FS_ACCESS_SUPPORTED && typeof window.showOpenFilePicker === 'function') {
+        log('IMPORT', 'startImportSingleWithBatch: using showOpenFilePicker, batchId=' + batchId);
+        window.showOpenFilePicker({
+          types: [{
+            description: 'Video',
+            accept: { 'video/*': ['.mp4', '.mov', '.avi', '.webm', '.mkv'] }
+          }],
+          multiple: false
+        }).then(function (handles) {
+          try {
+            var handle = handles && handles[0];
+            if (!handle) {
+              log('WARN', 'startImportSingleWithBatch: no handle returned');
+              return;
+            }
+            // 复用批量处理逻辑（单文件也是数组）
+            processBatchVideoFiles(project, [handle], null, batchId);
+          } catch (e) {
+            log('ERROR', 'startImportSingleWithBatch handles callback failed: ' + (e.message || e));
+          }
+        }).catch(function (err) {
+          if (err && err.name === 'AbortError') {
+            log('IMPORT', 'startImportSingleWithBatch: user aborted');
+            return;
+          }
+          log('ERROR', 'startImportSingleWithBatch: showOpenFilePicker failed: ' + (err && err.message || err));
+          showToast(tt('annotate.err_load_failed', '选择文件失败: ' + (err && err.message || err)));
+        });
+      } else {
+        // 降级到 <input type="file">（Firefox/Safari）
+        // 注意：降级路径下，input 的 change 会走 handleProjectVideoImport，
+        // 该函数本身已实现批次选择，但会丢失当前 batchId。
+        // 为保证体验，这里使用一个临时 input 直接走 processBatchVideoFiles
+        log('IMPORT', 'startImportSingleWithBatch: fallback to <input>, batchId=' + batchId);
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.multiple = false;
+        input.accept = 'video/*';
+        input.onchange = function () {
+          try {
+            var files = Array.prototype.slice.call(input.files || []);
+            var videoFiles = files.filter(function (f) { return isVideoFile(f); });
+            if (videoFiles.length === 0) {
+              showToast(tt('annotate.err_unsupported_format', '不支持的格式，仅支持 MP4/MOV/AVI'));
+              return;
+            }
+            processBatchVideoFiles(project, videoFiles, null, batchId);
+          } catch (e) {
+            log('ERROR', 'startImportSingleWithBatch fallback onchange failed: ' + (e.message || e));
+            showToast(tt('annotate.err_load_failed', '导入视频失败: ') + (e.message || e));
+          }
+        };
+        input.click();
+      }
+    } catch (e) {
+      log('ERROR', 'startImportSingleWithBatch failed: ' + (e.message || e));
+      showToast(tt('annotate.err_load_failed', '导入视频失败: ') + (e.message || e));
+    }
+  }
+
+  // ===== 更新导入进度条 =====
+  function updateImportProgress(done, total, fileName) {
+    try {
+      if (dom.projectImportProgressFill) {
+        var pct = total > 0 ? (done / total * 100) : 0;
+        dom.projectImportProgressFill.style.width = pct + '%';
+      }
+      if (dom.projectImportProgressText) {
+        var text = done + ' / ' + total;
+        if (fileName) {
+          text += ': ' + fileName;
+        }
+        dom.projectImportProgressText.textContent = text;
+      }
+    } catch (e) {
+      log('WARN', 'updateImportProgress failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 检测视频元信息 + 生成缩略图 =====
+  // 通过临时 <video> 元素加载 ObjectURL，loadedmetadata 后取帧
+  function detectVideoMetaAndThumbnail(file, videoObj, project, callback) {
+    try {
+      var url;
+      try {
+        url = URL.createObjectURL(file);
+      } catch (e) {
+        log('ERROR', 'detectVideoMetaAndThumbnail: createObjectURL failed: ' + (e.message || e));
+        if (typeof callback === 'function') callback();
+        return;
+      }
+      var v = document.createElement('video');
+      v.preload = 'metadata';
+      v.muted = true;
+      v.src = url;
+
+      var done = false;
+      function finish() {
+        if (done) return;
+        done = true;
+        try { URL.revokeObjectURL(url); } catch (e) {}
+        if (typeof callback === 'function') callback();
+      }
+
+      var timeoutId = setTimeout(function () {
+        log('WARN', 'detectVideoMetaAndThumbnail: timeout for ' + (file.name || 'unknown'));
+        finish();
+      }, 15000);
+
+      v.addEventListener('loadedmetadata', function () {
+        try {
+          var w = v.videoWidth || 0;
+          var h = v.videoHeight || 0;
+          var dur = v.duration || 0;
+          if (!isFinite(dur) || dur <= 0) dur = 0;
+          videoObj.resolution = [w, h];
+          videoObj.duration = dur;
+          // fps 默认 30（无法可靠获取），num_frames = round(dur * fps)
+          var fps = 30;
+          videoObj.fps = fps;
+          videoObj.num_frames = dur > 0 ? Math.round(dur * fps) : 0;
+          log('VIDEO', 'metadata: ' + file.name + ' ' + w + 'x' + h + ' dur=' + dur + 's fps=' + fps + ' frames=' + videoObj.num_frames);
+          saveProjects();
+
+          // 生成缩略图：seek 到 1 秒或 duration/2
+          var seekTime = dur > 1 ? 1 : (dur > 0 ? dur / 2 : 0);
+          if (seekTime > 0 && w > 0 && h > 0) {
+            try {
+              v.currentTime = seekTime;
+            } catch (eSeek) {
+              log('WARN', 'detectVideoMetaAndThumbnail: seek failed: ' + (eSeek.message || eSeek));
+              clearTimeout(timeoutId);
+              finish();
+              return;
+            }
+            v.addEventListener('seeked', function () {
+              try {
+                var canvas = document.createElement('canvas');
+                // 限制缩略图最大宽度为 320
+                var maxW = 320;
+                var cw = w, ch = h;
+                if (cw > maxW) {
+                  ch = Math.round(h * (maxW / cw));
+                  cw = maxW;
+                }
+                canvas.width = cw;
+                canvas.height = ch;
+                var ctx = canvas.getContext('2d');
+                if (ctx) {
+                  ctx.drawImage(v, 0, 0, cw, ch);
+                  try {
+                    videoObj.thumbnail = canvas.toDataURL('image/jpeg', 0.7);
+                  } catch (eData) {
+                    log('WARN', 'detectVideoMetaAndThumbnail: toDataURL failed: ' + (eData.message || eData));
+                    videoObj.thumbnail = DEFAULT_THUMBNAIL;
+                  }
+                }
+                saveProjects();
+                // 更新当前项目详情面板的视频列表（仅当此项目仍为当前项目时）
+                if (state.currentProject && state.currentProject.id === project.id) {
+                  // 不重新渲染整个面板，避免重置表单输入。仅更新视频列表区域
+                  updateVideoListOnly(project);
+                }
+                clearTimeout(timeoutId);
+                finish();
+              } catch (e) {
+                log('ERROR', 'detectVideoMetaAndThumbnail seeked handler failed: ' + (e.message || e));
+                clearTimeout(timeoutId);
+                finish();
+              }
+            }, { once: true });
+          } else {
+            // 时长太短或尺寸无效，用默认占位图
+            videoObj.thumbnail = DEFAULT_THUMBNAIL;
+            saveProjects();
+            clearTimeout(timeoutId);
+            finish();
+          }
+        } catch (e) {
+          log('ERROR', 'detectVideoMetaAndThumbnail loadedmetadata failed: ' + (e.message || e));
+          clearTimeout(timeoutId);
+          finish();
+        }
+      });
+
+      v.addEventListener('error', function () {
+        log('WARN', 'detectVideoMetaAndThumbnail: video error event for ' + (file.name || 'unknown') + ', using defaults');
+        // 失败时使用默认占位图，不阻断流程
+        videoObj.thumbnail = DEFAULT_THUMBNAIL;
+        saveProjects();
+        clearTimeout(timeoutId);
+        finish();
+      });
+
+      // 触发加载
+      try { v.load(); } catch (e) {}
+    } catch (e) {
+      log('ERROR', 'detectVideoMetaAndThumbnail failed: ' + (e.message || e));
+      if (typeof callback === 'function') callback();
+    }
+  }
+
+  // ===== 仅更新视频列表区域（不重置表单） =====
+  function updateVideoListOnly(project) {
+    try {
+      var panel = qs('projectVideosPanel');
+      if (!panel) return;
+      // 保留 actions 区，仅替换视频网格
+      var grid = panel.querySelector('.annotate-video-grid');
+      var empty = panel.querySelector('.annotate-project-empty-mini');
+      if (grid) {
+        var newHtml = renderVideoListHtml(project);
+        // renderVideoListHtml 可能返回 empty 提示或 grid
+        var tmp = document.createElement('div');
+        tmp.innerHTML = newHtml;
+        var newGrid = tmp.querySelector('.annotate-video-grid');
+        var newEmpty = tmp.querySelector('.annotate-project-empty-mini');
+        if (newGrid) {
+          grid.parentNode.replaceChild(newGrid, grid);
+        } else if (newEmpty && grid) {
+          grid.parentNode.replaceChild(newEmpty, grid);
+        }
+      } else if (empty) {
+        var newHtml2 = renderVideoListHtml(project);
+        var tmp2 = document.createElement('div');
+        tmp2.innerHTML = newHtml2;
+        var newGrid2 = tmp2.querySelector('.annotate-video-grid');
+        var newEmpty2 = tmp2.querySelector('.annotate-project-empty-mini');
+        if (newGrid2) {
+          empty.parentNode.replaceChild(newGrid2, empty);
+        } else if (newEmpty2) {
+          empty.parentNode.replaceChild(newEmpty2, empty);
+        }
+      }
+      // 重新绑定视频列表事件
+      bindVideoListEvents(project);
+      // 更新计数
+      var countEl = qs('projectVideosCount');
+      if (countEl) {
+        countEl.textContent = (Array.isArray(project.videos) ? project.videos.length : 0);
+      }
+    } catch (e) {
+      log('ERROR', 'updateVideoListOnly failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 绑定视频列表事件（删除/开始标注/加入批次） =====
+  function bindVideoListEvents(project) {
+    try {
+      var panel = qs('projectVideosPanel');
+      if (!panel) return;
+      var cards = panel.querySelectorAll('.annotate-video-card');
+      for (var i = 0; i < cards.length; i++) {
+        (function (card) {
+          var videoId = card.getAttribute('data-video-id');
+          if (!videoId) return;
+          // 开始标注按钮
+          var annotateBtn = card.querySelector('[data-action="annotate"]');
+          if (annotateBtn) {
+            annotateBtn.addEventListener('click', function (e) {
+              try {
+                e.stopPropagation();
+                startAnnotateFromProject(project, videoId);
+              } catch (err) {
+                log('ERROR', 'annotate btn click failed: ' + (err.message || err));
+              }
+            });
+          }
+          // 删除按钮
+          var deleteBtn = card.querySelector('[data-action="delete"]');
+          if (deleteBtn) {
+            deleteBtn.addEventListener('click', function (e) {
+              try {
+                e.stopPropagation();
+                deleteVideoFromProject(project, videoId);
+              } catch (err) {
+                log('ERROR', 'delete video btn click failed: ' + (err.message || err));
+              }
+            });
+          }
+          // 加入批次按钮
+          var batchBtn = card.querySelector('[data-action="batch"]');
+          if (batchBtn) {
+            batchBtn.addEventListener('click', function (e) {
+              try {
+                e.stopPropagation();
+                showAddVideoToBatchModal(project, videoId);
+              } catch (err) {
+                log('ERROR', 'add to batch btn click failed: ' + (err.message || err));
+              }
+            });
+          }
+          // 标签编辑按钮
+          var tagsBtn = card.querySelector('[data-action="tags"]');
+          if (tagsBtn) {
+            tagsBtn.addEventListener('click', function (e) {
+              try {
+                e.stopPropagation();
+                showTagsEditorModal(project, videoId);
+              } catch (err) {
+                log('ERROR', 'tags btn click failed: ' + (err.message || err));
+              }
+            });
+          }
+          // 预处理按钮
+          var processBtn = card.querySelector('[data-action="process"]');
+          if (processBtn) {
+            processBtn.addEventListener('click', function (e) {
+              try {
+                e.stopPropagation();
+                showProcessConfigModal(project, videoId, false);
+              } catch (err) {
+                log('ERROR', 'process btn click failed: ' + (err.message || err));
+              }
+            });
+          }
+          // checkbox 选中事件
+          var cb = card.querySelector('.annotate-video-select-cb');
+          if (cb) {
+            cb.addEventListener('change', function (e) {
+              try {
+                if (cb.checked) {
+                  selectedVideoIds.add(videoId);
+                  card.classList.add('selected');
+                } else {
+                  selectedVideoIds.delete(videoId);
+                  card.classList.remove('selected');
+                }
+                updateBatchToolbar();
+              } catch (err) {
+                log('ERROR', 'video checkbox change failed: ' + (err.message || err));
+              }
+            });
+            cb.addEventListener('click', function (e) {
+              e.stopPropagation();
+            });
+          }
+        })(cards[i]);
+      }
+
+      // 全选按钮
+      var selectAllBtn = qs('selectAllVideosBtn');
+      if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', function () {
+          try {
+            var videos = (project && Array.isArray(project.videos)) ? project.videos : [];
+            var allSelected = videos.length > 0 && videos.every(function (v) { return selectedVideoIds.has(v.id); });
+            if (allSelected) {
+              selectedVideoIds.clear();
+            } else {
+              for (var i = 0; i < videos.length; i++) {
+                selectedVideoIds.add(videos[i].id);
+              }
+            }
+            renderProjectDetail(project);
+          } catch (e) {
+            log('ERROR', 'select all failed: ' + (e.message || e));
+          }
+        });
+      }
+
+      // 批量加入批次按钮
+      var batchAddBtn = qs('batchAddToBatchBtn');
+      if (batchAddBtn) {
+        batchAddBtn.addEventListener('click', function () {
+          try {
+            if (selectedVideoIds.size === 0) {
+              showToast(tt('annotate.project.select_first', '请先选择视频'));
+              return;
+            }
+            showBatchAddToBatchModal(project);
+          } catch (e) {
+            log('ERROR', 'batch add to batch failed: ' + (e.message || e));
+          }
+        });
+      }
+
+      // 批量预处理按钮
+      var batchProcessBtn = qs('batchProcessBtn');
+      if (batchProcessBtn) {
+        batchProcessBtn.addEventListener('click', function () {
+          try {
+            if (selectedVideoIds.size === 0) {
+              showToast(tt('annotate.project.select_first', '请先选择轨迹'));
+              return;
+            }
+            showProcessConfigModal(project, null, true);
+          } catch (e) {
+            log('ERROR', 'batch process click failed: ' + (e.message || e));
+          }
+        });
+      }
+
+      // 批量删除按钮
+      var batchDelBtn = qs('batchDeleteVideosBtn');
+      if (batchDelBtn) {
+        batchDelBtn.addEventListener('click', function () {
+          try {
+            if (selectedVideoIds.size === 0) {
+              showToast(tt('annotate.project.select_first', '请先选择视频'));
+              return;
+            }
+            showModal({
+              title: tt('annotate.project.batch_delete', '删除选中'),
+              body: '<p style="text-align:center;padding:var(--spacing-lg);">' +
+                escapeHtml(tt('annotate.project.batch_delete_confirm', '确定删除选中的 {n} 条轨迹？').replace('{n}', selectedVideoIds.size)) +
+                '</p>',
+              confirmText: tt('annotate.modal_confirm', '确认'),
+              cancelText: tt('annotate.modal_cancel', '取消'),
+              onConfirm: function () {
+                try {
+                  var ids = Array.from(selectedVideoIds);
+                  // Bug 3 修复：传 skipConfirm=true，避免循环时每个视频都弹一次确认
+                  for (var i = 0; i < ids.length; i++) {
+                    deleteVideoFromProject(project, ids[i], true);
+                  }
+                  selectedVideoIds.clear();
+                  hideModal();
+                  renderProjectDetail(project);
+                  showToast(tt('annotate.project.batch_delete_done', '已删除 {n} 条轨迹').replace('{n}', ids.length), 'success');
+                } catch (e) {
+                  log('ERROR', 'batch delete confirm failed: ' + (e.message || e));
+                  hideModal();
+                }
+                return true;
+              }
+            });
+          } catch (e) {
+            log('ERROR', 'batch delete failed: ' + (e.message || e));
+          }
+        });
+      }
+
+      // 取消选择按钮
+      var clearSelBtn = qs('clearVideoSelectionBtn');
+      if (clearSelBtn) {
+        clearSelBtn.addEventListener('click', function () {
+          selectedVideoIds.clear();
+          renderProjectDetail(project);
+        });
+      }
+
+      updateBatchToolbar();
+    } catch (e) {
+      log('ERROR', 'bindVideoListEvents failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 更新批量操作栏 =====
+  function updateBatchToolbar() {
+    try {
+      var toolbar = qs('videoBatchToolbar');
+      var countEl = qs('selectedVideoCount');
+      if (toolbar) {
+        toolbar.style.display = selectedVideoIds.size > 0 ? '' : 'none';
+      }
+      if (countEl) {
+        countEl.textContent = selectedVideoIds.size;
+      }
+    } catch (e) {
+      log('ERROR', 'updateBatchToolbar failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 批量加入批次弹窗 =====
+  function showBatchAddToBatchModal(project) {
+    try {
+      var batches = project.batches || [];
+      if (batches.length === 0) {
+        showToast(tt('annotate.project.no_batch_first', '请先创建批次'));
+        return;
+      }
+      var optionsHtml = '';
+      for (var i = 0; i < batches.length; i++) {
+        var b = batches[i];
+        optionsHtml += '<option value="' + escapeHtml(b.id) + '">' +
+          escapeHtml(b.id) + (b.name ? ' (' + escapeHtml(b.name) + ')' : '') +
+          '</option>';
+      }
+      var body =
+        '<div class="annotate-modal-form">' +
+          '<p class="annotate-modal-form-hint">' +
+            tt('annotate.project.batch_add_hint', '将选中的 {n} 个视频加入指定批次，系统自动分配轨迹编号（同批次内不重复）').replace('{n}', selectedVideoIds.size) +
+          '</p>' +
+          '<div class="annotate-form-field">' +
+            '<label data-i18n="annotate.project.select_batch">选择批次</label>' +
+            '<select id="batchAddToBatchSelect" class="annotate-input">' +
+              '<option value="">-- ' + tt('annotate.project.select_batch_placeholder', '选择批次') + ' --</option>' +
+              optionsHtml +
+            '</select>' +
+          '</div>' +
+        '</div>';
+
+      showModal({
+        title: tt('annotate.project.batch_add_to_batch', '批量加入批次'),
+        body: body,
+        confirmText: tt('annotate.modal_confirm', '确认'),
+        cancelText: tt('annotate.modal_cancel', '取消'),
+        onConfirm: function () {
+          try {
+            var select = qs('batchAddToBatchSelect');
+            var batchId = select ? select.value : '';
+            if (!batchId) {
+              showToast(tt('annotate.project.select_batch_first', '请选择批次'));
+              return false;
+            }
+            var ids = Array.from(selectedVideoIds);
+            var successCount = 0;
+            for (var i = 0; i < ids.length; i++) {
+              try {
+                addVideoToBatch(project, ids[i], batchId);
+                successCount++;
+              } catch (e) {
+                log('ERROR', 'batch add video ' + ids[i] + ' failed: ' + (e.message || e));
+              }
+            }
+            showToast(tt('annotate.project.batch_add_success', '成功加入 {n} 个视频到批次').replace('{n}', successCount), 'success');
+            selectedVideoIds.clear();
+            hideModal();
+            renderProjectDetail(project);
+          } catch (e) {
+            log('ERROR', 'batch add confirm failed: ' + (e.message || e));
+            hideModal();
+          }
+          return true;
+        }
+      });
+    } catch (e) {
+      log('ERROR', 'showBatchAddToBatchModal failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 标签编辑弹窗（单条轨迹的自定义键值对标签） =====
+  function showTagsEditorModal(project, videoId) {
+    try {
+      var video = findVideoInProject(project, videoId);
+      if (!video) {
+        log('WARN', 'showTagsEditorModal: video not found, id=' + videoId);
+        showToast(tt('annotate.project.video_not_found', '视频未找到'));
+        return;
+      }
+      if (!video.tags || typeof video.tags !== 'object') {
+        video.tags = {};
+      }
+      var tags = video.tags;
+      var bodyHtml = '<div class="annotate-tag-editor" id="tagEditor">' +
+        '<div id="tagEditorRows"></div>' +
+        '<button type="button" class="annotate-btn annotate-btn-secondary annotate-btn-sm annotate-tag-add-btn" id="tagAddBtn">' +
+          '<span class="material-symbols-outlined">add</span>' +
+          '<span>' + tt('annotate.project.add_tag', '添加标签') + '</span>' +
+        '</button>' +
+      '</div>';
+
+      showModal({
+        title: tt('annotate.project.edit_tags', '编辑标签'),
+        body: bodyHtml,
+        confirmText: tt('annotate.modal_confirm', '确认'),
+        cancelText: tt('annotate.modal_cancel', '取消'),
+        onConfirm: function () {
+          try {
+            var rows = qsa('#tagEditorRows .annotate-tag-row');
+            var newTags = {};
+            for (var i = 0; i < rows.length; i++) {
+              var kInput = rows[i].querySelector('.annotate-tag-key');
+              var vInput = rows[i].querySelector('.annotate-tag-value');
+              var k = kInput ? kInput.value.trim() : '';
+              var val = vInput ? vInput.value : '';
+              if (k) {
+                newTags[k] = val;
+              }
+            }
+            video.tags = newTags;
+            saveProjects();
+            renderProjectDetail(project);
+            hideModal();
+            log('TAGS', 'tags saved for video ' + videoId + ', count=' + Object.keys(newTags).length);
+          } catch (e) {
+            log('ERROR', 'tags editor onConfirm failed: ' + (e.message || e));
+            hideModal();
+          }
+          return true;
+        }
+      });
+
+      // 渲染单行标签（key + value + 删除按钮）
+      var rowsContainer = qs('tagEditorRows');
+      function renderRow(k, v) {
+        try {
+          var row = document.createElement('div');
+          row.className = 'annotate-tag-row';
+          row.innerHTML =
+            '<input type="text" class="annotate-input annotate-tag-key" placeholder="' +
+              escapeHtml(tt('annotate.project.tag_key', '键')) + '" value="' + escapeHtml(k || '') + '">' +
+            '<input type="text" class="annotate-input annotate-tag-value" placeholder="' +
+              escapeHtml(tt('annotate.project.tag_value', '值')) + '" value="' + escapeHtml(v == null ? '' : String(v)) + '">' +
+            '<button type="button" class="annotate-btn annotate-btn-danger annotate-btn-sm annotate-tag-del-btn">' +
+              '<span class="material-symbols-outlined">delete</span>' +
+            '</button>';
+          var delBtn = row.querySelector('.annotate-tag-del-btn');
+          if (delBtn) {
+            delBtn.addEventListener('click', function () {
+              try {
+                row.remove();
+              } catch (err) {
+                log('ERROR', 'tag row delete failed: ' + (err.message || err));
+              }
+            });
+          }
+          if (rowsContainer) rowsContainer.appendChild(row);
+        } catch (e) {
+          log('ERROR', 'renderRow failed: ' + (e.message || e));
+        }
+      }
+
+      // 渲染初始标签行
+      if (rowsContainer) {
+        var keys = Object.keys(tags);
+        if (keys.length === 0) {
+          renderRow('', '');
+        } else {
+          for (var i = 0; i < keys.length; i++) {
+            renderRow(keys[i], tags[keys[i]]);
+          }
+        }
+      }
+
+      // 添加标签按钮
+      var addBtn = qs('tagAddBtn');
+      if (addBtn) {
+        addBtn.addEventListener('click', function () {
+          try {
+            renderRow('', '');
+          } catch (e) {
+            log('ERROR', 'tag add btn failed: ' + (e.message || e));
+          }
+        });
+      }
+    } catch (e) {
+      log('ERROR', 'showTagsEditorModal failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 删除视频（二次确认） =====
+  function deleteVideoFromProject(project, videoId, skipConfirm) {
+    try {
+      var video = findVideoInProject(project, videoId);
+      if (!video) {
+        log('WARN', 'deleteVideoFromProject: video not found, id=' + videoId);
+        return;
+      }
+
+      // 实际执行删除的内部函数（复用，避免重复代码）
+      function doDelete() {
+        try {
+          var idx = -1;
+          for (var i = 0; i < project.videos.length; i++) {
+            if (project.videos[i] && project.videos[i].id === videoId) {
+              idx = i; break;
+            }
+          }
+          if (idx < 0) {
+            log('WARN', 'deleteVideoFromProject: video already removed, id=' + videoId);
+            return;
+          }
+
+          // Bug 1 修复：从所有批次的 video_ids 中移除该视频
+          var removedFromBatches = removeVideoIdFromAllBatches(project, videoId);
+          if (removedFromBatches > 0) {
+            log('VIDEO', 'deleteVideoFromProject: removed from ' + removedFromBatches + ' batch(es)');
+          }
+
+          // Bug 2 修复：清理视频的文件句柄（IndexedDB）
+          if (video._restoreKey && FS_ACCESS_SUPPORTED) {
+            try {
+              fsDeleteHandle(video._restoreKey).catch(function (err) {
+                log('WARN', 'deleteVideoFromProject: fsDeleteHandle failed, key=' + video._restoreKey +
+                  ' err=' + (err.message || err));
+              });
+            } catch (e2) {
+              log('WARN', 'deleteVideoFromProject: fsDeleteHandle exception: ' + (e2.message || e2));
+            }
+          }
+
+          // 删除批次工作目录中的预处理文件（如果存在），不阻塞删除流程
+          if (video.processed_file && video.batch_id) {
+            try {
+              deleteProcessedFileFromWorkDir(project.id, video.batch_id, video.processed_file)
+                .catch(function (err) {
+                  log('WARN', 'deleteProcessedFileFromWorkDir failed: ' + (err.message || err));
+                });
+            } catch (e) {
+              log('WARN', 'deleteProcessedFileFromWorkDir exception: ' + (e.message || e));
+            }
+          }
+
+          project.videos.splice(idx, 1);
+          saveProjects();
+          updateVideoListOnly(project);
+          // 刷新批次面板（批次卡片内的视频列表也需要更新）
+          if (state.currentProject && state.currentProject.id === project.id) {
+            refreshBatchPanel(project);
+          }
+          showToast(tt('annotate.project.video_deleted', '视频已删除'));
+          log('VIDEO', 'deleteVideoFromProject: deleted id=' + videoId);
+        } catch (e) {
+          log('ERROR', 'deleteVideoFromProject doDelete failed: ' + (e.message || e));
+        }
+      }
+
+      // 批量删除场景跳过二次确认（已由调用方确认过）
+      if (skipConfirm) {
+        doDelete();
+        return;
+      }
+
+      // 单个删除：弹二次确认
+      showModal({
+        title: tt('annotate.project.delete_video_title', '删除视频'),
+        body: '<p>' + tt('annotate.project.delete_video_body',
+          '确认删除视频「{name}」？此操作不可撤销。').replace('{name}', escapeHtml(video.file_name)) + '</p>',
+        confirmText: tt('annotate.project.delete_btn', '删除'),
+        cancelText: tt('annotate.modal_cancel', '取消'),
+        onConfirm: function () {
+          try {
+            doDelete();
+            hideModal();
+          } catch (e) {
+            log('ERROR', 'deleteVideoFromProject onConfirm failed: ' + (e.message || e));
+            hideModal();
+          }
+        }
+      });
+    } catch (e) {
+      log('ERROR', 'deleteVideoFromProject failed: ' + (e.message || e));
+    }
+  }
+
+  // ==========================================================================
+  // 视频预处理（去畸变 / 画质统一 / 分辨率对齐 / 帧率标准化）
+  // ==========================================================================
+
+  // 预处理进度浮层句柄
+  var processProgressOverlay = null;
+  var processCancelFn = null;
+
+  // ===== 预处理配置弹窗 =====
+  // project: 当前项目；videoId: 单个视频 ID（批量时为 null）；isBatch: 是否批量
+  function showProcessConfigModal(project, videoId, isBatch) {
+    try {
+      if (!project) {
+        showToast(tt('annotate.project.no_current_project', '请先选择项目'));
+        return;
+      }
+      // 预处理前检查：必须先设置工作目录
+      if (!project.work_dir_name) {
+        log('WARN', 'showProcessConfigModal: work_dir not set, project=' + project.id);
+        showToast(tt('annotate.project.work_dir_required', '请先设置工作目录'));
+        return;
+      }
+      var dc = project.device_config || createDefaultDeviceConfig();
+      var intrinsic = dc.intrinsic || { fx: 0, fy: 0, cx: 0, cy: 0, distortion: [0, 0, 0, 0, 0] };
+      var distArr = Array.isArray(intrinsic.distortion) ? intrinsic.distortion.slice() : [0, 0, 0, 0, 0];
+      while (distArr.length < 5) distArr.push(0);
+      // distortion 数组顺序: [k1, k2, p1, p2, k3]
+      var hasIntrinsic = (intrinsic.fx || intrinsic.fy || intrinsic.cx || intrinsic.cy);
+
+      // 推断目标分辨率：从内参 cx,cy 推断（2*cx x 2*cy）
+      var autoW = (intrinsic.cx && intrinsic.cx > 0) ? Math.round(intrinsic.cx * 2) : 0;
+      var autoH = (intrinsic.cy && intrinsic.cy > 0) ? Math.round(intrinsic.cy * 2) : 0;
+
+      var html =
+        '<div class="annotate-process-config">' +
+          // 去畸变
+          '<div class="annotate-process-item">' +
+            '<div class="annotate-process-item-header">' +
+              '<label class="annotate-switch">' +
+                '<input type="checkbox" id="procUndistort" checked>' +
+                '<span class="annotate-switch-slider"></span>' +
+              '</label>' +
+              '<span class="material-symbols-outlined">lens_blur</span>' +
+              '<strong data-i18n="annotate.project.process_undistort">' + tt('annotate.project.process_undistort', '去畸变') + '</strong>' +
+            '</div>' +
+            '<div class="annotate-process-item-body">' +
+              (hasIntrinsic
+                ? '<span class="annotate-process-hint">fx=' + escapeHtml(String(intrinsic.fx)) +
+                  ' fy=' + escapeHtml(String(intrinsic.fy)) +
+                  ' cx=' + escapeHtml(String(intrinsic.cx)) +
+                  ' cy=' + escapeHtml(String(intrinsic.cy)) + '</span>'
+                : '<span class="annotate-process-hint annotate-process-warn">' +
+                    tt('annotate.project.process_no_intrinsic', '未配置内参，去畸变将跳过') + '</span>') +
+              '<span class="annotate-process-hint">k1=' + escapeHtml(String(distArr[0])) +
+              ' k2=' + escapeHtml(String(distArr[1])) +
+              ' p1=' + escapeHtml(String(distArr[2])) +
+              ' p2=' + escapeHtml(String(distArr[3])) +
+              ' k3=' + escapeHtml(String(distArr[4])) + '</span>' +
+            '</div>' +
+          '</div>' +
+          // 画质统一
+          '<div class="annotate-process-item">' +
+            '<div class="annotate-process-item-header">' +
+              '<label class="annotate-switch">' +
+                '<input type="checkbox" id="procQuality" checked>' +
+                '<span class="annotate-switch-slider"></span>' +
+              '</label>' +
+              '<span class="material-symbols-outlined">tune</span>' +
+              '<strong data-i18n="annotate.project.process_quality">' + tt('annotate.project.process_quality', '画质统一') + '</strong>' +
+            '</div>' +
+            '<div class="annotate-process-item-body">' +
+              '<label class="annotate-process-inline-label">' +
+                tt('annotate.project.process_quality_label', 'JPEG 质量') +
+                ' <input type="range" id="procQualityVal" min="85" max="100" value="92" class="annotate-process-range">' +
+                ' <span id="procQualityDisplay">92</span>' +
+              '</label>' +
+            '</div>' +
+          '</div>' +
+          // 分辨率对齐
+          '<div class="annotate-process-item">' +
+            '<div class="annotate-process-item-header">' +
+              '<label class="annotate-switch">' +
+                '<input type="checkbox" id="procResize"' + (autoW && autoH ? ' checked' : '') + '>' +
+                '<span class="annotate-switch-slider"></span>' +
+              '</label>' +
+              '<span class="material-symbols-outlined">aspect_ratio</span>' +
+              '<strong data-i18n="annotate.project.process_resize">' + tt('annotate.project.process_resize', '分辨率对齐') + '</strong>' +
+            '</div>' +
+            '<div class="annotate-process-item-body">' +
+              '<label class="annotate-process-inline-label">' +
+                tt('annotate.project.process_target_res', '目标分辨率') +
+                ' <input type="number" id="procResW" class="annotate-input annotate-input-sm" style="width:80px;" value="' + (autoW || 1280) + '" min="1"> ' +
+                ' × <input type="number" id="procResH" class="annotate-input annotate-input-sm" style="width:80px;" value="' + (autoH || 720) + '" min="1">' +
+              '</label>' +
+            '</div>' +
+          '</div>' +
+          // 帧率标准化
+          '<div class="annotate-process-item">' +
+            '<div class="annotate-process-item-header">' +
+              '<label class="annotate-switch">' +
+                '<input type="checkbox" id="procFps" checked>' +
+                '<span class="annotate-switch-slider"></span>' +
+              '</label>' +
+              '<span class="material-symbols-outlined">onset_video</span>' +
+              '<strong data-i18n="annotate.project.process_fps">' + tt('annotate.project.process_fps', '帧率标准化') + '</strong>' +
+            '</div>' +
+            '<div class="annotate-process-item-body">' +
+              '<label class="annotate-process-inline-label">' +
+                tt('annotate.project.process_target_fps', '目标 FPS') +
+                ' <input type="number" id="procFpsVal" class="annotate-input annotate-input-sm" style="width:80px;" value="30" min="1" max="120">' +
+              '</label>' +
+              '<label class="annotate-process-inline-label">' +
+                tt('annotate.project.process_resample_mode', '重采样') +
+                ' <select id="procResampleMode" class="annotate-input annotate-input-sm">' +
+                  '<option value="drop" data-i18n="annotate.project.process_resample_drop">' + tt('annotate.project.process_resample_drop', '丢弃') + '</option>' +
+                  '<option value="interpolate" data-i18n="annotate.project.process_resample_interp">' + tt('annotate.project.process_resample_interp', '插帧') + '</option>' +
+                '</select>' +
+              '</label>' +
+            '</div>' +
+          '</div>' +
+          (isBatch
+            ? '<p class="annotate-process-hint">' +
+                tt('annotate.project.batch_process_hint', '将对选中的 {n} 条轨迹依次执行预处理').replace('{n}', String(selectedVideoIds.size)) +
+              '</p>'
+            : '') +
+        '</div>';
+
+      showModal({
+        title: isBatch
+          ? tt('annotate.project.batch_process', '批量预处理')
+          : tt('annotate.project.process', '预处理'),
+        body: html,
+        confirmText: tt('annotate.project.process_start', '开始预处理'),
+        cancelText: tt('annotate.modal_cancel', '取消'),
+        onConfirm: function () {
+          try {
+            // 收集配置
+            var procUndistort = !!document.getElementById('procUndistort').checked;
+            var procQuality = !!document.getElementById('procQuality').checked;
+            var procQualityVal = parseInt(document.getElementById('procQualityVal').value, 10) || 92;
+            var procResize = !!document.getElementById('procResize').checked;
+            var procResW = parseInt(document.getElementById('procResW').value, 10) || 0;
+            var procResH = parseInt(document.getElementById('procResH').value, 10) || 0;
+            var procFps = !!document.getElementById('procFps').checked;
+            var procFpsVal = parseInt(document.getElementById('procFpsVal').value, 10) || 30;
+            var procResampleMode = document.getElementById('procResampleMode').value || 'drop';
+
+            // 构造 intrinsic / distortion（仅当 undistort 开启且有内参时）
+            var procIntrinsic = null;
+            var procDistortion = null;
+            if (procUndistort && hasIntrinsic) {
+              procIntrinsic = { fx: intrinsic.fx, fy: intrinsic.fy, cx: intrinsic.cx, cy: intrinsic.cy };
+              procDistortion = {
+                k1: distArr[0] || 0,
+                k2: distArr[1] || 0,
+                p1: distArr[2] || 0,
+                p2: distArr[3] || 0,
+                k3: distArr[4] || 0
+              };
+            }
+
+            var config = {
+              undistort: procUndistort,
+              intrinsic: procIntrinsic,
+              distortion: procDistortion,
+              quality: procQuality ? procQualityVal : null,
+              resolution: procResize ? [procResW, procResH] : null,
+              fps: procFps ? procFpsVal : 30,
+              resample_mode: procResampleMode
+            };
+
+            log('PROCESS', 'config: ' + JSON.stringify({
+              undistort: config.undistort, quality: config.quality,
+              resolution: config.resolution, fps: config.fps, resample_mode: config.resample_mode
+            }));
+
+            hideModal();
+
+            // 启动处理
+            if (isBatch) {
+              var ids = Array.from(selectedVideoIds);
+              runBatchProcess(project, ids, config);
+            } else {
+              var video = findVideoInProject(project, videoId);
+              if (!video) {
+                showToast(tt('annotate.project.video_not_found', '视频未找到'));
+                return;
+              }
+              runProcessForVideo(project, video, config);
+            }
+          } catch (e) {
+            log('ERROR', 'process config confirm failed: ' + (e.message || e));
+            hideModal();
+            showToast(tt('annotate.project.process_start_failed', '启动预处理失败: ') + (e.message || e));
+          }
+        }
+      });
+
+      // 质量滑块实时显示
+      setTimeout(function () {
+        try {
+          var qv = document.getElementById('procQualityVal');
+          var qd = document.getElementById('procQualityDisplay');
+          if (qv && qd) {
+            qv.addEventListener('input', function () { qd.textContent = qv.value; });
+          }
+        } catch (e) {}
+      }, 50);
+    } catch (e) {
+      log('ERROR', 'showProcessConfigModal failed: ' + (e.message || e));
+      showToast(tt('annotate.project.process_config_failed', '打开预处理配置失败: ') + (e.message || e));
+    }
+  }
+
+  // ===== 预处理进度浮层 =====
+  function showProcessProgressModal(title, current, total) {
+    try {
+      hideProcessProgressModal();
+      var overlay = document.createElement('div');
+      overlay.className = 'annotate-process-overlay';
+      overlay.innerHTML =
+        '<div class="annotate-process-progress-card">' +
+          '<div class="annotate-process-progress-header">' +
+            '<span class="material-symbols-outlined">auto_fix_high</span>' +
+            '<span class="annotate-process-progress-title">' + escapeHtml(title || tt('annotate.project.process', '预处理')) + '</span>' +
+          '</div>' +
+          '<div class="annotate-progress-bar">' +
+            '<div class="annotate-progress-bar-fill" id="procProgressFill" style="width:0%"></div>' +
+          '</div>' +
+          '<div class="annotate-progress-info" id="procProgressInfo">' +
+            (current || 0) + ' / ' + (total || 0) +
+          '</div>' +
+          '<div class="annotate-process-progress-status" id="procProgressStatus"></div>' +
+          '<button type="button" class="annotate-btn annotate-btn-danger annotate-btn-sm" id="procCancelBtn">' +
+            '<span class="material-symbols-outlined">cancel</span>' +
+            '<span data-i18n="annotate.project.process_cancel">' + tt('annotate.project.process_cancel', '取消') + '</span>' +
+          '</button>' +
+        '</div>';
+      document.body.appendChild(overlay);
+      processProgressOverlay = overlay;
+
+      var cancelBtn = overlay.querySelector('#procCancelBtn');
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', function () {
+          try {
+            if (typeof processCancelFn === 'function') {
+              processCancelFn();
+            }
+            hideProcessProgressModal();
+            showToast(tt('annotate.project.process_cancelled', '已取消预处理'));
+          } catch (e) {
+            log('ERROR', 'process cancel click failed: ' + (e.message || e));
+          }
+        });
+      }
+      log('PROCESS', 'progress modal shown: ' + title);
+    } catch (e) {
+      log('ERROR', 'showProcessProgressModal failed: ' + (e.message || e));
+    }
+  }
+
+  function updateProcessProgress(current, total, statusText) {
+    try {
+      if (!processProgressOverlay) return;
+      var fill = processProgressOverlay.querySelector('#procProgressFill');
+      var info = processProgressOverlay.querySelector('#procProgressInfo');
+      var status = processProgressOverlay.querySelector('#procProgressStatus');
+      if (fill) {
+        var pct = total > 0 ? (current / total * 100) : 0;
+        fill.style.width = pct + '%';
+      }
+      if (info) {
+        info.textContent = current + ' / ' + total;
+      }
+      if (status && statusText) {
+        status.textContent = statusText;
+      }
+    } catch (e) {
+      log('WARN', 'updateProcessProgress failed: ' + (e.message || e));
+    }
+  }
+
+  function hideProcessProgressModal() {
+    try {
+      if (processProgressOverlay && processProgressOverlay.parentNode) {
+        processProgressOverlay.parentNode.removeChild(processProgressOverlay);
+      }
+      processProgressOverlay = null;
+      processCancelFn = null;
+    } catch (e) {
+      log('WARN', 'hideProcessProgressModal failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 获取视频 File（用于预处理）=====
+  // 优先从 FS Access 恢复；失败则提示用户重新选择
+  function getVideoFileForProcessing(project, video) {
+    return new Promise(function (resolve, reject) {
+      try {
+        if (!project || !video) {
+          reject(new Error('invalid project/video'));
+          return;
+        }
+        var restoreKey = video._restoreKey || ('project_' + project.id + '_video_' + video.id);
+        if (FS_ACCESS_SUPPORTED) {
+          log('PROCESS', 'getVideoFile: restoring handle, key=' + restoreKey);
+          fsLoadHandle(restoreKey).then(function (handle) {
+            if (!handle) {
+              // 恢复失败，弹文件选择器让用户重新选择
+              log('PROCESS', 'no file handle, fallback to file picker');
+              promptSelectVideoFile(video, resolve, reject);
+              return;
+            }
+            return fsHandleToFile(handle).then(function (file) {
+              if (!file) {
+                // 权限失败，弹文件选择器
+                log('PROCESS', 'handle to file failed, fallback to file picker');
+                promptSelectVideoFile(video, resolve, reject);
+                return;
+              }
+              log('PROCESS', 'getVideoFile: restored ' + file.name);
+              resolve(file);
+            });
+          }).catch(function (err) {
+            // 恢复异常，弹文件选择器
+            log('PROCESS', 'restore failed: ' + (err.message || err) + ', fallback to file picker');
+            promptSelectVideoFile(video, resolve, reject);
+          });
+        } else {
+          // 不支持 FS Access：直接弹文件选择器
+          log('PROCESS', 'FS Access unsupported, fallback to file picker');
+          promptSelectVideoFile(video, resolve, reject);
+        }
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
+
+  // 弹文件选择器让用户重新选择视频文件（用于预处理）
+  function promptSelectVideoFile(video, resolve, reject) {
+    try {
+      // 先弹提示，告诉用户为什么需要选择文件
+      var tipHtml =
+        '<div style="text-align:center;padding:16px 8px;">' +
+          '<div style="font-size:48px;margin-bottom:8px;">📁</div>' +
+          '<p style="font-size:14px;color:var(--color-on-surface);margin:8px 0;">' +
+            tt('annotate.project.process_select_tip',
+              '预处理需要读取原始视频文件。<br>请选择你之前导入的视频文件（{name}）').replace('{name}', video.file_name || '') +
+          '</p>' +
+          '<p style="font-size:12px;color:var(--color-on-surface-variant);margin:8px 0;">' +
+            tt('annotate.project.process_select_sub',
+              '原始视频不会被修改，预处理后会生成新的视频文件') +
+          '</p>' +
+        '</div>';
+      showModal({
+        title: tt('annotate.project.process_select_title', '请选择视频文件'),
+        body: tipHtml,
+        confirmText: tt('annotate.project.process_select_btn', '选择文件'),
+        cancelText: tt('common.cancel', '取消'),
+        onConfirm: function () {
+          hideModal();
+          // 关闭提示弹窗后，再弹文件选择器
+          setTimeout(function () {
+            doSelectFile(video, resolve, reject);
+          }, 100);
+        },
+        onCancel: function () {
+          reject(new Error('user_cancelled'));
+        }
+      });
+    } catch (e) {
+      reject(e);
+    }
+  }
+
+  // 实际弹文件选择器
+  function doSelectFile(video, resolve, reject) {
+    try {
+      // 优先使用 FS Access API（Chrome/Edge），选择后保存句柄，下次不需要重新选
+      if (FS_ACCESS_SUPPORTED && typeof window.showOpenFilePicker === 'function') {
+        window.showOpenFilePicker({
+          types: [{
+            description: 'Video',
+            accept: { 'video/*': ['.mp4', '.mov', '.avi', '.webm', '.mkv'] }
+          }],
+          multiple: false
+        }).then(function (handles) {
+          var handle = handles && handles[0];
+          if (!handle) {
+            reject(new Error('user_cancelled'));
+            return;
+          }
+          // 保存句柄到 IndexedDB，下次预处理可以直接恢复
+          var restoreKey = video._restoreKey || ('project_' + (state.currentProject && state.currentProject.id) + '_video_' + video.id);
+          fsSaveHandle(restoreKey, handle).then(function () {
+            log('PROCESS', 'file handle saved for key=' + restoreKey);
+            return handle.getFile();
+          }).then(function (file) {
+            log('PROCESS', 'user selected file (FS Access): ' + file.name);
+            resolve(file);
+          }).catch(function (err) {
+            reject(err);
+          });
+        }).catch(function (err) {
+          // 用户取消或权限拒绝
+          var msg = err && err.message ? err.message : String(err);
+          if (msg.indexOf('aborted') !== -1 || msg.indexOf('Abort') !== -1) {
+            reject(new Error('user_cancelled'));
+          } else {
+            reject(err);
+          }
+        });
+      } else {
+        // 降级到普通 <input type="file">（Firefox/Safari）
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'video/*,.mp4,.mov,.avi,.webm';
+        input.style.display = 'none';
+        input.onchange = function (e) {
+          try {
+            var file = e.target.files && e.target.files[0];
+            document.body.removeChild(input);
+            if (!file) {
+              reject(new Error('user_cancelled'));
+              return;
+            }
+            log('PROCESS', 'user selected file (input): ' + file.name);
+            resolve(file);
+          } catch (err) {
+            try { document.body.removeChild(input); } catch (_) {}
+            reject(err);
+          }
+        };
+        document.body.appendChild(input);
+        input.click();
+      }
+    } catch (e) {
+      reject(e);
+    }
+  }
+
+  // ===== 创建隐藏 video 元素并加载 File =====
+  function createHiddenVideoElement(file, onReady, onError) {
+    try {
+      var url = URL.createObjectURL(file);
+      var v = document.createElement('video');
+      // 注意：不能用 display:none，某些浏览器对不可见元素不触发 seeked
+      v.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0.01;pointer-events:none;z-index:-1;';
+      v.muted = true;
+      v.playsInline = true;
+      v.preload = 'auto';
+      v.src = url;
+      document.body.appendChild(v);
+
+      var cleanup = function () {
+        try { URL.revokeObjectURL(url); } catch (_) {}
+        try { if (v.parentNode) v.parentNode.removeChild(v); } catch (_) {}
+      };
+
+      var ready = false;
+      // 等 canplay（readyState >= 2），确保可以 seek
+      v.oncanplay = function () {
+        if (ready) return;
+        ready = true;
+        log('PROCESS', 'hidden video canplay: ' + v.videoWidth + 'x' + v.videoHeight + ' dur=' + v.duration + ' readyState=' + v.readyState);
+        // 确保可以 seek
+        try {
+          v.currentTime = 0.001;
+          v.onseeked = function () {
+            v.onseeked = null;
+            onReady(v, url, cleanup);
+          };
+          // 超时兜底
+          setTimeout(function () {
+            if (!v.onseeked) return;
+            v.onseeked = null;
+            log('WARN', 'initial seek timeout, proceeding anyway');
+            onReady(v, url, cleanup);
+          }, 1000);
+        } catch (e) {
+          log('WARN', 'initial seek failed, proceeding anyway: ' + (e.message || e));
+          onReady(v, url, cleanup);
+        }
+      };
+      v.onerror = function () {
+        cleanup();
+        if (typeof onError === 'function') onError(new Error('hidden video load error'));
+      };
+      // 如果 readyState 已经 >= 2，直接触发
+      if (v.readyState >= 2) {
+        v.oncanplay();
+      }
+      // 超时兜底：5 秒后如果还没 canplay，强制开始
+      setTimeout(function () {
+        if (ready) return;
+        ready = true;
+        log('WARN', 'canplay timeout, proceeding anyway. readyState=' + v.readyState);
+        onReady(v, url, cleanup);
+      }, 5000);
+      v.load();
+    } catch (e) {
+      if (typeof onError === 'function') onError(e);
+    }
+  }
+
+  // ===== 执行单个视频预处理 =====
+  function runProcessForVideo(project, video, config) {
+    try {
+      // 先获取文件，再显示进度弹窗（避免先显示进度又弹文件选择）
+      log('PROCESS', 'getting video file for processing...');
+      getVideoFileForProcessing(project, video).then(function (file) {
+        try {
+          // 文件获取成功，显示进度弹窗
+          showProcessProgressModal(
+            tt('annotate.project.process_progress_title', '预处理: {name}').replace('{name}', video.file_name || ''),
+            0, 0
+          );
+          createHiddenVideoElement(file, function (vEl, url, cleanup) {
+            try {
+              // 设置取消函数
+              processCancelFn = function () {
+                cleanup();
+                log('PROCESS', 'cancelled by user');
+              };
+
+              var callbacks = {
+                onProgress: function (frame, total) {
+                  updateProcessProgress(frame, total, video.file_name || '');
+                },
+                onComplete: function (result) {
+                  try {
+                    cleanup();
+                    hideProcessProgressModal();
+                    onProcessComplete(video.id, result, config);
+                  } catch (e) {
+                    log('ERROR', 'processVideo onComplete wrapper failed: ' + (e.message || e));
+                    hideProcessProgressModal();
+                    showToast(tt('annotate.project.process_failed', '预处理失败: ') + (e.message || e));
+                  }
+                },
+                onError: function (err) {
+                  try {
+                    cleanup();
+                    hideProcessProgressModal();
+                    log('ERROR', 'processVideo onError: ' + (err.message || err));
+                    showToast(tt('annotate.project.process_failed', '预处理失败: ') + (err.message || err));
+                  } catch (e) {}
+                }
+              };
+
+              // 检查 MediaRecorder 支持（提前给出友好提示）
+              if (typeof MediaRecorder === 'undefined') {
+                cleanup();
+                hideProcessProgressModal();
+                showToast(tt('annotate.project.process_no_recorder',
+                  '浏览器不支持视频录制，请使用 Chrome/Edge'));
+                return;
+              }
+
+              var cancelFn = window.AIX_ANNOTATE_PROCESS.processVideo(vEl, config, callbacks);
+              processCancelFn = function () {
+                cleanup();
+                if (typeof cancelFn === 'function') cancelFn();
+                log('PROCESS', 'cancelled by user (recorder)');
+              };
+            } catch (e) {
+              cleanup();
+              hideProcessProgressModal();
+              showToast(tt('annotate.project.process_failed', '预处理失败: ') + (e.message || e));
+            }
+          }, function (err) {
+            hideProcessProgressModal();
+            showToast(tt('annotate.project.process_load_failed', '加载视频文件失败，请重新选择文件: ') + (err.message || err));
+            log('ERROR', 'createHiddenVideoElement failed: ' + (err.message || err));
+          });
+        } catch (e) {
+          hideProcessProgressModal();
+          showToast(tt('annotate.project.process_failed', '预处理失败: ') + (e.message || e));
+        }
+      }).catch(function (err) {
+        hideProcessProgressModal();
+        var msg = err && err.message ? err.message : String(err);
+        if (msg === 'user_cancelled') {
+          // 用户取消选择，不显示错误
+          log('PROCESS', 'user cancelled file selection');
+        } else if (msg === 'no_file_handle' || msg === 'fs_access_unsupported' || msg === 'permission_denied_or_unavailable') {
+          showToast(tt('annotate.project.process_reselect',
+            '无法恢复视频文件，请先进入该视频标注并重新选择文件后再预处理'));
+        } else {
+          showToast(tt('annotate.project.process_failed', '预处理失败: ') + msg);
+        }
+        log('ERROR', 'getVideoFileForProcessing failed: ' + msg);
+      });
+    } catch (e) {
+      hideProcessProgressModal();
+      log('ERROR', 'runProcessForVideo failed: ' + (e.message || e));
+      showToast(tt('annotate.project.process_failed', '预处理失败: ') + (e.message || e));
+    }
+  }
+
+  // ===== 批量预处理 =====
+  function runBatchProcess(project, videoIds, config) {
+    try {
+      if (!videoIds || videoIds.length === 0) {
+        showToast(tt('annotate.project.select_first', '请先选择轨迹'));
+        return;
+      }
+      var idx = 0;
+      var failed = 0;
+      var total = videoIds.length;
+
+      function processNext() {
+        try {
+          if (idx >= total) {
+            hideProcessProgressModal();
+            var doneMsg = tt('annotate.project.batch_process_done', '批量预处理完成：成功 {ok}，失败 {fail}')
+              .replace('{ok}', String(total - failed)).replace('{fail}', String(failed));
+            showToast(doneMsg);
+            log('PROCESS', 'batch done: ok=' + (total - failed) + ' fail=' + failed);
+            return;
+          }
+          var vid = videoIds[idx];
+          var video = findVideoInProject(project, vid);
+          if (!video) {
+            log('WARN', 'batch: video not found, skip id=' + vid);
+            failed++;
+            idx++;
+            processNext();
+            return;
+          }
+          log('PROCESS', 'batch: processing ' + (idx + 1) + '/' + total + ' id=' + vid);
+
+          // 先获取文件，再显示进度弹窗（避免先弹进度再弹文件选择）
+          getVideoFileForProcessing(project, video).then(function (file) {
+            // 文件就绪后再显示进度弹窗
+            showProcessProgressModal(
+              tt('annotate.project.batch_progress_title', '批量预处理 ({i}/{n}): {name}')
+                .replace('{i}', String(idx + 1)).replace('{n}', String(total))
+                .replace('{name}', video.file_name || ''),
+              0, 0
+            );
+            createHiddenVideoElement(file, function (vEl, url, cleanup) {
+              try {
+                processCancelFn = function () { cleanup(); };
+                var callbacks = {
+                  onProgress: function (frame, ftotal) {
+                    updateProcessProgress(frame, ftotal,
+                      (idx + 1) + '/' + total + ' - ' + (video.file_name || ''));
+                  },
+                  onComplete: function (result) {
+                    try {
+                      cleanup();
+                      // 必须等待 onProcessComplete 完成（写入 processed_file + 重新渲染）后
+                      // 再处理下一个视频，否则会出现"只标记了一个已预处理"的问题
+                      Promise.resolve(onProcessComplete(video.id, result, config)).then(function () {
+                        idx++;
+                        processNext();
+                      }).catch(function (e) {
+                        log('ERROR', 'batch onComplete async failed: ' + (e.message || e));
+                        failed++;
+                        idx++;
+                        processNext();
+                      });
+                    } catch (e) {
+                      log('ERROR', 'batch onComplete failed: ' + (e.message || e));
+                      failed++;
+                      idx++;
+                      processNext();
+                    }
+                  },
+                  onError: function (err) {
+                    cleanup();
+                    log('ERROR', 'batch processVideo error: ' + (err.message || err));
+                    failed++;
+                    idx++;
+                    processNext();
+                  }
+                };
+                if (typeof MediaRecorder === 'undefined') {
+                  cleanup();
+                  hideProcessProgressModal();
+                  showToast(tt('annotate.project.process_no_recorder',
+                    '浏览器不支持视频录制，请使用 Chrome/Edge'));
+                  return;
+                }
+                var cancelFn = window.AIX_ANNOTATE_PROCESS.processVideo(vEl, config, callbacks);
+                processCancelFn = function () {
+                  cleanup();
+                  if (typeof cancelFn === 'function') cancelFn();
+                };
+              } catch (e) {
+                cleanup();
+                failed++;
+                idx++;
+                processNext();
+              }
+            }, function (err) {
+              log('ERROR', 'batch load video failed: ' + (err.message || err));
+              failed++;
+              idx++;
+              processNext();
+            });
+          }).catch(function (err) {
+            log('ERROR', 'batch getVideoFile failed: ' + (err.message || err));
+            failed++;
+            idx++;
+            processNext();
+          });
+        } catch (e) {
+          log('ERROR', 'batch processNext failed: ' + (e.message || e));
+          failed++;
+          idx++;
+          processNext();
+        }
+      }
+
+      processNext();
+    } catch (e) {
+      hideProcessProgressModal();
+      log('ERROR', 'runBatchProcess failed: ' + (e.message || e));
+      showToast(tt('annotate.project.process_failed', '预处理失败: ') + (e.message || e));
+    }
+  }
+
+  // ===== 预处理完成回调 =====
+  // 重构后：将 Blob 写入工作目录的 processed/ 子文件夹，不再存 IndexedDB
+  function onProcessComplete(videoId, result, config) {
+    return new Promise(function (resolve) {
+    try {
+      var project = state.currentProject;
+      if (!project) {
+        log('ERROR', 'onProcessComplete: no current project');
+        showToast(tt('annotate.project.process_save_failed',
+          '保存到文件系统失败，已降级下载'));
+        fallbackDownloadProcessedBlob(result, videoId);
+        resolve();
+        return;
+      }
+      var video = findVideoInProject(project, videoId);
+      if (!video) {
+        log('WARN', 'onProcessComplete: video not found, id=' + videoId);
+        resolve();
+        return;
+      }
+      // 记录处理配置/日志（用于导出与回显）
+      video.process_config = config;
+      video.process_log = result.log;
+      saveProjects();
+      log('PROCESS', 'onProcessComplete: video=' + videoId +
+        ' blob_size=' + (result.blob && result.blob.size || 0));
+
+      // 写入批次工作目录 processed/ 子文件夹
+      saveProcessedBlobToWorkDir(project.id, video.batch_id, result.blob, video.file_name).then(function (info) {
+        try {
+          video.processed_file = info.path;
+          // 兼容清理：移除可能存在的旧 IndexedDB ID 标记
+          if (video.processed_blob_id) delete video.processed_blob_id;
+          saveProjects();
+          var fullDisplayPath = info.dirName + '/' + info.path;
+          log('PROCESS', 'saved processed file: ' + fullDisplayPath);
+          var msg = tt('annotate.project.process_saved_to', '已保存到：{path}')
+            .split('{path}').join(fullDisplayPath);
+          showToast(msg);
+          // 重新渲染项目详情（更新轨迹卡片"已预处理"标签与路径）
+          if (state.currentProject) {
+            renderProjectDetail(state.currentProject);
+          }
+          resolve();
+        } catch (e) {
+          log('ERROR', 'onProcessComplete post-save failed: ' + (e.message || e));
+          resolve();
+        }
+      }).catch(function (err) {
+        log('ERROR', 'saveProcessedBlobToWorkDir failed: ' + (err.message || err) +
+          ', fallback to download');
+        // 降级：下载 WebM 文件
+        showToast(tt('annotate.project.process_save_failed',
+          '保存到文件系统失败，已降级下载'));
+        fallbackDownloadProcessedBlob(result, videoId);
+        resolve();
+      });
+    } catch (e) {
+      log('ERROR', 'onProcessComplete failed: ' + (e.message || e));
+      showToast(tt('annotate.project.process_failed', '预处理失败: ') + (e.message || e));
+      fallbackDownloadProcessedBlob(result, videoId);
+      resolve();
+    }
+    });
+  }
+
+  // ===== 降级：下载预处理 Blob（浏览器不支持 FS Access 或写入失败时） =====
+  function fallbackDownloadProcessedBlob(result, videoId) {
+    try {
+      if (!result || !result.blob) {
+        log('WARN', 'fallbackDownloadProcessedBlob: no blob');
+        return;
+      }
+      var exportApi = window.AIX_ANNOTATE_EXPORT;
+      if (exportApi && typeof exportApi.downloadBlob === 'function') {
+        var fname = buildProcessedFileName(videoId ? ('video_' + videoId) : 'video');
+        exportApi.downloadBlob(result.blob, fname);
+        log('PROCESS', 'fallback download: ' + fname);
+      } else {
+        log('WARN', 'fallbackDownloadProcessedBlob: downloadBlob unavailable');
+      }
+    } catch (e) {
+      log('ERROR', 'fallbackDownloadProcessedBlob failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 从预处理 Blob 加载视频到播放器 =====
+  function loadProcessedVideoIntoPlayer(blob, fileName) {
+    try {
+      if (!blob) {
+        log('WARN', 'loadProcessedVideoIntoPlayer: blob is null');
+        return false;
+      }
+      // 清理旧 URL
+      if (state.videoUrl) {
+        try { URL.revokeObjectURL(state.videoUrl); } catch (e) {}
+        state.videoUrl = null;
+      }
+      var url;
+      try {
+        url = URL.createObjectURL(blob);
+      } catch (e) {
+        log('ERROR', 'loadProcessedVideoIntoPlayer: createObjectURL failed: ' + (e.message || e));
+        return false;
+      }
+      state.videoFile = { name: fileName || 'processed.webm', size: blob.size, type: blob.type };
+      state.videoFileName = fileName || 'processed.webm';
+      state.videoFileSize = blob.size;
+      state.videoUrl = url;
+      state.videoDuration = 0;
+      state.videoResolution = [0, 0];
+      state.fps = 30;
+      state.totalFrames = 0;
+      state.currentFrame = 0;
+
+      if (dom.fileName) dom.fileName.textContent = state.videoFileName;
+      if (dom.fileInfo) dom.fileInfo.removeAttribute('hidden');
+      if (dom.emptyHint) dom.emptyHint.setAttribute('hidden', '');
+
+      if (!dom.video) {
+        log('ERROR', 'loadProcessedVideoIntoPlayer: video element not found');
+        return false;
+      }
+      try {
+        dom.video.src = url;
+        dom.video.load();
+      } catch (e) {
+        log('ERROR', 'loadProcessedVideoIntoPlayer: set video.src failed: ' + (e.message || e));
+        return false;
+      }
+
+      // 检测元数据
+      detectVideoMetadata(function () {
+        try {
+          log('FILE', 'Processed video ready, duration=' + state.videoDuration + 's fps=' + state.fps);
+          showToast(tt('annotate.file_loaded', '视频加载完成: ') + state.videoFileName);
+          updateFrameDisplay();
+          updateFileInfoUI();
+        } catch (e) {
+          log('ERROR', 'loadProcessedVideoIntoPlayer detect callback failed: ' + (e.message || e));
+        }
+      });
+      return true;
+    } catch (e) {
+      log('ERROR', 'loadProcessedVideoIntoPlayer failed: ' + (e.message || e));
+      return false;
+    }
+  }
+
+  // ==========================================================================
+  // 阶段 5：从项目进入标注流程
+  // ==========================================================================
+
+  function startAnnotateFromProject(project, videoId) {
+    try {
+      var video = findVideoInProject(project, videoId);
+      if (!video) {
+        log('WARN', 'startAnnotateFromProject: video not found, id=' + videoId);
+        showToast(tt('annotate.project.video_not_found', '视频未找到'));
+        return;
+      }
+      log('PROJECT', 'startAnnotateFromProject: project=' + project.id + ' video=' + video.id);
+
+      // 设置 state
+      state.mode = 'project';
+      state.currentProject = project;
+      state.currentVideo = video;
+      state.project_id = project.id;
+      state.video_id = video.id;
+      state.device_config = project.device_config || createDefaultDeviceConfig();
+
+      // 视频元信息
+      state.videoFileName = video.file_name;
+      state.videoFileSize = video.file_size || 0;
+      state.videoDuration = video.duration || 0;
+      state.videoResolution = (video.resolution && video.resolution.length === 2)
+        ? [video.resolution[0] || 0, video.resolution[1] || 0] : [0, 0];
+      state.fps = video.fps || 30;
+      state.totalFrames = video.num_frames || 0;
+      state.currentFrame = 0;
+
+      // meta_info 自动带入：优先从批次继承，降级从项目/设备配置取
+      // 批次级字段：data_source / frame_name / instruction_sub_camera / task_success / task_horizon
+      // 视频级字段：trajectory_index / fps / num_frames
+      var batchMeta = null;
+      if (video.batch_id) {
+        var metaBatch = findBatchById(project, video.batch_id);
+        if (metaBatch && metaBatch.meta_info) {
+          batchMeta = metaBatch.meta_info;
+          log('ANNOTATE', 'startAnnotateFromProject: inheriting meta_info from batch ' + video.batch_id);
+        }
+      }
+      state.meta_info = {
+        data_source: (batchMeta && batchMeta.data_source) || project.data_source || '',
+        trajectory_index: video.trajectory_index || '',
+        fps: video.fps || 30,
+        num_frames: video.num_frames || 0,
+        frame_name: (batchMeta && Array.isArray(batchMeta.frame_name))
+          ? batchMeta.frame_name.slice()
+          : ((project.device_config && Array.isArray(project.device_config.frame_name))
+            ? project.device_config.frame_name.slice() : []),
+        instruction_sub_camera: (batchMeta && batchMeta.instruction_sub_camera) ||
+          (project.device_config && project.device_config.instruction_sub_camera) || '',
+        task_success: batchMeta ? !!batchMeta.task_success : true,
+        task_horizon: (batchMeta && batchMeta.task_horizon) || 'NA'
+      };
+
+      // 加载已有标注（若 video.annotations 存在），否则初始化空结构
+      if (video.annotations && typeof video.annotations === 'object' &&
+        Array.isArray(video.annotations.hand_detection)) {
+        // 深拷贝，避免修改 state 时直接改到 video.annotations
+        state.annotations = JSON.parse(JSON.stringify(video.annotations));
+        log('ANNOTATE', 'startAnnotateFromProject: loaded existing annotations, ' +
+          'hand_det=' + (video.annotations.hand_detection || []).length +
+          ' keypoints=' + (video.annotations.hand_keypoints || []).length);
+      } else {
+        state.annotations = {
+          hand_detection: [],
+          hand_keypoints: [],
+          action_segmentation: { labels: [], segments: [] },
+          hand_object: [],
+          objects: []
+        };
+        log('ANNOTATE', 'startAnnotateFromProject: no existing annotations, init empty');
+      }
+      state.selectedIds = { hand: null, keypoint: null, segment: null, relation: null, object: null };
+      state.history = [];
+      state.historyIndex = -1;
+
+      // 标记标注状态为进行中（仅在未完成时）
+      if (video.annotation_status !== 'completed') {
+        video.annotation_status = 'in_progress';
+        saveProjects();
+      }
+
+      // 切换到标注模式 UI（隐藏项目面板，显示标注容器）
+      hideProjectPanelAndShowAnnotate();
+
+      // 元信息已从批次继承 + 视频级字段已填，一律跳过步骤 2，直接进入步骤 3（标注）
+      // 步骤 2 仍保留在步骤条，采集人可主动点击回去查看/修改元信息
+      state.currentStep = 3;
+      goToStep(3);
+      updateStepsIndicator();
+
+      // 回填 meta_info 表单（供采集人点回步骤 2 时查看）
+      fillMetaInfoForm();
+
+      // 加载原始视频文件（File System Access API 恢复 或 提示重新选择）
+      function loadOriginalVideo() {
+        var restoreKey = video._restoreKey || ('project_' + project.id + '_video_' + video.id);
+        if (FS_ACCESS_SUPPORTED) {
+          log('RESTORE', 'startAnnotateFromProject: attempting restore, key=' + restoreKey);
+          showToast(tt('annotate.restore_in_progress', '正在恢复视频文件...'));
+          fsLoadHandle(restoreKey).then(function (handle) {
+            if (!handle) {
+              // 无 handle，提示重新选择
+              log('RESTORE', 'No saved file handle for key=' + restoreKey);
+              showToast(tt('annotate.project.reselect_video_hint', '请在下方上传区重新选择该视频文件以加载播放器'));
+              ensureVideoReselectPrompt();
+              return;
+            }
+            log('RESTORE', 'Found file handle, requesting permission...');
+            return fsHandleToFile(handle).then(function (file) {
+              if (!file) {
+                log('RESTORE', 'Permission denied or file unavailable');
+                showToast(tt('annotate.restore_permission_denied', '无法恢复视频文件，请重新选择（权限被拒绝）'));
+                ensureVideoReselectPrompt();
+                return;
+              }
+              log('RESTORE', 'File restored: ' + file.name);
+              // 恢复成功，加载视频
+              handleFileSelect(file, handle, restoreKey);
+              var restoredMsg = tt('annotate.video_restored', '已恢复视频文件: ' + file.name);
+              restoredMsg = restoredMsg.split('{name}').join(file.name);
+              showToast(restoredMsg);
+            });
+          }).catch(function (err) {
+            log('ERROR', 'startAnnotateFromProject restore failed: ' + (err.message || err));
+            showToast(tt('annotate.project.reselect_video_hint', '请在下方上传区重新选择该视频文件以加载播放器'));
+            ensureVideoReselectPrompt();
+          });
+        } else {
+          // 不支持 FS Access，走原提示流程
+          showToast(tt('annotate.project.reselect_video_hint', '请在下方上传区重新选择该视频文件以加载播放器'));
+          ensureVideoReselectPrompt();
+        }
+      }
+
+      // 优先加载预处理视频（从工作目录 processed/ 子文件夹读取）；失败则降级到原始视频
+      if (video.processed_file) {
+        log('RESTORE', 'startAnnotateFromProject: loading processed video, path=' + video.processed_file);
+        showToast(tt('annotate.project.process_restore_in_progress', '正在加载预处理视频...'));
+        loadProcessedFileFromWorkDir(project.id, video.processed_file).then(function (file) {
+          try {
+            log('RESTORE', 'Processed video loaded, size=' + (file && file.size || 0));
+            var ok = loadProcessedVideoIntoPlayer(file, video.file_name);
+            if (!ok) {
+              log('WARN', 'loadProcessedVideoIntoPlayer failed, fallback to original');
+              loadOriginalVideo();
+            } else {
+              showToast(tt('annotate.project.process_restored', '已加载预处理视频'));
+            }
+          } catch (e) {
+            log('ERROR', 'loadProcessedVideoIntoPlayer wrapper failed: ' + (e.message || e));
+            loadOriginalVideo();
+          }
+        }).catch(function (err) {
+          log('WARN', 'loadProcessedFileFromWorkDir failed, fallback to original: ' + (err.message || err));
+          loadOriginalVideo();
+        });
+      } else {
+        loadOriginalVideo();
+      }
+
+      saveToLocalStorage();
+      log('PROJECT', 'startAnnotateFromProject: entered annotation mode');
+    } catch (e) {
+      log('ERROR', 'startAnnotateFromProject failed: ' + (e.message || e));
+      showToast(tt('annotate.err_load_failed', '进入标注失败: ') + (e.message || e));
+    }
+  }
+
+  // ==========================================================================
+  // 阶段 5.5：批量标注（连续标注批次内多个视频）
+  // ==========================================================================
+
+  // debounce 定时器（自动保存标注到 video）
+  var _persistAnnotationsTimer = null;
+
+  // ===== 把当前 state.annotations 持久化到 currentVideo.annotations =====
+  // debounce 1 秒，避免高频修改时频繁写入
+  function persistCurrentAnnotationsToVideo(immediate) {
+    try {
+      if (!state.currentVideo || !state.currentProject) {
+        return;
+      }
+      function doPersist() {
+        try {
+          if (!state.currentVideo) return;
+          // 深拷贝 state.annotations 到 video.annotations
+          state.currentVideo.annotations = JSON.parse(JSON.stringify(state.annotations));
+          // 同步 meta_info 到 video（便于导出时取用）
+          state.currentVideo.meta_info = JSON.parse(JSON.stringify(state.meta_info));
+          saveProjects();
+          log('ANNOTATE', 'persistCurrentAnnotationsToVideo: saved, video=' + state.currentVideo.id);
+        } catch (e) {
+          log('ERROR', 'persistCurrentAnnotationsToVideo doPersist failed: ' + (e.message || e));
+        }
+      }
+      if (_persistAnnotationsTimer) {
+        clearTimeout(_persistAnnotationsTimer);
+        _persistAnnotationsTimer = null;
+      }
+      if (immediate) {
+        doPersist();
+      } else {
+        _persistAnnotationsTimer = setTimeout(doPersist, 1000);
+      }
+    } catch (e) {
+      log('ERROR', 'persistCurrentAnnotationsToVideo failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 启动批量标注（从批次内第一个未标注视频开始） =====
+  function startBatchAnnotate(project, batchId) {
+    try {
+      if (!project || !batchId) {
+        log('WARN', 'startBatchAnnotate: no project or batchId');
+        return;
+      }
+      var batch = findBatchById(project, batchId);
+      if (!batch || !Array.isArray(batch.video_ids) || batch.video_ids.length === 0) {
+        showToast(tt('annotate.project.no_videos_in_batch', '该批次暂无轨迹'));
+        return;
+      }
+      // 收集批次内视频 ID 顺序
+      var videoIds = batch.video_ids.slice();
+      // 找第一个未标注（annotation_status !== 'completed'）的视频
+      var startIndex = -1;
+      for (var i = 0; i < videoIds.length; i++) {
+        var v = findVideoInProject(project, videoIds[i]);
+        if (v && v.annotation_status !== 'completed') {
+          startIndex = i;
+          break;
+        }
+      }
+      if (startIndex < 0) {
+        // 全部已完成，从第一个开始（允许复检）
+        startIndex = 0;
+        showToast(tt('annotate.batch_all_completed',
+          '该批次所有视频已标注完成，从第一个开始复检'));
+      }
+      // 初始化批次标注上下文
+      state.batchAnnotateContext = {
+        projectId: project.id,
+        batchId: batchId,
+        videoIds: videoIds,
+        currentIndex: startIndex
+      };
+      log('BATCH', 'startBatchAnnotate: batch=' + batchId +
+        ' total=' + videoIds.length + ' start=' + startIndex);
+      // 加载起始视频
+      loadVideoForBatchAnnotate(project, videoIds[startIndex]);
+    } catch (e) {
+      log('ERROR', 'startBatchAnnotate failed: ' + (e.message || e));
+      showToast(tt('annotate.err_load_failed', '启动批量标注失败: ') + (e.message || e));
+    }
+  }
+
+  // ===== 加载批次内指定视频进入标注 =====
+  function loadVideoForBatchAnnotate(project, videoId) {
+    try {
+      if (!project || !videoId) return;
+      // 先持久化当前视频的标注（若有）
+      persistCurrentAnnotationsToVideo(true);
+      // 显示导航条
+      showBatchAnnotateNav();
+      // 复用现有 startAnnotateFromProject 进入标注
+      startAnnotateFromProject(project, videoId);
+      // 更新导航条状态
+      updateBatchAnnotateNav();
+    } catch (e) {
+      log('ERROR', 'loadVideoForBatchAnnotate failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 切换到下一个批次视频 =====
+  function goToNextBatchVideo() {
+    try {
+      var ctx = state.batchAnnotateContext;
+      if (!ctx) {
+        log('WARN', 'goToNextBatchVideo: no batch context');
+        return;
+      }
+      var project = state.currentProject || findProjectById(ctx.projectId);
+      if (!project) {
+        log('WARN', 'goToNextBatchVideo: project not found');
+        return;
+      }
+      // 先标记当前视频为已完成
+      if (state.currentVideo) {
+        state.currentVideo.annotation_status = 'completed';
+        persistCurrentAnnotationsToVideo(true);
+      }
+      // 找下一个未标注视频（从 currentIndex+1 开始）
+      var nextIdx = -1;
+      for (var i = ctx.currentIndex + 1; i < ctx.videoIds.length; i++) {
+        var v = findVideoInProject(project, ctx.videoIds[i]);
+        if (v && v.annotation_status !== 'completed') {
+          nextIdx = i;
+          break;
+        }
+      }
+      if (nextIdx < 0) {
+        // 后面没有了，提示全部完成
+        showToast(tt('annotate.batch_complete',
+          '该批次已全部标注完成！可继续从第一个复检或退出批量标注'));
+        // 从第一个开始复检
+        nextIdx = 0;
+      }
+      ctx.currentIndex = nextIdx;
+      log('BATCH', 'goToNextBatchVideo: index=' + nextIdx + ' total=' + ctx.videoIds.length);
+      loadVideoForBatchAnnotate(project, ctx.videoIds[nextIdx]);
+    } catch (e) {
+      log('ERROR', 'goToNextBatchVideo failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 切换到上一个批次视频 =====
+  function goToPrevBatchVideo() {
+    try {
+      var ctx = state.batchAnnotateContext;
+      if (!ctx) {
+        log('WARN', 'goToPrevBatchVideo: no batch context');
+        return;
+      }
+      var project = state.currentProject || findProjectById(ctx.projectId);
+      if (!project) return;
+      // 持久化当前标注
+      persistCurrentAnnotationsToVideo(true);
+      if (ctx.currentIndex <= 0) {
+        showToast(tt('annotate.batch_first_video', '已是第一个视频'));
+        return;
+      }
+      ctx.currentIndex--;
+      log('BATCH', 'goToPrevBatchVideo: index=' + ctx.currentIndex);
+      loadVideoForBatchAnnotate(project, ctx.videoIds[ctx.currentIndex]);
+    } catch (e) {
+      log('ERROR', 'goToPrevBatchVideo failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 退出批量标注模式 =====
+  function exitBatchAnnotate() {
+    try {
+      if (!state.batchAnnotateContext) {
+        hideBatchAnnotateNav();
+        return;
+      }
+      showModal({
+        title: tt('annotate.batch_exit_title', '退出批量标注'),
+        body: '<p>' + tt('annotate.batch_exit_body',
+          '确认退出批量标注？当前视频的标注已自动保存，可随时从批次卡片重新进入。') + '</p>',
+        confirmText: tt('annotate.batch_exit_confirm', '退出'),
+        cancelText: tt('annotate.modal_cancel', '取消'),
+        onConfirm: function () {
+          try {
+            persistCurrentAnnotationsToVideo(true);
+            state.batchAnnotateContext = null;
+            hideBatchAnnotateNav();
+            // 返回项目列表视图
+            showProjectListView();
+            hideModal();
+            log('BATCH', 'exitBatchAnnotate: exited');
+          } catch (e) {
+            log('ERROR', 'exitBatchAnnotate onConfirm failed: ' + (e.message || e));
+            hideModal();
+          }
+        }
+      });
+    } catch (e) {
+      log('ERROR', 'exitBatchAnnotate failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 显示/隐藏批量标注导航条 =====
+  function showBatchAnnotateNav() {
+    try {
+      if (dom.batchNav) {
+        dom.batchNav.removeAttribute('hidden');
+      }
+    } catch (e) {
+      log('ERROR', 'showBatchAnnotateNav failed: ' + (e.message || e));
+    }
+  }
+
+  function hideBatchAnnotateNav() {
+    try {
+      if (dom.batchNav) {
+        dom.batchNav.setAttribute('hidden', '');
+      }
+    } catch (e) {
+      log('ERROR', 'hideBatchAnnotateNav failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 更新导航条 UI（视频名/进度/状态/按钮启用） =====
+  function updateBatchAnnotateNav() {
+    try {
+      var ctx = state.batchAnnotateContext;
+      if (!ctx) {
+        hideBatchAnnotateNav();
+        return;
+      }
+      showBatchAnnotateNav();
+      var project = state.currentProject || findProjectById(ctx.projectId);
+      var currentVideo = state.currentVideo;
+      var total = ctx.videoIds.length;
+      var idx = ctx.currentIndex + 1; // 1-based 显示
+
+      // 视频名
+      if (dom.batchNavName) {
+        dom.batchNavName.textContent = currentVideo
+          ? (currentVideo.file_name || currentVideo.id)
+          : '—';
+      }
+      // 进度
+      if (dom.batchNavProgress) {
+        dom.batchNavProgress.textContent = idx + ' / ' + total;
+      }
+      // 状态
+      if (dom.batchNavStatus) {
+        var statusKey = 'annotate.batch_status_';
+        var status = currentVideo ? currentVideo.annotation_status : 'unannotated';
+        var statusText;
+        if (status === 'completed') {
+          statusText = tt('annotate.batch_status_completed', '已完成');
+        } else if (status === 'in_progress') {
+          statusText = tt('annotate.batch_status_in_progress', '进行中');
+        } else {
+          statusText = tt('annotate.batch_status_unannotated', '未标注');
+        }
+        dom.batchNavStatus.textContent = statusText;
+        dom.batchNavStatus.setAttribute('data-status', status || 'unannotated');
+      }
+      // 上一个按钮
+      if (dom.batchPrevBtn) {
+        dom.batchPrevBtn.disabled = (ctx.currentIndex <= 0);
+      }
+      // 下一个按钮（最后一个时文案改为"完成"）
+      if (dom.batchNextBtn) {
+        var isLast = (ctx.currentIndex >= total - 1);
+        var nextLabel = dom.batchNextBtn.querySelector('span:first-child');
+        if (nextLabel) {
+          nextLabel.textContent = isLast
+            ? tt('annotate.batch_nav_finish', '完成')
+            : tt('annotate.batch_nav_next', '下一个');
+        }
+      }
+      log('BATCH', 'updateBatchAnnotateNav: ' + idx + '/' + total +
+        ' status=' + (currentVideo ? currentVideo.annotation_status : 'null'));
+    } catch (e) {
+      log('ERROR', 'updateBatchAnnotateNav failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 绑定批量标注导航条事件 =====
+  function bindBatchAnnotateNavEvents() {
+    try {
+      if (dom.batchPrevBtn) {
+        dom.batchPrevBtn.addEventListener('click', function () {
+          goToPrevBatchVideo();
+        });
+      }
+      if (dom.batchNextBtn) {
+        dom.batchNextBtn.addEventListener('click', function () {
+          goToNextBatchVideo();
+        });
+      }
+      if (dom.batchExitBtn) {
+        dom.batchExitBtn.addEventListener('click', function () {
+          exitBatchAnnotate();
+        });
+      }
+      log('BATCH', 'bindBatchAnnotateNavEvents: bound');
+    } catch (e) {
+      log('ERROR', 'bindBatchAnnotateNavEvents failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 在标注模式顶部显示"重新选择视频文件"提示 =====
+  function ensureVideoReselectPrompt() {
+    try {
+      var step2 = qs('annotateStep2');
+      if (!step2) return;
+      var existingPrompt = step2.querySelector('.annotate-reselect-prompt');
+      if (existingPrompt) return; // 已存在
+      var prompt = document.createElement('div');
+      prompt.className = 'annotate-reselect-prompt';
+      prompt.innerHTML =
+        '<div class="annotate-reselect-prompt-inner">' +
+          '<span class="material-symbols-outlined">info</span>' +
+          '<span data-i18n="annotate.project.reselect_prompt">' +
+            tt('annotate.project.reselect_prompt', '项目模式下需重新选择视频文件以加载播放器（浏览器安全限制，无法持久化 File 对象）') +
+          '</span>' +
+          '<button type="button" class="annotate-btn annotate-btn-primary annotate-btn-sm" id="reselectVideoBtn">' +
+            '<span class="material-symbols-outlined">folder_open</span>' +
+            '<span data-i18n="annotate.select_file">选择文件</span>' +
+          '</button>' +
+        '</div>';
+      step2.insertBefore(prompt, step2.firstChild);
+      var btn = prompt.querySelector('#reselectVideoBtn');
+      if (btn) {
+        btn.addEventListener('click', function () {
+          try {
+            // 复用统一的文件选择入口（FS Access 优先，降级到 fileInput）
+            openVideoPicker();
+          } catch (e) {
+            log('ERROR', 'reselect video click failed: ' + (e.message || e));
+          }
+        });
+      }
+    } catch (e) {
+      log('ERROR', 'ensureVideoReselectPrompt failed: ' + (e.message || e));
+    }
+  }
+
+  // ==========================================================================
+  // 阶段 3：采集设备参数配置
+  // ==========================================================================
+
+  // ===== 渲染设备配置表单 HTML =====
+  function renderDeviceConfigFormHtml(project) {
+    try {
+      var dc = project.device_config || createDefaultDeviceConfig();
+      project.device_config = dc; // 确保项目上有 device_config
+
+      var intrinsic = dc.intrinsic || { fx: 0, fy: 0, cx: 0, cy: 0, distortion: [0, 0, 0, 0, 0] };
+      var distortion = Array.isArray(intrinsic.distortion) ? intrinsic.distortion : [0, 0, 0, 0, 0];
+      while (distortion.length < 5) distortion.push(0);
+      var extrinsic = dc.extrinsic || { R: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], T: [0, 0, 0] };
+      var R = Array.isArray(extrinsic.R) ? extrinsic.R : [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+      while (R.length < 3) R.push([0, 0, 0]);
+      for (var i = 0; i < 3; i++) {
+        if (!Array.isArray(R[i])) R[i] = [0, 0, 0];
+        while (R[i].length < 3) R[i].push(0);
+      }
+      var T = Array.isArray(extrinsic.T) ? extrinsic.T : [0, 0, 0];
+      while (T.length < 3) T.push(0);
+      var frameNames = Array.isArray(dc.frame_name) ? dc.frame_name : [];
+      var mainCam = dc.instruction_sub_camera || '';
+
+      var html =
+        '<div class="annotate-device-config">' +
+          // 导入按钮（假按钮，功能待开发）
+          '<div class="annotate-device-actions" style="margin-bottom: 12px;">' +
+            '<button type="button" class="annotate-btn annotate-btn-secondary" id="importDeviceConfigBtn">' +
+              '<span class="material-symbols-outlined">file_upload</span>' +
+              '<span data-i18n="annotate.project.import_device_config">导入标定文件</span>' +
+            '</button>' +
+            '<span class="annotate-device-hint-inline" data-i18n="annotate.project.import_device_hint">' +
+              tt('annotate.project.import_device_hint_text', '支持 JSON/YAML 格式，功能开发中') +
+            '</span>' +
+          '</div>' +
+          // 说明提示
+          '<div class="annotate-device-hint">' +
+            tt('annotate.project.device_hint',
+              '相机标定参数，来自相机标定流程（如 OpenCV calibrateCamera）。' +
+              '如果没有标定数据可留空（默认 0），不影响标注流程，仅用于导出 HDF5 时附带。') +
+          '</div>' +
+          // 内参
+          '<div class="annotate-device-section">' +
+            '<h4 class="annotate-device-section-title">' +
+              '<span class="material-symbols-outlined">tune</span>' +
+              '<span data-i18n="annotate.project.intrinsic">内参 (Intrinsic)</span>' +
+            '</h4>' +
+            '<div class="annotate-device-hint" style="margin-bottom: 8px;">' +
+              tt('annotate.project.intrinsic_hint',
+                '描述相机光学特性：<code>fx/fy</code> 焦距（像素），<code>cx/cy</code> 主点，' +
+                '<code>k1/k2/k3</code> 径向畸变，<code>p1/p2</code> 切向畸变。') +
+            '</div>' +
+            '<div class="annotate-device-form-grid">' +
+              renderNumberField('dc_fx', tt('annotate.project.fx', 'fx'), intrinsic.fx || 0) +
+              renderNumberField('dc_fy', tt('annotate.project.fy', 'fy'), intrinsic.fy || 0) +
+              renderNumberField('dc_cx', tt('annotate.project.cx', 'cx'), intrinsic.cx || 0) +
+              renderNumberField('dc_cy', tt('annotate.project.cy', 'cy'), intrinsic.cy || 0) +
+              renderNumberField('dc_k1', tt('annotate.project.k1', 'k1'), distortion[0] || 0) +
+              renderNumberField('dc_k2', tt('annotate.project.k2', 'k2'), distortion[1] || 0) +
+              renderNumberField('dc_p1', tt('annotate.project.p1', 'p1'), distortion[2] || 0) +
+              renderNumberField('dc_p2', tt('annotate.project.p2', 'p2'), distortion[3] || 0) +
+              renderNumberField('dc_k3', tt('annotate.project.k3', 'k3'), distortion[4] || 0) +
+            '</div>' +
+          '</div>' +
+          // 外参
+          '<div class="annotate-device-section">' +
+            '<h4 class="annotate-device-section-title">' +
+              '<span class="material-symbols-outlined">rotate_90_degrees_ccw</span>' +
+              '<span data-i18n="annotate.project.extrinsic">外参 (Extrinsic)</span>' +
+            '</h4>' +
+            '<div class="annotate-device-hint" style="margin-bottom: 8px;">' +
+              tt('annotate.project.extrinsic_hint',
+                '描述相机在世界坐标系中的位姿：<code>R</code> 旋转矩阵 3×3，<code>T</code> 平移向量 3。' +
+                '多相机系统需要每个相机的外参。') +
+            '</div>' +
+            '<div class="annotate-device-extrinsic">' +
+              '<div class="annotate-device-extrinsic-block">' +
+                '<label class="annotate-device-extrinsic-label">R (3×3)</label>' +
+                '<div class="annotate-device-matrix3">' +
+                  renderNumberField('dc_r00', 'R[0][0]', R[0][0] || 0, true) +
+                  renderNumberField('dc_r01', 'R[0][1]', R[0][1] || 0, true) +
+                  renderNumberField('dc_r02', 'R[0][2]', R[0][2] || 0, true) +
+                  renderNumberField('dc_r10', 'R[1][0]', R[1][0] || 0, true) +
+                  renderNumberField('dc_r11', 'R[1][1]', R[1][1] || 0, true) +
+                  renderNumberField('dc_r12', 'R[1][2]', R[1][2] || 0, true) +
+                  renderNumberField('dc_r20', 'R[2][0]', R[2][0] || 0, true) +
+                  renderNumberField('dc_r21', 'R[2][1]', R[2][1] || 0, true) +
+                  renderNumberField('dc_r22', 'R[2][2]', R[2][2] || 0, true) +
+                '</div>' +
+              '</div>' +
+              '<div class="annotate-device-extrinsic-block">' +
+                '<label class="annotate-device-extrinsic-label">T (3)</label>' +
+                '<div class="annotate-device-vector3">' +
+                  renderNumberField('dc_t0', 'T[0]', T[0] || 0, true) +
+                  renderNumberField('dc_t1', 'T[1]', T[1] || 0, true) +
+                  renderNumberField('dc_t2', 'T[2]', T[2] || 0, true) +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          // 相机名称映射
+          '<div class="annotate-device-section">' +
+            '<h4 class="annotate-device-section-title">' +
+              '<span class="material-symbols-outlined">camera</span>' +
+              '<span data-i18n="annotate.project.camera_mapping">相机名称映射</span>' +
+            '</h4>' +
+            '<div class="annotate-device-hint" style="margin-bottom: 8px;">' +
+              tt('annotate.project.camera_mapping_hint',
+                '<code>frame_name</code> 是多相机系统中所有相机名称列表（如 head_cam、left_cam）。' +
+                '<code>instruction_sub_camera</code> 是当前标注视频对应的相机名称（必须存在于 frame_name 中）。' +
+                '单相机系统填一个名称即可。') +
+            '</div>' +
+            '<div class="annotate-device-frame-name">' +
+              '<label class="annotate-device-label" data-i18n="annotate.project.frame_name">frame_name (相机名称列表)</label>' +
+              '<div class="annotate-device-frame-name-list" id="dcFrameNameList"></div>' +
+              '<div class="annotate-device-frame-name-add">' +
+                '<input type="text" id="dcFrameNameInput" class="annotate-input annotate-input-sm" placeholder="' +
+                  tt('annotate.project.frame_name_placeholder', '输入相机名称，如 cam_0') + '">' +
+                '<button type="button" class="annotate-btn annotate-btn-secondary annotate-btn-sm" id="dcAddFrameNameBtn" data-i18n="annotate.project.add_frame_name">添加</button>' +
+              '</div>' +
+            '</div>' +
+            '<div class="annotate-device-main-cam">' +
+              '<label class="annotate-device-label" for="dcMainCamSelect" data-i18n="annotate.project.instruction_sub_camera">instruction_sub_camera (主相机)</label>' +
+              '<select id="dcMainCamSelect" class="annotate-input">' +
+                '<option value="">' + tt('annotate.project.select_main_cam', '-- 选择主相机 --') + '</option>' +
+                renderFrameNameOptions(frameNames, mainCam) +
+              '</select>' +
+              '<p class="annotate-device-hint" id="dcMainCamHint"></p>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      return html;
+    } catch (e) {
+      log('ERROR', 'renderDeviceConfigFormHtml failed: ' + (e.message || e));
+      return '<p>' + escapeHtml('设备配置渲染失败: ' + (e.message || e)) + '</p>';
+    }
+  }
+
+  function renderNumberField(id, label, value, compact) {
+    try {
+      var v = (typeof value === 'number' && !isNaN(value)) ? value : 0;
+      return '<div class="annotate-form-field' + (compact ? ' annotate-form-field-compact' : '') + '">' +
+        '<label for="' + id + '" class="annotate-device-field-label">' + escapeHtml(label) + '</label>' +
+        '<input type="number" id="' + id + '" class="annotate-input annotate-input-sm" step="any" value="' + v + '">' +
+      '</div>';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  function renderFrameNameOptions(frameNames, selected) {
+    try {
+      var html = '';
+      for (var i = 0; i < frameNames.length; i++) {
+        var fn = frameNames[i];
+        var isSel = (fn === selected) ? ' selected' : '';
+        html += '<option value="' + escapeHtml(fn) + '"' + isSel + '>' + escapeHtml(fn) + '</option>';
+      }
+      return html;
+    } catch (e) {
+      return '';
+    }
+  }
+
+  // ===== 渲染 frame_name 列表 =====
+  function renderFrameNameList(project) {
+    try {
+      var listEl = qs('dcFrameNameList');
+      if (!listEl) return;
+      var dc = project.device_config || createDefaultDeviceConfig();
+      var names = Array.isArray(dc.frame_name) ? dc.frame_name : [];
+      listEl.innerHTML = '';
+      if (names.length === 0) {
+        listEl.innerHTML = '<p class="annotate-device-empty-hint">' +
+          tt('annotate.project.no_frame_names', '暂无相机名称') + '</p>';
+        return;
+      }
+      for (var i = 0; i < names.length; i++) {
+        (function (name, idx) {
+          var item = document.createElement('div');
+          item.className = 'annotate-frame-name-item';
+          item.innerHTML =
+            '<span class="annotate-frame-name-text">' + escapeHtml(name) + '</span>' +
+            '<button type="button" class="annotate-btn annotate-btn-danger annotate-btn-sm annotate-frame-name-del" data-idx="' + idx + '">' +
+              '<span class="material-symbols-outlined">delete</span>' +
+            '</button>';
+          var delBtn = item.querySelector('.annotate-frame-name-del');
+          if (delBtn) {
+            delBtn.addEventListener('click', function () {
+              try {
+                // 删除 frame_name
+                dc.frame_name.splice(idx, 1);
+                // 如果删除的是主相机，清空主相机
+                if (dc.instruction_sub_camera === name) {
+                  dc.instruction_sub_camera = '';
+                }
+                saveProjects();
+                renderFrameNameList(project);
+                refreshMainCamOptions(project);
+                log('DEVICE', 'frame_name deleted: ' + name);
+              } catch (e) {
+                log('ERROR', 'frame_name delete failed: ' + (e.message || e));
+              }
+            });
+          }
+          listEl.appendChild(item);
+        })(names[i], i);
+      }
+    } catch (e) {
+      log('ERROR', 'renderFrameNameList failed: ' + (e.message || e));
+    }
+  }
+
+  function refreshMainCamOptions(project) {
+    try {
+      var select = qs('dcMainCamSelect');
+      if (!select) return;
+      var dc = project.device_config || createDefaultDeviceConfig();
+      var names = Array.isArray(dc.frame_name) ? dc.frame_name : [];
+      var current = dc.instruction_sub_camera || '';
+      var html = '<option value="">' + tt('annotate.project.select_main_cam', '-- 选择主相机 --') + '</option>';
+      html += renderFrameNameOptions(names, current);
+      select.innerHTML = html;
+      select.value = current;
+    } catch (e) {
+      log('ERROR', 'refreshMainCamOptions failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 绑定设备配置表单事件 =====
+  function bindDeviceConfigFormEvents(project) {
+    try {
+      var dc = project.device_config || createDefaultDeviceConfig();
+      project.device_config = dc;
+
+      // 内参 + 外参输入字段
+      var numberFields = [
+        { id: 'dc_fx', path: ['intrinsic', 'fx'] },
+        { id: 'dc_fy', path: ['intrinsic', 'fy'] },
+        { id: 'dc_cx', path: ['intrinsic', 'cx'] },
+        { id: 'dc_cy', path: ['intrinsic', 'cy'] },
+        { id: 'dc_k1', path: ['intrinsic', 'distortion', 0] },
+        { id: 'dc_k2', path: ['intrinsic', 'distortion', 1] },
+        { id: 'dc_p1', path: ['intrinsic', 'distortion', 2] },
+        { id: 'dc_p2', path: ['intrinsic', 'distortion', 3] },
+        { id: 'dc_k3', path: ['intrinsic', 'distortion', 4] },
+        { id: 'dc_r00', path: ['extrinsic', 'R', 0, 0] },
+        { id: 'dc_r01', path: ['extrinsic', 'R', 0, 1] },
+        { id: 'dc_r02', path: ['extrinsic', 'R', 0, 2] },
+        { id: 'dc_r10', path: ['extrinsic', 'R', 1, 0] },
+        { id: 'dc_r11', path: ['extrinsic', 'R', 1, 1] },
+        { id: 'dc_r12', path: ['extrinsic', 'R', 1, 2] },
+        { id: 'dc_r20', path: ['extrinsic', 'R', 2, 0] },
+        { id: 'dc_r21', path: ['extrinsic', 'R', 2, 1] },
+        { id: 'dc_r22', path: ['extrinsic', 'R', 2, 2] },
+        { id: 'dc_t0', path: ['extrinsic', 'T', 0] },
+        { id: 'dc_t1', path: ['extrinsic', 'T', 1] },
+        { id: 'dc_t2', path: ['extrinsic', 'T', 2] }
+      ];
+
+      // 导入标定文件按钮（假按钮，功能待开发）
+      var importBtn = qs('importDeviceConfigBtn');
+      if (importBtn) {
+        importBtn.addEventListener('click', function () {
+          showToast(
+            tt('annotate.project.import_device_todo', '导入标定文件功能开发中，后续支持 JSON/YAML 格式'),
+            'info'
+          );
+        });
+      }
+
+      for (var i = 0; i < numberFields.length; i++) {
+        (function (field) {
+          var el = qs(field.id);
+          if (!el) return;
+          el.addEventListener('input', function () {
+            try {
+              var val = parseFloat(el.value);
+              if (isNaN(val)) val = 0;
+              // 按路径写入 dc
+              var obj = dc;
+              for (var p = 0; p < field.path.length - 1; p++) {
+                var key = field.path[p];
+                if (obj[key] == null || typeof obj[key] !== 'object') {
+                  obj[key] = (typeof field.path[p + 1] === 'number') ? [] : {};
+                }
+                obj = obj[key];
+              }
+              var lastKey = field.path[field.path.length - 1];
+              obj[lastKey] = val;
+              saveProjects();
+            } catch (e) {
+              log('ERROR', 'device field input failed for ' + field.id + ': ' + (e.message || e));
+            }
+          });
+        })(numberFields[i]);
+      }
+
+      // 渲染 frame_name 列表
+      renderFrameNameList(project);
+
+      // 添加 frame_name 按钮
+      var addBtn = qs('dcAddFrameNameBtn');
+      var input = qs('dcFrameNameInput');
+      if (addBtn && input) {
+        addBtn.addEventListener('click', function () {
+          try {
+            var name = (input.value || '').trim();
+            if (!name) {
+              showToast(tt('annotate.project.frame_name_empty', '相机名称不能为空'));
+              return;
+            }
+            if (!Array.isArray(dc.frame_name)) dc.frame_name = [];
+            // 重复校验
+            if (dc.frame_name.indexOf(name) >= 0) {
+              showToast(tt('annotate.project.frame_name_duplicate', '相机名称已存在'));
+              return;
+            }
+            dc.frame_name.push(name);
+            input.value = '';
+            saveProjects();
+            renderFrameNameList(project);
+            refreshMainCamOptions(project);
+            log('DEVICE', 'frame_name added: ' + name);
+          } catch (e) {
+            log('ERROR', 'add frame_name failed: ' + (e.message || e));
+          }
+        });
+        // 回车提交
+        input.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.keyCode === 13) {
+            e.preventDefault();
+            if (addBtn) addBtn.click();
+          }
+        });
+      }
+
+      // 主相机选择
+      var mainCamSelect = qs('dcMainCamSelect');
+      var hintEl = qs('dcMainCamHint');
+      if (mainCamSelect) {
+        mainCamSelect.addEventListener('change', function () {
+          try {
+            var val = mainCamSelect.value || '';
+            // 校验：必须存在于 frame_name 中
+            if (val && Array.isArray(dc.frame_name) && dc.frame_name.indexOf(val) < 0) {
+              if (hintEl) {
+                hintEl.textContent = tt('annotate.project.main_cam_not_in_frame_name', '主相机必须在 frame_name 列表中');
+                hintEl.style.color = '#ef4444';
+              }
+              dc.instruction_sub_camera = '';
+            } else {
+              dc.instruction_sub_camera = val;
+              if (hintEl) {
+                hintEl.textContent = val ? tt('annotate.project.main_cam_set', '主相机已设置: ') + val : '';
+                hintEl.style.color = '';
+              }
+              saveProjects();
+            }
+            log('DEVICE', 'instruction_sub_camera = ' + val);
+          } catch (e) {
+            log('ERROR', 'main cam select failed: ' + (e.message || e));
+          }
+        });
+      }
+    } catch (e) {
+      log('ERROR', 'bindDeviceConfigFormEvents failed: ' + (e.message || e));
+    }
+  }
+
+  // ==========================================================================
+  // 阶段 4：批次和轨迹编号管理
+  // ==========================================================================
+
+  // ===== 渲染批次管理面板 HTML =====
+  function renderBatchPanelHtml(project) {
+    try {
+      var batches = (project && Array.isArray(project.batches)) ? project.batches : [];
+      var html = '<div class="annotate-batch-panel">';
+      html += '<div class="annotate-batch-actions">';
+      html += '<button type="button" class="annotate-btn annotate-btn-primary annotate-btn-sm" id="createBatchBtn">' +
+        '<span class="material-symbols-outlined">add</span>' +
+        '<span data-i18n="annotate.project.create_batch">新建批次</span>' +
+      '</button>';
+      html += '</div>';
+
+      // 批次级统计：总轨迹 / 已标注 / 通过
+      var statsVideos = (project && Array.isArray(project.videos)) ? project.videos : [];
+      var statsTotal = statsVideos.length;
+      var statsAnnotated = 0;
+      var statsPassed = 0;
+      for (var si = 0; si < statsVideos.length; si++) {
+        var sv = statsVideos[si];
+        if (sv && sv.annotations && typeof sv.annotations === 'object' &&
+          Object.keys(sv.annotations).length > 0) {
+          statsAnnotated++;
+        }
+        if (sv && sv.annotation_status === 'passed') {
+          statsPassed++;
+        }
+      }
+      html += '<div class="annotate-batch-stats">' +
+        '<div class="annotate-batch-stat">' +
+          '<span class="annotate-batch-stat-label">' + tt('annotate.project.batch_stats_total', '总轨迹') + '</span>' +
+          '<span class="annotate-batch-stat-value">' + statsTotal + '</span>' +
+        '</div>' +
+        '<div class="annotate-batch-stat">' +
+          '<span class="annotate-batch-stat-label">' + tt('annotate.project.batch_stats_annotated', '已标注') + '</span>' +
+          '<span class="annotate-batch-stat-value">' + statsAnnotated + '</span>' +
+        '</div>' +
+        '<div class="annotate-batch-stat">' +
+          '<span class="annotate-batch-stat-label">' + tt('annotate.project.batch_stats_passed', '通过') + '</span>' +
+          '<span class="annotate-batch-stat-value">' + statsPassed + '</span>' +
+        '</div>' +
+      '</div>';
+
+      if (batches.length === 0) {
+        html += '<div class="annotate-project-empty-mini">' +
+          '<span class="material-symbols-outlined">layers_clear</span>' +
+          '<p data-i18n="annotate.project.no_batches">' + tt('annotate.project.no_batches', '暂无批次') + '</p>' +
+        '</div>';
+      } else {
+        html += '<div class="annotate-batch-list">';
+        for (var i = 0; i < batches.length; i++) {
+          html += renderBatchCardHtml(project, batches[i]);
+        }
+        html += '</div>';
+      }
+      html += '</div>';
+      return html;
+    } catch (e) {
+      log('ERROR', 'renderBatchPanelHtml failed: ' + (e.message || e));
+      return '<p>' + escapeHtml('批次面板渲染失败: ' + (e.message || e)) + '</p>';
+    }
+  }
+
+  // ===== 渲染单个批次卡片（含工作目录、操作按钮、视频列表） =====
+  function renderBatchCardHtml(project, batch) {
+    try {
+      if (!project || !batch) return '';
+      var videoCount = Array.isArray(batch.video_ids) ? batch.video_ids.length : 0;
+      var hasWorkDir = !!batch.work_dir_name;
+      var isExpanded = !!(state.expandedBatchIds && state.expandedBatchIds[batch.id]);
+      var isNewBatch = !!(state.highlightBatchId && state.highlightBatchId === batch.id);
+
+      // 收集该批次的视频
+      var batchVideos = [];
+      if (Array.isArray(batch.video_ids) && Array.isArray(project.videos)) {
+        for (var vi = 0; vi < batch.video_ids.length; vi++) {
+          var v = findVideoInProject(project, batch.video_ids[vi]);
+          if (v) batchVideos.push(v);
+        }
+      }
+
+      var html = '<div class="annotate-batch-card' + (isExpanded ? ' expanded' : '') +
+        (isNewBatch ? ' highlight' : '') + '" data-batch-id="' + escapeHtml(batch.id) + '">';
+
+      // 卡片头部
+      html += '<div class="annotate-batch-card-header">' +
+        '<button type="button" class="annotate-batch-card-toggle" data-action="toggle-batch" data-batch-id="' + escapeHtml(batch.id) + '">' +
+          '<span class="material-symbols-outlined annotate-batch-card-arrow">' + (isExpanded ? 'expand_more' : 'chevron_right') + '</span>' +
+          '<span class="annotate-batch-card-id">' + escapeHtml(batch.id) + '</span>' +
+          '<span class="annotate-batch-card-name">' + escapeHtml(batch.name || '') + '</span>' +
+          '<span class="annotate-batch-card-meta">' +
+            '<span class="material-symbols-outlined">videocam</span>' +
+            '<span>' + videoCount + '</span>' +
+          '</span>' +
+          '<span class="annotate-batch-card-meta">' +
+            '<span class="material-symbols-outlined">schedule</span>' +
+            '<span>' + formatDateTime(batch.created_at) + '</span>' +
+          '</span>' +
+        '</button>' +
+        '<button type="button" class="annotate-btn annotate-btn-danger annotate-btn-sm annotate-batch-card-delete" data-action="delete-batch" data-batch-id="' + escapeHtml(batch.id) + '" title="' + escapeHtml(tt('annotate.delete', '删除')) + '">' +
+          '<span class="material-symbols-outlined">delete</span>' +
+        '</button>' +
+      '</div>';
+
+      // 卡片内容（展开时显示）
+      if (isExpanded) {
+        html += '<div class="annotate-batch-card-body">';
+
+        // 工作目录行
+        html += '<div class="annotate-batch-workdir">' +
+          '<span class="material-symbols-outlined">folder</span>' +
+          '<span class="annotate-batch-workdir-label" data-i18n="annotate.project.work_dir">' +
+            tt('annotate.project.work_dir', '工作目录') + ':' +
+          '</span>' +
+          '<span class="annotate-batch-workdir-value' + (hasWorkDir ? '' : ' not-set') + '">' +
+            (hasWorkDir ? escapeHtml(batch.work_dir_name) :
+              tt('annotate.project.work_dir_not_set', '未设置')) +
+          '</span>' +
+          '<button type="button" class="annotate-btn annotate-btn-secondary annotate-btn-sm" data-action="set-batch-workdir" data-batch-id="' + escapeHtml(batch.id) + '">' +
+            '<span class="material-symbols-outlined">' + (hasWorkDir ? 'edit' : 'folder_open') + '</span>' +
+            '<span>' + (hasWorkDir ? tt('annotate.project.change', '更改') :
+              tt('annotate.project.set_work_dir', '设置工作目录')) + '</span>' +
+          '</button>' +
+        '</div>';
+
+        // 批次元信息摘要（只读，创建批次时填写）
+        var bMeta = batch.meta_info;
+        var hasMeta = bMeta && (bMeta.data_source || (Array.isArray(bMeta.frame_name) && bMeta.frame_name.length) || bMeta.instruction_sub_camera);
+        html += '<div class="annotate-batch-meta-summary' + (hasMeta ? '' : ' empty') + '">';
+        html += '<span class="material-symbols-outlined">info</span>';
+        html += '<span class="annotate-batch-meta-label">' +
+          tt('annotate.project.batch_meta_info', '批次元信息') + ':</span>';
+        if (hasMeta) {
+          var metaParts = [];
+          if (bMeta.data_source) {
+            metaParts.push('data_source=' + escapeHtml(bMeta.data_source));
+          }
+          if (Array.isArray(bMeta.frame_name) && bMeta.frame_name.length) {
+            metaParts.push('frame_name=[' + escapeHtml(bMeta.frame_name.join(', ')) + ']');
+          }
+          if (bMeta.instruction_sub_camera) {
+            metaParts.push('sub_cam=' + escapeHtml(bMeta.instruction_sub_camera));
+          }
+          metaParts.push('task_success=' + (bMeta.task_success ? 'true' : 'false'));
+          metaParts.push('task_horizon=' + escapeHtml(bMeta.task_horizon || 'NA'));
+          html += '<span class="annotate-batch-meta-value">' + metaParts.join(' · ') + '</span>';
+        } else {
+          html += '<span class="annotate-batch-meta-value not-set">' +
+            tt('annotate.project.batch_meta_not_set', '未填写（进入标注时将从项目继承）') + '</span>';
+        }
+        html += '</div>';
+
+        // 操作按钮行
+        // 预处理拦截条件：未设置工作目录或无视频，按钮禁用
+        var processDisabled = (videoCount === 0 || !hasWorkDir);
+        var processTitle = !hasWorkDir
+          ? tt('annotate.project.work_dir_required_for_process', '请先设置该批次的工作目录，再进行预处理')
+          : (videoCount === 0 ? tt('annotate.project.no_videos_in_batch', '该批次暂无轨迹') : '');
+        html += '<div class="annotate-batch-card-actions">';
+        // 导入轨迹按钮（新建批次高亮）
+        html += '<button type="button" class="annotate-btn annotate-btn-primary annotate-btn-sm' +
+          (isNewBatch ? ' highlight-pulse' : '') + '" data-action="import-to-batch" data-batch-id="' + escapeHtml(batch.id) + '"' +
+          (isNewBatch ? ' id="highlightImportBtn"' : '') + '>' +
+          '<span class="material-symbols-outlined">video_file</span>' +
+          '<span data-i18n="annotate.project.import_to_batch">' + tt('annotate.project.import_to_batch', '导入轨迹') + '</span>' +
+        '</button>';
+        // 批量预处理按钮（未设置工作目录时禁用 + 提示）
+        html += '<button type="button" class="annotate-btn annotate-btn-secondary annotate-btn-sm" data-action="batch-process" data-batch-id="' + escapeHtml(batch.id) + '"' +
+          (processDisabled ? ' disabled' : '') +
+          (processTitle ? ' title="' + escapeHtml(processTitle) + '"' : '') + '>' +
+          '<span class="material-symbols-outlined">auto_fix_high</span>' +
+          '<span data-i18n="annotate.project.batch_process">' + tt('annotate.project.batch_process', '批量预处理') + '</span>' +
+        '</button>';
+        // 批量标注按钮（原"开始标注"，现改为批量标注入口）
+        html += '<button type="button" class="annotate-btn annotate-btn-primary annotate-btn-sm" data-action="start-annotate-batch" data-batch-id="' + escapeHtml(batch.id) + '" ' +
+          (videoCount === 0 ? 'disabled' : '') + '>' +
+          '<span class="material-symbols-outlined">playlist_play</span>' +
+          '<span data-i18n="annotate.project.batch_annotate">' + tt('annotate.project.batch_annotate', '批量标注') + '</span>' +
+        '</button>';
+        html += '</div>';
+
+        // 视频列表
+        if (batchVideos.length === 0) {
+          html += '<div class="annotate-batch-empty">' +
+            '<span class="material-symbols-outlined">videocam_off</span>' +
+            '<p data-i18n="annotate.project.no_videos_in_batch">' +
+              tt('annotate.project.no_videos_in_batch', '该批次暂无轨迹，点击「导入轨迹」添加') +
+            '</p>' +
+          '</div>';
+        } else {
+          html += '<div class="annotate-batch-video-list">';
+          for (var vj = 0; vj < batchVideos.length; vj++) {
+            var vid = batchVideos[vj];
+            var isProcessed = !!(vid.processed_file);
+            // 单视频预处理按钮禁用条件：已预处理 或 批次未设置工作目录
+            var vidProcessDisabled = isProcessed || !hasWorkDir;
+            var vidProcessTitle = !hasWorkDir
+              ? tt('annotate.project.work_dir_required_for_process', '请先设置该批次的工作目录，再进行预处理')
+              : (isProcessed ? tt('annotate.project.already_processed', '该视频已预处理') : '');
+            // 标注状态标签
+            var annStatus = vid.annotation_status || 'unannotated';
+            var annStatusTag = '';
+            if (annStatus === 'completed') {
+              annStatusTag = '<span class="annotate-tag annotate-tag-success" data-i18n="annotate.batch_status_completed">' +
+                tt('annotate.batch_status_completed', '已标注') + '</span>';
+            } else if (annStatus === 'in_progress') {
+              annStatusTag = '<span class="annotate-tag annotate-tag-warning" data-i18n="annotate.batch_status_in_progress">' +
+                tt('annotate.batch_status_in_progress', '标注中') + '</span>';
+            } else {
+              annStatusTag = '<span class="annotate-tag annotate-tag-muted" data-i18n="annotate.batch_status_unannotated">' +
+                tt('annotate.batch_status_unannotated', '未标注') + '</span>';
+            }
+            html += '<div class="annotate-batch-video-item" data-video-id="' + escapeHtml(vid.id) + '">' +
+              '<span class="annotate-batch-video-name" title="' + escapeHtml(vid.file_name || '') + '">' +
+                escapeHtml(vid.file_name || '') +
+              '</span>' +
+              annStatusTag +
+              (isProcessed ?
+                '<span class="annotate-tag annotate-tag-success" data-i18n="annotate.project.processed">' +
+                  tt('annotate.project.processed', '已预处理') + '</span>' :
+                '<span class="annotate-tag annotate-tag-muted" data-i18n="annotate.project.unprocessed">' +
+                  tt('annotate.project.unprocessed', '未处理') + '</span>') +
+              '<div class="annotate-batch-video-actions">' +
+                '<button type="button" class="annotate-btn annotate-btn-secondary annotate-btn-sm" data-action="process-video" data-video-id="' + escapeHtml(vid.id) + '"' +
+                  (vidProcessDisabled ? ' disabled' : '') +
+                  (vidProcessTitle ? ' title="' + escapeHtml(vidProcessTitle) + '"' : '') + '>' +
+                  '<span class="material-symbols-outlined">auto_fix_high</span>' +
+                  '<span data-i18n="annotate.project.process">' + tt('annotate.project.process', '预处理') + '</span>' +
+                '</button>' +
+                '<button type="button" class="annotate-btn annotate-btn-primary annotate-btn-sm" data-action="annotate-video" data-video-id="' + escapeHtml(vid.id) + '">' +
+                  '<span class="material-symbols-outlined">edit</span>' +
+                  '<span data-i18n="annotate.project.annotate">' + tt('annotate.project.annotate', '标注') + '</span>' +
+                '</button>' +
+                '<button type="button" class="annotate-btn annotate-btn-danger annotate-btn-sm" data-action="delete-video" data-video-id="' + escapeHtml(vid.id) + '">' +
+                  '<span class="material-symbols-outlined">delete</span>' +
+                '</button>' +
+              '</div>' +
+            '</div>';
+          }
+          html += '</div>';
+        }
+
+        html += '</div>'; // annotate-batch-card-body
+      }
+
+      html += '</div>'; // annotate-batch-card
+      return html;
+    } catch (e) {
+      log('ERROR', 'renderBatchCardHtml failed: ' + (e.message || e));
+      return '';
+    }
+  }
+
+  // ===== 绑定批次管理面板事件 =====
+  function bindBatchPanelEvents(project) {
+    try {
+      // 新建批次按钮
+      var createBtn = qs('createBatchBtn');
+      if (createBtn) {
+        createBtn.addEventListener('click', function () {
+          try {
+            createBatch(project);
+          } catch (e) {
+            log('ERROR', 'create batch btn failed: ' + (e.message || e));
+          }
+        });
+      }
+
+      var panel = qs('projectBatchPanel');
+      if (!panel) return;
+
+      // 折叠/展开批次卡片
+      var toggleBtns = panel.querySelectorAll('[data-action="toggle-batch"]');
+      for (var ti = 0; ti < toggleBtns.length; ti++) {
+        (function (btn) {
+          btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            try {
+              var batchId = btn.getAttribute('data-batch-id');
+              toggleBatchExpand(batchId);
+              refreshBatchPanel(project);
+            } catch (err) {
+              log('ERROR', 'toggle batch failed: ' + (err.message || err));
+            }
+          });
+        })(toggleBtns[ti]);
+      }
+
+      // 删除批次
+      var delBtns = panel.querySelectorAll('[data-action="delete-batch"]');
+      for (var i = 0; i < delBtns.length; i++) {
+        (function (btn) {
+          btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            try {
+              var batchId = btn.getAttribute('data-batch-id');
+              if (batchId) deleteBatch(project, batchId);
+            } catch (err) {
+              log('ERROR', 'delete batch btn failed: ' + (err.message || err));
+            }
+          });
+        })(delBtns[i]);
+      }
+
+      // 设置批次工作目录
+      var workDirBtns = panel.querySelectorAll('[data-action="set-batch-workdir"]');
+      for (var wi = 0; wi < workDirBtns.length; wi++) {
+        (function (btn) {
+          btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            try {
+              var batchId = btn.getAttribute('data-batch-id');
+              var batch = findBatchById(project, batchId);
+              if (batch) setBatchWorkDir(project, batch);
+            } catch (err) {
+              log('ERROR', 'set batch workdir failed: ' + (err.message || err));
+            }
+          });
+        })(workDirBtns[wi]);
+      }
+
+      // 导入轨迹到批次
+      var importBtns = panel.querySelectorAll('[data-action="import-to-batch"]');
+      for (var ii = 0; ii < importBtns.length; ii++) {
+        (function (btn) {
+          btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            try {
+              var batchId = btn.getAttribute('data-batch-id');
+              // 清除高亮标记
+              if (state.highlightBatchId) {
+                delete state.highlightBatchId;
+              }
+              importVideosToBatch(project, batchId);
+            } catch (err) {
+              log('ERROR', 'import to batch failed: ' + (err.message || err));
+            }
+          });
+        })(importBtns[ii]);
+      }
+
+      // 批量预处理（当前批次所有视频）
+      var batchProcessBtns = panel.querySelectorAll('[data-action="batch-process"]');
+      for (var bi = 0; bi < batchProcessBtns.length; bi++) {
+        (function (btn) {
+          btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            try {
+              var batchId = btn.getAttribute('data-batch-id');
+              runBatchProcessForBatch(project, batchId);
+            } catch (err) {
+              log('ERROR', 'batch process failed: ' + (err.message || err));
+            }
+          });
+        })(batchProcessBtns[bi]);
+      }
+
+      // 批量标注（启动批次连续标注模式）
+      var annotateBatchBtns = panel.querySelectorAll('[data-action="start-annotate-batch"]');
+      for (var ai = 0; ai < annotateBatchBtns.length; ai++) {
+        (function (btn) {
+          btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            try {
+              var batchId = btn.getAttribute('data-batch-id');
+              startBatchAnnotate(project, batchId);
+            } catch (err) {
+              log('ERROR', 'start batch annotate failed: ' + (err.message || err));
+            }
+          });
+        })(annotateBatchBtns[ai]);
+      }
+
+      // 单个视频操作：预处理 / 标注 / 删除
+      var videoActionBtns = panel.querySelectorAll('[data-action="process-video"], [data-action="annotate-video"], [data-action="delete-video"]');
+      for (var va = 0; va < videoActionBtns.length; va++) {
+        (function (btn) {
+          btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            try {
+              var action = btn.getAttribute('data-action');
+              var videoId = btn.getAttribute('data-video-id');
+              var video = findVideoInProject(project, videoId);
+              if (!video) return;
+              if (action === 'process-video') {
+                processSingleVideo(project, videoId);
+              } else if (action === 'annotate-video') {
+                startAnnotateFromProject(project, videoId);
+              } else if (action === 'delete-video') {
+                deleteVideoFromProject(project, videoId);
+              }
+            } catch (err) {
+              log('ERROR', 'video action failed: ' + (err.message || err));
+            }
+          });
+        })(videoActionBtns[va]);
+      }
+    } catch (e) {
+      log('ERROR', 'bindBatchPanelEvents failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 切换批次展开状态 =====
+  function toggleBatchExpand(batchId) {
+    try {
+      if (!state.expandedBatchIds) state.expandedBatchIds = {};
+      if (state.expandedBatchIds[batchId]) {
+        delete state.expandedBatchIds[batchId];
+      } else {
+        state.expandedBatchIds[batchId] = true;
+      }
+    } catch (e) {
+      log('ERROR', 'toggleBatchExpand failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 按 ID 查找批次 =====
+  function findBatchById(project, batchId) {
+    try {
+      if (!project || !Array.isArray(project.batches) || !batchId) return null;
+      for (var i = 0; i < project.batches.length; i++) {
+        if (project.batches[i] && project.batches[i].id === batchId) {
+          return project.batches[i];
+        }
+      }
+      return null;
+    } catch (e) {
+      log('ERROR', 'findBatchById failed: ' + (e.message || e));
+      return null;
+    }
+  }
+
+  // ===== 导入轨迹到指定批次 =====
+  function importVideosToBatch(project, batchId) {
+    try {
+      if (!project || !batchId) {
+        log('WARN', 'importVideosToBatch: no project or batchId');
+        return;
+      }
+      var batch = findBatchById(project, batchId);
+      if (!batch) {
+        log('WARN', 'importVideosToBatch: batch not found: ' + batchId);
+        return;
+      }
+      log('IMPORT', 'importVideosToBatch: batchId=' + batchId);
+      // 复用 startImportWithBatch（已选定批次的导入流程）
+      startImportWithBatch(project, batchId);
+    } catch (e) {
+      log('ERROR', 'importVideosToBatch failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 对指定批次的所有视频进行批量预处理 =====
+  function runBatchProcessForBatch(project, batchId) {
+    try {
+      if (!project || !batchId) return;
+      var batch = findBatchById(project, batchId);
+      if (!batch || !Array.isArray(batch.video_ids) || batch.video_ids.length === 0) {
+        showToast(tt('annotate.project.no_videos_in_batch', '该批次暂无轨迹'));
+        return;
+      }
+      // 拦截：工作目录必须设置后才可以预处理
+      if (!batch.work_dir_name) {
+        log('WARN', 'runBatchProcessForBatch: work_dir not set, batch=' + batchId);
+        showToast(tt('annotate.project.work_dir_required_for_process',
+          '请先设置该批次的工作目录，再进行预处理'));
+        return;
+      }
+      // 收集该批次的视频 ID
+      var videoIds = batch.video_ids.slice();
+      log('PROCESS', 'runBatchProcessForBatch: batch=' + batchId + ' videos=' + videoIds.length);
+      runBatchProcess(project, videoIds);
+    } catch (e) {
+      log('ERROR', 'runBatchProcessForBatch failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 对单个视频进行预处理（复用 runBatchProcess，传入单元素列表） =====
+  function processSingleVideo(project, videoId) {
+    try {
+      if (!project || !videoId) {
+        log('WARN', 'processSingleVideo: no project or videoId');
+        return;
+      }
+      var video = findVideoInProject(project, videoId);
+      if (!video) {
+        log('WARN', 'processSingleVideo: video not found: ' + videoId);
+        return;
+      }
+      if (video.processed_file) {
+        showToast(tt('annotate.project.already_processed',
+          '该视频已预处理，如需重新处理请先删除预处理结果'));
+        return;
+      }
+      // 拦截：视频所属批次的工作目录必须设置后才可以预处理
+      if (video.batch_id) {
+        var batch = findBatchById(project, video.batch_id);
+        if (!batch || !batch.work_dir_name) {
+          log('WARN', 'processSingleVideo: work_dir not set, batch=' + video.batch_id);
+          showToast(tt('annotate.project.work_dir_required_for_process',
+            '请先设置该视频所属批次的工作目录，再进行预处理'));
+          return;
+        }
+      } else {
+        // 无批次归属的视频不允许预处理（批次是预处理的前提）
+        log('WARN', 'processSingleVideo: video has no batch, video=' + videoId);
+        showToast(tt('annotate.project.no_batch_for_process',
+          '该视频未归属任何批次，无法预处理'));
+        return;
+      }
+      log('PROCESS', 'processSingleVideo: id=' + videoId);
+      runBatchProcess(project, [videoId]);
+    } catch (e) {
+      log('ERROR', 'processSingleVideo failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 创建批次 =====
+  function createBatch(project) {
+    try {
+      if (!project) return;
+      if (!Array.isArray(project.batches)) project.batches = [];
+
+      // 默认值：从项目 data_source 和 device_config 带入
+      var defaultDataSource = project.data_source || '';
+      var defaultFrameName = (project.device_config && Array.isArray(project.device_config.frame_name))
+        ? project.device_config.frame_name.join(', ') : '';
+      var defaultSubCam = (project.device_config && project.device_config.instruction_sub_camera) || '';
+
+      // 构建弹窗表单
+      var bodyHtml = '<div class="annotate-batch-meta-form">' +
+        '<p class="annotate-batch-meta-hint">' +
+          tt('annotate.project.batch_meta_hint', '填写批次元信息，进入标注时将自动继承到元信息表单') +
+        '</p>' +
+        '<div class="annotate-form-row">' +
+          '<label>' + tt('annotate.meta_info.data_source', '数据来源 (data_source)') + '</label>' +
+          '<input type="text" id="batchMetaDataSource" class="annotate-input" value="' + escapeHtml(defaultDataSource) +
+            '" placeholder="如：AIX-Office-v1">' +
+        '</div>' +
+        '<div class="annotate-form-row">' +
+          '<label>' + tt('annotate.meta_info.frame_name', '相机名 (frame_name)') + '</label>' +
+          '<input type="text" id="batchMetaFrameName" class="annotate-input" value="' + escapeHtml(defaultFrameName) +
+            '" placeholder="cam_0, cam_1, ...">' +
+        '</div>' +
+        '<div class="annotate-form-row">' +
+          '<label>' + tt('annotate.meta_info.instruction_sub_camera', '指令相机 (instruction_sub_camera)') + '</label>' +
+          '<input type="text" id="batchMetaSubCam" class="annotate-input" value="' + escapeHtml(defaultSubCam) +
+            '" placeholder="cam_0">' +
+        '</div>' +
+        '<div class="annotate-form-row annotate-form-row-inline">' +
+          '<label>' + tt('annotate.meta_info.task_success', '任务成功 (task_success)') + '</label>' +
+          '<input type="checkbox" id="batchMetaTaskSuccess" checked>' +
+        '</div>' +
+        '<div class="annotate-form-row">' +
+          '<label>' + tt('annotate.meta_info.task_horizon', '任务时长类型 (task_horizon)') + '</label>' +
+          '<select id="batchMetaTaskHorizon" class="annotate-input">' +
+            '<option value="NA">' + tt('annotate.meta_info.task_horizon_na', 'NA') + '</option>' +
+            '<option value="short">' + tt('annotate.meta_info.task_horizon_short', 'short') + '</option>' +
+            '<option value="long">' + tt('annotate.meta_info.task_horizon_long', 'long') + '</option>' +
+          '</select>' +
+        '</div>' +
+      '</div>';
+
+      showModal({
+        title: tt('annotate.project.create_batch_title', '创建批次并填写元信息'),
+        body: bodyHtml,
+        confirmText: tt('annotate.project.create', '创建'),
+        cancelText: tt('annotate.modal_cancel', '取消'),
+        onConfirm: function () {
+          try {
+            // 读取表单值
+            var dataSourceInput = document.getElementById('batchMetaDataSource');
+            var frameNameInput = document.getElementById('batchMetaFrameName');
+            var subCamInput = document.getElementById('batchMetaSubCam');
+            var taskSuccessInput = document.getElementById('batchMetaTaskSuccess');
+            var taskHorizonInput = document.getElementById('batchMetaTaskHorizon');
+
+            // frame_name 按逗号分隔成数组
+            var frameNameRaw = frameNameInput ? frameNameInput.value.trim() : '';
+            var frameNameArr = frameNameRaw
+              ? frameNameRaw.split(',').map(function (s) { return s.trim(); }).filter(function (s) { return s; })
+              : [];
+
+            var batchId = genSequentialId('batch', project.batches);
+            var batch = {
+              id: batchId,
+              name: batchId,
+              created_at: new Date().toISOString(),
+              video_ids: [],
+              meta_info: {
+                data_source: dataSourceInput ? dataSourceInput.value.trim() : '',
+                frame_name: frameNameArr,
+                instruction_sub_camera: subCamInput ? subCamInput.value.trim() : '',
+                task_success: taskSuccessInput ? !!taskSuccessInput.checked : true,
+                task_horizon: taskHorizonInput ? taskHorizonInput.value : 'NA'
+              }
+            };
+            project.batches.push(batch);
+            saveProjects();
+            // 自动展开新建批次 + 高亮导入按钮
+            if (!state.expandedBatchIds) state.expandedBatchIds = {};
+            state.expandedBatchIds[batchId] = true;
+            state.highlightBatchId = batchId;
+            // 重新渲染批次面板
+            refreshBatchPanel(project);
+            // 重新渲染流程向导
+            var wizardBox = dom.projectDetailView ?
+              dom.projectDetailView.querySelector('.annotate-process-wizard') : null;
+            if (wizardBox && wizardBox.parentNode) {
+              var newWizard = document.createElement('div');
+              newWizard.innerHTML = renderProcessWizard(project).trim();
+              if (newWizard.firstChild) {
+                wizardBox.parentNode.replaceChild(newWizard.firstChild, wizardBox);
+                bindProcessWizard(project);
+              }
+            }
+            hideModal();
+            showToast(tt('annotate.project.batch_created', '批次已创建: ') + batchId);
+            log('BATCH', 'createBatch: ' + batchId + ' meta_info=' + JSON.stringify(batch.meta_info));
+          } catch (e) {
+            log('ERROR', 'createBatch onConfirm failed: ' + (e.message || e));
+            hideModal();
+          }
+        }
+      });
+    } catch (e) {
+      log('ERROR', 'createBatch failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 把 videoId 加入到指定批次（去重） =====
+  function addVideoIdToBatch(project, batchId, videoId) {
+    try {
+      if (!project || !batchId || !videoId) return false;
+      if (!Array.isArray(project.batches)) return false;
+      for (var i = 0; i < project.batches.length; i++) {
+        var b = project.batches[i];
+        if (b && b.id === batchId) {
+          if (!Array.isArray(b.video_ids)) b.video_ids = [];
+          if (b.video_ids.indexOf(videoId) === -1) {
+            b.video_ids.push(videoId);
+            log('BATCH', 'addVideoIdToBatch: batch=' + batchId + ' video=' + videoId);
+          }
+          return true;
+        }
+      }
+      log('WARN', 'addVideoIdToBatch: batch not found: ' + batchId);
+      return false;
+    } catch (e) {
+      log('ERROR', 'addVideoIdToBatch failed: ' + (e.message || e));
+      return false;
+    }
+  }
+
+  // ===== 从所有批次中移除指定 videoId（删除视频时调用） =====
+  function removeVideoIdFromAllBatches(project, videoId) {
+    try {
+      if (!project || !videoId || !Array.isArray(project.batches)) return 0;
+      var removedCount = 0;
+      for (var i = 0; i < project.batches.length; i++) {
+        var b = project.batches[i];
+        if (b && Array.isArray(b.video_ids)) {
+          var idx = b.video_ids.indexOf(videoId);
+          if (idx >= 0) {
+            b.video_ids.splice(idx, 1);
+            removedCount++;
+            log('BATCH', 'removeVideoIdFromAllBatches: batch=' + b.id + ' video=' + videoId);
+          }
+        }
+      }
+      return removedCount;
+    } catch (e) {
+      log('ERROR', 'removeVideoIdFromAllBatches failed: ' + (e.message || e));
+      return 0;
+    }
+  }
+
+  // ===== 删除批次（二次确认） =====
+  function deleteBatch(project, batchId) {
+    try {
+      var batch = null;
+      for (var i = 0; i < (project.batches || []).length; i++) {
+        if (project.batches[i] && project.batches[i].id === batchId) {
+          batch = project.batches[i]; break;
+        }
+      }
+      if (!batch) {
+        log('WARN', 'deleteBatch: batch not found, id=' + batchId);
+        return;
+      }
+      showModal({
+        title: tt('annotate.project.delete_batch_title', '删除批次'),
+        body: '<p>' + tt('annotate.project.delete_batch_body',
+          '确认删除批次「{id}」？批次内视频将移除轨迹编号。此操作不可撤销。')
+          .replace('{id}', escapeHtml(batchId)) + '</p>',
+        confirmText: tt('annotate.project.delete_btn', '删除'),
+        cancelText: tt('annotate.modal_cancel', '取消'),
+        onConfirm: function () {
+          try {
+            // 清空批次内视频的 trajectory_index 和 batch_id
+            var videoIds = Array.isArray(batch.video_ids) ? batch.video_ids : [];
+            for (var v = 0; v < videoIds.length; v++) {
+              var vid = videoIds[v];
+              var video = findVideoInProject(project, vid);
+              if (video) {
+                video.trajectory_index = '';
+                video.batch_id = '';
+              }
+            }
+            // 从 batches 列表移除
+            var idx = -1;
+            for (var j = 0; j < (project.batches || []).length; j++) {
+              if (project.batches[j] && project.batches[j].id === batchId) {
+                idx = j; break;
+              }
+            }
+            if (idx >= 0) {
+              project.batches.splice(idx, 1);
+            }
+            saveProjects();
+            refreshBatchPanel(project);
+            updateVideoListOnly(project);
+            showToast(tt('annotate.project.batch_deleted', '批次已删除'));
+            log('BATCH', 'deleteBatch: ' + batchId);
+            hideModal();
+          } catch (e) {
+            log('ERROR', 'deleteBatch onConfirm failed: ' + (e.message || e));
+            hideModal();
+          }
+        }
+      });
+    } catch (e) {
+      log('ERROR', 'deleteBatch failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 刷新批次面板（局部） =====
+  function refreshBatchPanel(project) {
+    try {
+      var panel = qs('projectBatchPanel');
+      if (!panel) return;
+      var newHtml = renderBatchPanelHtml(project);
+      panel.innerHTML = newHtml.substring('<div class="annotate-batch-panel">'.length,
+        newHtml.length - '</div>'.length);
+      // 上面 substring 是去除最外层 div 包裹，直接整体替换更简单：
+      panel.innerHTML = newHtml;
+      // 重新绑定事件
+      bindBatchPanelEvents(project);
+      // 更新计数
+      var countEl = qs('projectBatchesCount');
+      if (countEl) {
+        countEl.textContent = (Array.isArray(project.batches) ? project.batches.length : 0);
+      }
+    } catch (e) {
+      log('ERROR', 'refreshBatchPanel failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 显示"将视频加入批次"弹窗 =====
+  function showAddVideoToBatchModal(project, videoId) {
+    try {
+      var video = findVideoInProject(project, videoId);
+      if (!video) return;
+      var batches = project.batches || [];
+      if (batches.length === 0) {
+        showToast(tt('annotate.project.no_batch_first', '请先创建批次'));
+        return;
+      }
+      // 构建 batch 选项 HTML
+      var optionsHtml = '';
+      for (var i = 0; i < batches.length; i++) {
+        var b = batches[i];
+        var sel = (video.batch_id === b.id) ? 'selected' : '';
+        optionsHtml += '<option value="' + escapeHtml(b.id) + '"' + sel + '>' +
+          escapeHtml(b.id) + (b.name ? ' (' + escapeHtml(b.name) + ')' : '') +
+          '</option>';
+      }
+      var body =
+        '<div class="annotate-modal-form">' +
+          '<p class="annotate-modal-form-hint">' +
+            tt('annotate.project.add_to_batch_hint', '选择批次，系统将自动分配轨迹编号（同批次内不重复）') +
+          '</p>' +
+          '<div class="annotate-form-field">' +
+            '<label data-i18n="annotate.project.select_batch">选择批次</label>' +
+            '<select id="addToBatchSelect" class="annotate-input">' +
+              '<option value="">' + tt('annotate.project.select_batch_placeholder', '-- 选择批次 --') + '</option>' +
+              optionsHtml +
+            '</select>' +
+          '</div>' +
+          (video.batch_id ?
+            '<p class="annotate-modal-form-current">' +
+              tt('annotate.project.current_batch', '当前批次') + ': ' + escapeHtml(video.batch_id) +
+              ' · ' + tt('annotate.project.current_traj', '轨迹') + ': ' + escapeHtml(video.trajectory_index || '-') +
+            '</p>' : '') +
+        '</div>';
+
+      showModal({
+        title: tt('annotate.project.add_to_batch_title', '将视频加入批次'),
+        body: body,
+        confirmText: tt('annotate.modal_confirm', '确认'),
+        cancelText: tt('annotate.modal_cancel', '取消'),
+        onConfirm: function () {
+          try {
+            var select = qs('addToBatchSelect');
+            var newBatchId = select ? select.value : '';
+            if (!newBatchId) {
+              showToast(tt('annotate.project.select_batch_first', '请选择批次'));
+              return false; // 不关闭弹窗
+            }
+            addVideoToBatch(project, videoId, newBatchId);
+            hideModal();
+          } catch (e) {
+            log('ERROR', 'add to batch confirm failed: ' + (e.message || e));
+            hideModal();
+          }
+          return true;
+        }
+      });
+    } catch (e) {
+      log('ERROR', 'showAddVideoToBatchModal failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 将视频加入批次，自动分配 trajectory_index =====
+  function addVideoToBatch(project, videoId, batchId) {
+    try {
+      var video = findVideoInProject(project, videoId);
+      if (!video) return;
+      var batch = null;
+      for (var i = 0; i < (project.batches || []).length; i++) {
+        if (project.batches[i] && project.batches[i].id === batchId) {
+          batch = project.batches[i]; break;
+        }
+      }
+      if (!batch) {
+        showToast(tt('annotate.project.batch_not_found', '批次未找到'));
+        return;
+      }
+      if (!Array.isArray(batch.video_ids)) batch.video_ids = [];
+
+      // 如果视频已在其他批次，先从原批次移除
+      if (video.batch_id && video.batch_id !== batchId) {
+        var oldBatch = null;
+        for (var j = 0; j < (project.batches || []).length; j++) {
+          if (project.batches[j] && project.batches[j].id === video.batch_id) {
+            oldBatch = project.batches[j]; break;
+          }
+        }
+        if (oldBatch && Array.isArray(oldBatch.video_ids)) {
+          var idx = oldBatch.video_ids.indexOf(videoId);
+          if (idx >= 0) oldBatch.video_ids.splice(idx, 1);
+        }
+      }
+
+      // 如果已在当前批次，不重复添加
+      if (video.batch_id === batchId && video.trajectory_index) {
+        showToast(tt('annotate.project.already_in_batch', '视频已在此批次') + ' (traj=' + video.trajectory_index + ')');
+        return;
+      }
+
+      // 分配新的 trajectory_index（同批次内不重复）
+      var newTraj = allocateTrajectoryIndex(project, batch);
+      video.batch_id = batchId;
+      video.trajectory_index = newTraj;
+      if (batch.video_ids.indexOf(videoId) < 0) {
+        batch.video_ids.push(videoId);
+      }
+      saveProjects();
+      updateVideoListOnly(project);
+      showToast(tt('annotate.project.added_to_batch', '已加入批次 {id}，轨迹编号 {traj}')
+        .replace('{id}', batchId).replace('{traj}', newTraj));
+      log('BATCH', 'addVideoToBatch: video=' + videoId + ' batch=' + batchId + ' traj=' + newTraj);
+    } catch (e) {
+      log('ERROR', 'addVideoToBatch failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 分配 trajectory_index（traj_001 格式，同批次内不重复） =====
+  function allocateTrajectoryIndex(project, batch) {
+    try {
+      // 采集日期：优先从 meta_info.date 获取，否则用当天日期
+      var dateStr = '';
+      if (project.meta_info && project.meta_info.date) {
+        dateStr = String(project.meta_info.date).replace(/-/g, '');
+      } else {
+        var now = new Date();
+        dateStr = '' + now.getFullYear() +
+          String(now.getMonth() + 1).padStart(2, '0') +
+          String(now.getDate()).padStart(2, '0');
+      }
+      // 收集该批次内已使用的序号
+      var usedNum = {};
+      if (Array.isArray(batch.video_ids)) {
+        for (var i = 0; i < batch.video_ids.length; i++) {
+          var v = findVideoInProject(project, batch.video_ids[i]);
+          if (v && v.trajectory_index) {
+            // 解析已有 trajectory_index 的序号部分
+            var match = String(v.trajectory_index).match(/_(\d+)$/);
+            if (match) {
+              usedNum[parseInt(match[1], 10)] = true;
+            }
+          }
+        }
+      }
+      // 从 001 开始寻找第一个未使用的
+      var idx = 1;
+      while (true) {
+        if (!usedNum[idx]) {
+          return dateStr + '_' + String(idx).padStart(3, '0');
+        }
+        idx++;
+        if (idx > 99999) break; // 安全上限
+      }
+      return dateStr + '_' + Date.now().toString(36); // 兜底
+    } catch (e) {
+      log('ERROR', 'allocateTrajectoryIndex failed: ' + (e.message || e));
+      var now = new Date();
+      var fallback = '' + now.getFullYear() +
+        String(now.getMonth() + 1).padStart(2, '0') +
+        String(now.getDate()).padStart(2, '0') + '_001';
+      return fallback;
+    }
+  }
+
+  // ==========================================================================
+  // 阶段 5：meta_info 表单（步骤 2）
+  // ==========================================================================
+
+  // ===== 回填 meta_info 表单 =====
+  function fillMetaInfoForm() {
+    try {
+      var mi = state.meta_info || {};
+      if (dom.metaDataSourceInput) dom.metaDataSourceInput.value = mi.data_source || '';
+      if (dom.metaTrajectoryIndexInput) dom.metaTrajectoryIndexInput.value = mi.trajectory_index || '';
+      if (dom.metaFpsInput) dom.metaFpsInput.value = mi.fps || 30;
+      if (dom.metaNumFramesInput) dom.metaNumFramesInput.value = mi.num_frames || 0;
+      if (dom.metaFrameNameInput) {
+        // frame_name 是数组，用逗号分隔显示
+        dom.metaFrameNameInput.value = Array.isArray(mi.frame_name) ? mi.frame_name.join(', ') : '';
+      }
+      if (dom.metaInstructionSubCameraInput) dom.metaInstructionSubCameraInput.value = mi.instruction_sub_camera || '';
+      if (dom.metaTaskSuccessInput) dom.metaTaskSuccessInput.checked = (mi.task_success !== false);
+      if (dom.metaTaskHorizonInput) dom.metaTaskHorizonInput.value = mi.task_horizon || 'NA';
+      log('META_INFO', 'fillMetaInfoForm: data_source=' + mi.data_source + ' traj=' + mi.trajectory_index +
+        ' fps=' + mi.fps + ' frames=' + mi.num_frames);
+    } catch (e) {
+      log('ERROR', 'fillMetaInfoForm failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 绑定 meta_info 表单事件 =====
+  function bindMetaInfoForm() {
+    try {
+      var fields = [
+        { el: dom.metaDataSourceInput, key: 'data_source' },
+        { el: dom.metaTrajectoryIndexInput, key: 'trajectory_index' },
+        { el: dom.metaFpsInput, key: 'fps', isNumber: true },
+        { el: dom.metaNumFramesInput, key: 'num_frames', isNumber: true, isInt: true },
+        { el: dom.metaInstructionSubCameraInput, key: 'instruction_sub_camera' },
+        { el: dom.metaTaskHorizonInput, key: 'task_horizon' }
+      ];
+      for (var i = 0; i < fields.length; i++) {
+        (function (f) {
+          if (!f.el) return;
+          function handleValue() {
+            try {
+              var val = f.el.value;
+              if (f.isNumber) {
+                var n = f.isInt ? parseInt(val, 10) : parseFloat(val);
+                if (isNaN(n) || n < 0) n = 0;
+                val = n;
+                if (f.key === 'fps' && n <= 0) {
+                  n = 30;
+                  if (f.el) f.el.value = '30';
+                  val = 30;
+                }
+              }
+              state.meta_info[f.key] = val;
+              // fps 联动 totalFrames
+              if (f.key === 'fps') {
+                state.fps = val;
+                if (state.videoDuration > 0) {
+                  var oldTotal = state.totalFrames;
+                  state.totalFrames = Math.round(state.videoDuration * state.fps);
+                  if (oldTotal !== state.totalFrames) {
+                    log('META_INFO', 'totalFrames recalculated: ' + oldTotal + ' -> ' + state.totalFrames);
+                    updateFrameDisplay();
+                  }
+                }
+              }
+              log('META_INFO', f.key + ' = ' + val);
+              saveToLocalStorage();
+            } catch (e) {
+              log('ERROR', 'meta_info field handler failed for ' + f.key + ': ' + (e.message || e));
+            }
+          }
+          f.el.addEventListener('input', handleValue);
+          f.el.addEventListener('change', handleValue);
+        })(fields[i]);
+      }
+
+      // frame_name 输入（逗号分隔的字符串 → 数组）
+      if (dom.metaFrameNameInput) {
+        dom.metaFrameNameInput.addEventListener('input', function () {
+          try {
+            var raw = dom.metaFrameNameInput.value || '';
+            var arr = raw.split(',').map(function (s) { return s.trim(); })
+              .filter(function (s) { return s.length > 0; });
+            state.meta_info.frame_name = arr;
+            log('META_INFO', 'frame_name = [' + arr.join(', ') + ']');
+            saveToLocalStorage();
+          } catch (e) {
+            log('ERROR', 'frame_name input handler failed: ' + (e.message || e));
+          }
+        });
+      }
+
+      // task_success checkbox
+      if (dom.metaTaskSuccessInput) {
+        dom.metaTaskSuccessInput.addEventListener('change', function () {
+          try {
+            state.meta_info.task_success = !!dom.metaTaskSuccessInput.checked;
+            log('META_INFO', 'task_success = ' + state.meta_info.task_success);
+            saveToLocalStorage();
+          } catch (e) {
+            log('ERROR', 'task_success handler failed: ' + (e.message || e));
+          }
+        });
+      }
+    } catch (e) {
+      log('ERROR', 'bindMetaInfoForm failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 折叠面板事件绑定 =====
+  function bindAccordionEvents(root) {
+    try {
+      var headers = (root || document).querySelectorAll('.annotate-accordion-header');
+      for (var i = 0; i < headers.length; i++) {
+        (function (header) {
+          header.addEventListener('click', function () {
+            try {
+              var targetId = header.getAttribute('data-target');
+              if (!targetId) return;
+              var body = document.getElementById(targetId);
+              if (!body) return;
+              var isCollapsed = header.classList.contains('collapsed');
+              if (isCollapsed) {
+                header.classList.remove('collapsed');
+                body.classList.remove('collapsed');
+                body.style.display = '';
+              } else {
+                header.classList.add('collapsed');
+                body.classList.add('collapsed');
+                body.style.display = 'none';
+              }
+            } catch (e) {
+              log('ERROR', 'accordion header click failed: ' + (e.message || e));
+            }
+          });
+        })(headers[i]);
+      }
+    } catch (e) {
+      log('ERROR', 'bindAccordionEvents failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 直接标注模式（无项目）入口 =====
+  function enterDirectAnnotateMode() {
+    try {
+      state.mode = 'direct';
+      state.currentProject = null;
+      state.currentVideo = null;
+      state.project_id = null;
+      state.video_id = null;
+      state.device_config = null;
+      state.currentStep = 1;
+      // 清空视频运行时状态（File 对象不可持久化，刷新后需重新选择）
+      if (state.videoUrl) {
+        try { URL.revokeObjectURL(state.videoUrl); } catch (e) {}
+        state.videoUrl = null;
+      }
+      state.videoFile = null;
+      state.videoFileName = '';
+      state.videoFileSize = 0;
+      state.videoDuration = 0;
+      state.videoResolution = [0, 0];
+      state.totalFrames = 0;
+      state.currentFrame = 0;
+      state.isPlaying = false;
+      // meta_info 保持默认
+      state.meta_info = {
+        data_source: '',
+        trajectory_index: '',
+        fps: 30,
+        num_frames: 0,
+        frame_name: [],
+        instruction_sub_camera: '',
+        task_success: true,
+        task_horizon: 'NA'
+      };
+      hideProjectPanelAndShowAnnotate();
+      // 重置步骤 1 UI（隐藏旧文件信息，显示上传区）
+      if (dom.fileInfo) dom.fileInfo.setAttribute('hidden', '');
+      if (dom.uploadZone) dom.uploadZone.removeAttribute('hidden');
+      if (dom.fileName) dom.fileName.textContent = '';
+      goToStep(1);
+      // 清空 IndexedDB 中的 direct_video handle（进入全新直接标注，旧句柄不再需要）
+      if (FS_ACCESS_SUPPORTED) {
+        fsDeleteHandle('direct_video').catch(function (err) {
+          log('WARN', 'enterDirectAnnotateMode: fsDeleteHandle direct_video failed: ' + (err.message || err));
+        });
+      }
+      log('PROJECT', 'enterDirectAnnotateMode: switched to direct mode (video state cleared)');
+      saveToLocalStorage();
+    } catch (e) {
+      log('ERROR', 'enterDirectAnnotateMode failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 返回项目面板（从标注模式） =====
+  function backToProjectPanel() {
+    try {
+      if (!state.project_id) {
+        log('WARN', 'backToProjectPanel: no project_id, cannot return');
+        return;
+      }
+      // 恢复 mode
+      state.mode = 'project';
+      showProjectPanel();
+      showProjectListView();
+      log('PROJECT', 'backToProjectPanel');
+      saveToLocalStorage();
+    } catch (e) {
+      log('ERROR', 'backToProjectPanel failed: ' + (e.message || e));
     }
   }
 
@@ -5992,6 +11967,37 @@
     updatePreviewSpeedLabel: updatePreviewSpeedLabel,
     updatePreviewProgress: updatePreviewProgress,
     updatePreviewTimeLabel: updatePreviewTimeLabel,
+    // 阶段 1-5：项目管理 API
+    createProject: createProject,
+    deleteProject: deleteProject,
+    selectProject: selectProject,
+    saveProjects: saveProjects,
+    loadProjects: loadProjects,
+    renderProjectList: renderProjectList,
+    renderProjectDetail: renderProjectDetail,
+    showProjectListView: showProjectListView,
+    showProjectDetailView: showProjectDetailView,
+    showNewProjectFormView: showNewProjectFormView,
+    showProjectPanel: showProjectPanel,
+    hideProjectPanelAndShowAnnotate: hideProjectPanelAndShowAnnotate,
+    enterDirectAnnotateMode: enterDirectAnnotateMode,
+    backToProjectPanel: backToProjectPanel,
+    handleProjectVideoImport: handleProjectVideoImport,
+    startAnnotateFromProject: startAnnotateFromProject,
+    fillMetaInfoForm: fillMetaInfoForm,
+    bindMetaInfoForm: bindMetaInfoForm,
+    findProjectById: findProjectById,
+    findVideoInProject: findVideoInProject,
+    createDefaultDeviceConfig: createDefaultDeviceConfig,
+    createBatch: createBatch,
+    deleteBatch: deleteBatch,
+    addVideoToBatch: addVideoToBatch,
+    allocateTrajectoryIndex: allocateTrajectoryIndex,
+    genId: genId,
+    genSequentialId: genSequentialId,
+    escapeHtml: escapeHtml,
+    formatDateTime: formatDateTime,
+    DEFAULT_THUMBNAIL: DEFAULT_THUMBNAIL,
     // 回调钩子（供 annotate-canvas.js / annotate-export.js 注册）
     onFrameChange: null,
     onTabChange: null,

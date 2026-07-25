@@ -3191,6 +3191,70 @@ body.preview-mode .annotate-step-4 .annotate-preview-controls {
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+/* ===== Modal 表单（批次选择等） ===== */
+.annotate-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.annotate-modal-hint {
+  margin: 0;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(74, 158, 255, 0.08);
+  border-left: 3px solid #4a9eff;
+  border-radius: var(--radius-sm);
+  color: var(--color-on-surface-variant);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.annotate-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.annotate-modal-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-on-surface);
+}
+
+.annotate-modal-select {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(28, 28, 28, 0.6);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  color: var(--color-on-surface);
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23849588' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.annotate-modal-select:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.annotate-modal-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(0, 255, 163, 0.15);
+}
+
+.annotate-modal-select option {
+  background: var(--color-surface-container);
+  color: var(--color-on-surface);
+}
+
 /* ===== 响应式：annotate 页面 ===== */
 @media (max-width: 1200px) {
   .annotate-workspace {
@@ -3284,6 +3348,2051 @@ body.preview-mode .annotate-step-4 .annotate-preview-controls {
 
   .annotate-export-actions .annotate-btn {
     width: 100%;
+  }
+}
+
+/* ========================================
+   EGO 标注工具 - 项目化管理面板样式（阶段 6）
+   ======================================== */
+
+/* ===== 项目面板容器 ===== */
+.annotate-project-panel {
+  width: 100%;
+}
+
+.annotate-project-view {
+  display: none;
+  animation: annotate-fade-in 0.2s ease;
+}
+
+.annotate-project-view.active {
+  display: block;
+}
+
+@keyframes annotate-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== 项目视图头部 ===== */
+.annotate-project-view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.annotate-project-view-title h2 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-on-surface);
+  margin-bottom: var(--spacing-xs);
+  letter-spacing: -0.02em;
+}
+
+.annotate-project-view-title p {
+  font-size: 14px;
+  color: var(--color-on-surface-variant);
+}
+
+.annotate-project-view-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+/* ===== 项目列表（卡片网格） ===== */
+.annotate-project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.annotate-project-card {
+  background: rgba(18, 18, 18, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.annotate-project-card:hover {
+  border-color: rgba(0, 255, 163, 0.4);
+  background: rgba(28, 28, 28, 0.85);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.annotate-project-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+}
+
+.annotate-project-card-name {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-on-surface);
+  word-break: break-word;
+  flex: 1;
+}
+
+.annotate-project-card-delete {
+  background: transparent;
+  border: none;
+  color: var(--color-outline);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.annotate-project-card-delete:hover {
+  color: var(--color-error);
+  background: rgba(255, 180, 171, 0.1);
+}
+
+.annotate-project-card-delete .material-symbols-outlined {
+  font-size: 20px;
+}
+
+.annotate-project-card-data-source {
+  font-size: 13px;
+  color: var(--color-primary);
+  font-family: var(--font-body);
+  word-break: break-all;
+}
+
+.annotate-project-card-meta {
+  display: flex;
+  gap: var(--spacing-md);
+  font-size: 12px;
+  color: var(--color-outline);
+  flex-wrap: wrap;
+}
+
+.annotate-project-card-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.annotate-project-card-meta .material-symbols-outlined {
+  font-size: 14px;
+}
+
+.annotate-project-card-remark {
+  font-size: 12px;
+  color: var(--color-on-surface-variant);
+  line-height: 1.5;
+  margin-top: var(--spacing-xs);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.annotate-project-card-created {
+  font-size: 11px;
+  color: var(--color-outline);
+  margin-top: auto;
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ===== 项目空状态 ===== */
+.annotate-project-empty {
+  text-align: center;
+  padding: var(--spacing-xxl) var(--spacing-lg);
+  color: var(--color-outline);
+}
+
+.annotate-project-empty .material-symbols-outlined {
+  font-size: 64px;
+  margin-bottom: var(--spacing-md);
+  opacity: 0.5;
+}
+
+.annotate-project-empty p {
+  font-size: 15px;
+}
+
+/* ===== 新建项目表单 ===== */
+.annotate-project-form {
+  background: rgba(18, 18, 18, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.annotate-project-form-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: flex-end;
+  margin-top: var(--spacing-sm);
+}
+
+/* ===== 项目详情视图 ===== */
+.annotate-project-detail-view.active {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-lg);
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.annotate-project-detail-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.annotate-project-detail-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.annotate-project-detail-name {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-on-surface);
+  margin: 0 0 var(--spacing-xs) 0;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.annotate-project-detail-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--color-on-surface-variant);
+}
+
+.annotate-project-detail-source,
+.annotate-project-detail-remark {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.annotate-project-detail-source .material-symbols-outlined,
+.annotate-project-detail-remark .material-symbols-outlined {
+  font-size: 16px;
+  color: var(--color-outline);
+}
+
+/* 保留旧类名兼容 */
+.annotate-project-detail-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.annotate-project-detail-title h2 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-on-surface);
+  margin-bottom: var(--spacing-xs);
+}
+
+.annotate-project-detail-title .annotate-project-card-data-source {
+  font-size: 13px;
+}
+
+/* ===== 流程向导条（Process Wizard） ===== */
+.annotate-process-wizard {
+  margin: var(--spacing-md) 0;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: rgba(18, 18, 18, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+}
+
+.annotate-process-wizard-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-on-surface-variant);
+  margin-bottom: var(--spacing-md);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.annotate-process-wizard-title .material-symbols-outlined {
+  font-size: 18px;
+  color: var(--color-primary);
+}
+
+.annotate-process-wizard-steps {
+  display: flex;
+  align-items: stretch;
+  gap: var(--spacing-xs);
+  /* 5 步流程在窄屏可能拥挤，允许横向滚动兜底 */
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+/* 窄屏（< 1100px）：让步骤不收缩太厉害，允许横向滚动 */
+@media (max-width: 1100px) {
+  .annotate-process-wizard-steps .annotate-wizard-step {
+    flex: 0 0 auto;
+    min-width: 140px;
+  }
+}
+
+/* 步骤卡片基础样式 */
+.annotate-wizard-step {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(28, 28, 28, 0.6);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  color: var(--color-on-surface-variant);
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+
+.annotate-wizard-step:hover {
+  background: rgba(40, 40, 40, 0.8);
+  transform: translateY(-1px);
+}
+
+.annotate-wizard-step:active {
+  transform: translateY(0);
+}
+
+.annotate-wizard-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  font-size: 16px;
+  font-weight: 700;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-outline);
+}
+
+.annotate-wizard-step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.annotate-wizard-step-title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.annotate-wizard-step-status {
+  font-size: 12px;
+  color: var(--color-outline);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 步骤箭头 */
+.annotate-wizard-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-outline);
+  font-size: 18px;
+  flex-shrink: 0;
+  padding: 0 2px;
+  opacity: 0.6;
+}
+
+/* 状态：已完成（绿色） */
+.annotate-wizard-step-done {
+  border-color: var(--color-primary);
+  background: rgba(0, 255, 163, 0.06);
+}
+
+.annotate-wizard-step-done .annotate-wizard-step-num {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.annotate-wizard-step-done .annotate-wizard-step-title,
+.annotate-wizard-step-done .annotate-wizard-step-status {
+  color: var(--color-primary);
+}
+
+/* 状态：当前（蓝色高亮） */
+.annotate-wizard-step-current {
+  border-color: #4a9eff;
+  background: rgba(74, 158, 255, 0.08);
+  box-shadow: 0 0 0 1px rgba(74, 158, 255, 0.2);
+}
+
+.annotate-wizard-step-current .annotate-wizard-step-num {
+  background: #4a9eff;
+  color: #ffffff;
+}
+
+.annotate-wizard-step-current .annotate-wizard-step-title,
+.annotate-wizard-step-current .annotate-wizard-step-status {
+  color: #4a9eff;
+}
+
+/* 状态：跳过（灰色） */
+.annotate-wizard-step-skip {
+  border-color: rgba(255, 255, 255, 0.06);
+  background: rgba(20, 20, 20, 0.4);
+  opacity: 0.75;
+}
+
+.annotate-wizard-step-skip .annotate-wizard-step-num {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-outline);
+}
+
+.annotate-wizard-step-skip .annotate-wizard-step-title {
+  color: var(--color-on-surface-variant);
+}
+
+.annotate-wizard-step-skip .annotate-wizard-step-status {
+  color: var(--color-outline);
+}
+
+/* 状态：未完成/待处理（灰色，比 skip 更暗） */
+.annotate-wizard-step-pending {
+  border-color: rgba(255, 255, 255, 0.05);
+  opacity: 0.55;
+}
+
+.annotate-wizard-step-pending:hover {
+  opacity: 0.8;
+}
+
+/* 步骤 ④ CTA 特殊样式（蓝色实心按钮） */
+.annotate-wizard-step-cta.annotate-wizard-step-current {
+  background: #4a9eff;
+  border-color: #4a9eff;
+  box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);
+}
+
+.annotate-wizard-step-cta.annotate-wizard-step-current .annotate-wizard-step-num {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.annotate-wizard-step-cta.annotate-wizard-step-current .annotate-wizard-step-title {
+  color: #ffffff;
+  font-size: 14px;
+}
+
+.annotate-wizard-step-cta.annotate-wizard-step-current .annotate-wizard-step-status {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+}
+
+.annotate-wizard-step-cta.annotate-wizard-step-current:hover {
+  background: #3a8eff;
+  transform: translateY(-1px);
+}
+
+/* 面板高亮动画（点击步骤后） */
+.annotate-wizard-highlight {
+  animation: annotate-wizard-flash 1.5s ease;
+}
+
+@keyframes annotate-wizard-flash {
+  0% { box-shadow: 0 0 0 0 rgba(74, 158, 255, 0); }
+  20% { box-shadow: 0 0 0 4px rgba(74, 158, 255, 0.4); }
+  100% { box-shadow: 0 0 0 0 rgba(74, 158, 255, 0); }
+}
+
+/* 响应式：窄屏垂直排列 */
+@media (max-width: 768px) {
+  .annotate-process-wizard-steps {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .annotate-wizard-step {
+    width: 100%;
+    flex: none;
+  }
+
+  .annotate-wizard-arrow {
+    transform: rotate(90deg);
+    padding: 2px 0;
+  }
+}
+
+/* ===== 折叠面板（Accordion） ===== */
+.annotate-accordion {
+  background: rgba(18, 18, 18, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.annotate-accordion-item {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.annotate-accordion-item:last-child {
+  border-bottom: none;
+}
+
+.annotate-accordion-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-lg);
+  cursor: pointer;
+  user-select: none;
+  background: rgba(28, 28, 28, 0.5);
+  transition: background 0.2s ease;
+  width: 100%;
+  border: none;
+  text-align: left;
+  font-family: inherit;
+}
+
+.annotate-accordion-header:hover {
+  background: rgba(40, 40, 40, 0.7);
+}
+
+.annotate-accordion-header .material-symbols-outlined:first-child {
+  color: var(--color-primary);
+  font-size: 22px;
+}
+
+.annotate-accordion-header > span:not(.material-symbols-outlined):not(.annotate-accordion-count):not(.annotate-accordion-arrow) {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-on-surface);
+  flex: 1;
+}
+
+.annotate-accordion-count {
+  background: rgba(var(--color-primary-rgb, 99, 102, 241), 0.15);
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.annotate-accordion-header .annotate-accordion-arrow {
+  color: var(--color-outline);
+  font-size: 20px;
+  transition: transform 0.2s ease;
+}
+
+.annotate-accordion-header.collapsed .annotate-accordion-arrow {
+  transform: rotate(-90deg);
+}
+
+.annotate-accordion-body {
+  padding: var(--spacing-lg);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.annotate-accordion-body.collapsed {
+  display: none;
+}
+
+.annotate-accordion-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+/* ===== 视频列表 ===== */
+.annotate-video-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.annotate-video-card {
+  background: rgba(28, 28, 28, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.annotate-video-card:hover {
+  border-color: rgba(0, 255, 163, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+
+.annotate-video-thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: var(--color-surface-container);
+  overflow: hidden;
+}
+
+.annotate-video-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.annotate-video-thumb .annotate-video-thumb-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--color-outline);
+}
+
+.annotate-video-thumb-placeholder .material-symbols-outlined {
+  font-size: 48px;
+  opacity: 0.5;
+}
+
+.annotate-video-thumb-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,0.8) 100%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: var(--spacing-sm);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.annotate-video-card:hover .annotate-video-thumb-overlay {
+  opacity: 1;
+}
+
+.annotate-video-thumb-duration {
+  position: absolute;
+  top: var(--spacing-xs);
+  right: var(--spacing-xs);
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+}
+
+.annotate-video-info {
+  padding: var(--spacing-sm) var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.annotate-video-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.annotate-video-meta {
+  display: flex;
+  gap: var(--spacing-sm);
+  font-size: 11px;
+  color: var(--color-outline);
+  flex-wrap: wrap;
+}
+
+.annotate-video-traj {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 6px;
+  background: rgba(0, 255, 163, 0.1);
+  color: var(--color-primary);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+}
+
+.annotate-video-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+  padding: 0 var(--spacing-md) var(--spacing-sm);
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* ===== 轨迹卡片自定义标签 ===== */
+.annotate-video-tag-label {
+  background: rgba(255, 152, 0, 0.15);
+  color: #ff9800;
+  border: 1px solid rgba(255, 152, 0, 0.3);
+}
+
+.annotate-tag-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.annotate-tag-row {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+
+.annotate-tag-row .annotate-input {
+  flex: 1;
+}
+
+.annotate-tag-add-btn {
+  margin-top: var(--spacing-sm);
+}
+
+/* ===== 导入进度条 ===== */
+.annotate-project-import-progress {
+  position: fixed;
+  bottom: var(--spacing-lg);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(18, 18, 18, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 255, 163, 0.3);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md) var(--spacing-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  min-width: 320px;
+  z-index: 200;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.annotate-project-import-progress[hidden] {
+  display: none;
+}
+
+.annotate-project-import-progress-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--color-surface-container-high);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.annotate-project-import-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-fixed) 100%);
+  width: 0%;
+  transition: width 0.3s ease;
+  border-radius: var(--radius-full);
+}
+
+.annotate-project-import-progress-text {
+  font-size: 12px;
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-body);
+  white-space: nowrap;
+}
+
+/* ===== 工作目录设置区 ===== */
+.annotate-work-dir-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+}
+
+.annotate-work-dir-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.annotate-work-dir-header .material-symbols-outlined {
+  font-size: 20px;
+  color: var(--color-primary);
+}
+
+.annotate-work-dir-label {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-on-surface);
+}
+
+.annotate-work-dir-name {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--color-on-surface);
+  padding: 2px 8px;
+  background: rgba(76, 175, 80, 0.12);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  border-radius: 4px;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.annotate-work-dir-name.not-set {
+  color: var(--color-on-surface-variant);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+  font-style: italic;
+}
+
+.annotate-work-dir-hint {
+  font-size: 12px;
+  color: var(--color-on-surface-variant);
+  font-family: var(--font-body);
+  line-height: 1.5;
+}
+
+.annotate-work-dir-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.annotate-work-dir-warn {
+  font-size: 12px;
+  color: #ffa726;
+  font-family: var(--font-body);
+}
+
+/* 已预处理标签内的相对路径 */
+.annotate-video-tag-path {
+  margin-left: 4px;
+  padding-left: 6px;
+  border-left: 1px solid rgba(76, 175, 80, 0.3);
+  font-size: 11px;
+  color: rgba(76, 175, 80, 0.85);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* ===== 设备配置表单 ===== */
+.annotate-device-config {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.annotate-device-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.annotate-device-section-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding-bottom: var(--spacing-xs);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.annotate-device-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--spacing-sm) var(--spacing-md);
+}
+
+/* 匹配 JS 中使用的类名 */
+.annotate-device-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--spacing-sm) var(--spacing-md);
+}
+
+.annotate-device-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-sm) var(--spacing-md);
+}
+
+.annotate-matrix-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-xs);
+  max-width: 320px;
+}
+
+.annotate-matrix-grid .annotate-input {
+  text-align: center;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: 13px;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+/* 匹配 JS 中使用的外参类名 */
+.annotate-device-extrinsic {
+  display: flex;
+  gap: var(--spacing-lg);
+  flex-wrap: wrap;
+}
+
+.annotate-device-extrinsic-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  flex: 1;
+  min-width: 280px;
+}
+
+.annotate-device-extrinsic-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-on-surface-variant);
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+/* 匹配 JS 中使用的矩阵/向量类名 */
+.annotate-device-matrix3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-xs);
+  max-width: 360px;
+}
+
+.annotate-device-matrix3 .annotate-input {
+  text-align: center;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: 13px;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.annotate-device-vector3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-xs);
+  max-width: 360px;
+}
+
+.annotate-device-vector3 .annotate-input {
+  text-align: center;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: 13px;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+/* 设备配置字段标签和输入框 */
+.annotate-device-field-label {
+  display: block;
+  font-size: 11px;
+  color: var(--color-on-surface-variant);
+  margin-bottom: 3px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-weight: 500;
+}
+
+.annotate-input-sm {
+  padding: 6px 10px;
+  font-size: 13px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.annotate-form-field-compact {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 设备参数说明提示 */
+.annotate-device-hint {
+  background: rgba(99, 102, 241, 0.08);
+  border-left: 3px solid var(--color-primary);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--color-on-surface-variant);
+  line-height: 1.6;
+  margin-bottom: var(--spacing-md);
+}
+
+.annotate-device-hint code {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 11px;
+  color: var(--color-primary);
+}
+
+.annotate-device-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.annotate-device-hint-inline {
+  font-size: 12px;
+  color: var(--color-on-surface-variant);
+  opacity: 0.7;
+}
+
+/* 视频多选 checkbox */
+.annotate-video-checkbox {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+  padding: 4px;
+}
+
+.annotate-video-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--color-primary);
+}
+
+.annotate-video-card {
+  position: relative;
+}
+
+.annotate-video-card.selected {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+/* 批量操作栏 */
+.annotate-batch-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.annotate-batch-toolbar-info {
+  font-size: 13px;
+  color: var(--color-on-surface);
+  margin-right: auto;
+}
+
+.annotate-batch-toolbar-info strong {
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: 15px;
+}
+
+/* 匹配 JS 中使用的相机映射类名 */
+.annotate-device-frame-name {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.annotate-device-frame-name-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-sm);
+}
+
+.annotate-device-label {
+  display: block;
+  font-size: 12px;
+  color: var(--color-on-surface-variant);
+  margin-bottom: 4px;
+  font-family: var(--font-body);
+}
+
+.annotate-frame-name-row {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.annotate-frame-name-row .annotate-input {
+  flex: 1;
+}
+
+.annotate-frame-name-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-sm);
+}
+
+.annotate-frame-name-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: rgba(0, 255, 163, 0.1);
+  color: var(--color-primary);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-family: var(--font-body);
+}
+
+.annotate-frame-name-tag .material-symbols-outlined {
+  font-size: 14px;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.annotate-frame-name-tag .material-symbols-outlined:hover {
+  opacity: 1;
+  color: var(--color-error);
+}
+
+.annotate-main-cam-hint {
+  font-size: 11px;
+  color: var(--color-outline);
+  margin-top: 4px;
+}
+
+.annotate-main-cam-hint.error {
+  color: var(--color-error);
+}
+
+/* ===== 批次管理 ===== */
+.annotate-batch-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.annotate-batch-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.annotate-batch-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.annotate-batch-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(28, 28, 28, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+}
+
+.annotate-batch-item:hover {
+  background: rgba(40, 40, 40, 0.6);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.annotate-batch-item-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.annotate-batch-item-id {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.annotate-batch-item-name {
+  font-size: 14px;
+  color: var(--color-on-surface);
+}
+
+.annotate-batch-item-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-on-surface-variant);
+}
+
+.annotate-batch-item-meta .material-symbols-outlined {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.annotate-batch-item-delete {
+  background: transparent;
+  border: none;
+  color: var(--color-outline);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+
+.annotate-batch-item-delete:hover {
+  color: var(--color-error);
+  background: rgba(255, 180, 171, 0.1);
+}
+
+.annotate-batch-item-delete .material-symbols-outlined {
+  font-size: 18px;
+}
+
+/* ===== 批次级统计 ===== */
+.annotate-batch-stats {
+  display: flex;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(28, 28, 28, 0.5);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-sm);
+}
+
+.annotate-batch-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+.annotate-batch-stat-label {
+  font-size: 11px;
+  color: var(--color-on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.annotate-batch-stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-primary);
+  font-family: var(--font-display);
+}
+
+/* ===== 批次卡片（含工作目录、操作按钮、视频列表） ===== */
+.annotate-batch-card {
+  background: rgba(28, 28, 28, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.annotate-batch-card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.annotate-batch-card.expanded {
+  border-color: rgba(0, 255, 163, 0.25);
+}
+
+.annotate-batch-card.highlight {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(0, 255, 163, 0.2);
+  animation: batchHighlightFade 2.5s ease 0.5s forwards;
+}
+
+@keyframes batchHighlightFade {
+  to {
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 0 rgba(0, 255, 163, 0);
+  }
+}
+
+.annotate-batch-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(18, 18, 18, 0.5);
+}
+
+.annotate-batch-card-toggle {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--color-on-surface);
+  padding: var(--spacing-xs) 0;
+  text-align: left;
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+
+.annotate-batch-card-toggle:hover {
+  color: var(--color-primary);
+}
+
+.annotate-batch-card-arrow {
+  font-size: 20px;
+  color: var(--color-outline);
+  transition: transform 0.2s ease;
+}
+
+.annotate-batch-card-id {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.annotate-batch-card-name {
+  font-size: 14px;
+  color: var(--color-on-surface);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.annotate-batch-card-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-on-surface-variant);
+}
+
+.annotate-batch-card-meta .material-symbols-outlined {
+  font-size: 14px;
+}
+
+.annotate-batch-card-delete {
+  flex-shrink: 0;
+}
+
+.annotate-batch-card-body {
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  border-top: 1px dashed rgba(255, 255, 255, 0.06);
+}
+
+.annotate-batch-workdir {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+
+.annotate-batch-workdir .material-symbols-outlined {
+  font-size: 18px;
+  color: var(--color-primary);
+}
+
+.annotate-batch-workdir-label {
+  color: var(--color-on-surface-variant);
+}
+
+.annotate-batch-workdir-value {
+  flex: 1;
+  min-width: 120px;
+  color: var(--color-on-surface);
+  font-family: 'Consolas', 'Monaco', monospace;
+  word-break: break-all;
+}
+
+.annotate-batch-workdir-value.not-set {
+  color: var(--color-outline);
+  font-style: italic;
+}
+
+/* 批次元信息摘要（只读） */
+.annotate-batch-meta-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+
+.annotate-batch-meta-summary .material-symbols-outlined {
+  font-size: 16px;
+  color: var(--color-secondary);
+}
+
+.annotate-batch-meta-label {
+  color: var(--color-on-surface-variant);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.annotate-batch-meta-value {
+  flex: 1;
+  min-width: 200px;
+  color: var(--color-on-surface);
+  font-family: 'Consolas', 'Monaco', monospace;
+  word-break: break-all;
+}
+
+.annotate-batch-meta-value.not-set {
+  color: var(--color-outline);
+  font-style: italic;
+  font-family: var(--font-body);
+}
+
+/* 创建批次元信息表单（弹窗内） */
+.annotate-batch-meta-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.annotate-batch-meta-hint {
+  font-size: 13px;
+  color: var(--color-on-surface-variant);
+  background: rgba(0, 255, 163, 0.04);
+  border-left: 3px solid var(--color-primary);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-sm);
+  margin: 0;
+}
+
+.annotate-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.annotate-form-row label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-on-surface);
+}
+
+.annotate-form-row-inline {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.annotate-form-row-inline label {
+  flex: 1;
+}
+
+.annotate-batch-card-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.annotate-batch-card-actions .annotate-btn {
+  flex: 1;
+  min-width: 120px;
+  justify-content: center;
+}
+
+/* 新建批次高亮脉冲（提示用户点击导入） */
+.annotate-btn.highlight-pulse {
+  animation: btnPulse 1.6s ease-in-out infinite;
+  position: relative;
+}
+
+@keyframes btnPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(0, 255, 163, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(0, 255, 163, 0);
+  }
+}
+
+.annotate-batch-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-lg);
+  color: var(--color-outline);
+  text-align: center;
+}
+
+.annotate-batch-empty .material-symbols-outlined {
+  font-size: 32px;
+  opacity: 0.5;
+}
+
+.annotate-batch-empty p {
+  font-size: 13px;
+  margin: 0;
+}
+
+.annotate-batch-video-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.annotate-batch-video-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-sm);
+  flex-wrap: wrap;
+}
+
+.annotate-batch-video-name {
+  flex: 1;
+  min-width: 120px;
+  font-size: 13px;
+  color: var(--color-on-surface);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.annotate-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.annotate-tag-success {
+  background: rgba(0, 255, 163, 0.12);
+  color: var(--color-primary);
+}
+
+.annotate-tag-muted {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-on-surface-variant);
+}
+
+.annotate-tag-warning {
+  background: rgba(255, 180, 0, 0.15);
+  color: #ffb400;
+}
+
+.annotate-batch-video-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+  flex-wrap: wrap;
+}
+
+/* ===== 批量标注导航条 ===== */
+.annotate-batch-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  background: rgba(18, 18, 18, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 255, 163, 0.2);
+  border-radius: var(--radius-lg);
+}
+
+.annotate-batch-nav[hidden] {
+  display: none;
+}
+
+.annotate-batch-nav-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  min-width: 0;
+}
+
+.annotate-batch-nav-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-on-surface);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.annotate-batch-nav-progress {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+  color: var(--color-primary);
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.annotate-batch-nav-status {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.annotate-batch-nav-status[data-status="completed"] {
+  background: rgba(0, 255, 163, 0.12);
+  color: var(--color-primary);
+}
+
+.annotate-batch-nav-status[data-status="in_progress"] {
+  background: rgba(255, 180, 0, 0.15);
+  color: #ffb400;
+}
+
+.annotate-batch-nav-status[data-status="unannotated"] {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-on-surface-variant);
+}
+
+/* ===== meta_info 表单提示 ===== */
+.annotate-meta-info-hint {
+  background: rgba(0, 255, 163, 0.04);
+  border-left: 3px solid var(--color-primary);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-sm);
+}
+
+.annotate-meta-info-hint p {
+  font-size: 12px;
+  color: var(--color-on-surface-variant);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ===== 重新选择视频提示 ===== */
+.annotate-reselect-prompt {
+  background: rgba(255, 200, 0, 0.08);
+  border: 1px solid rgba(255, 200, 0, 0.3);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.annotate-reselect-prompt-inner {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.annotate-reselect-prompt-inner > .material-symbols-outlined {
+  color: #ffc800;
+  font-size: 20px;
+}
+
+.annotate-reselect-prompt-inner > span:not(.material-symbols-outlined) {
+  flex: 1;
+  min-width: 200px;
+  font-size: 13px;
+  color: var(--color-on-surface-variant);
+  line-height: 1.5;
+}
+
+/* ===== Checkbox wrap（meta_info task_success） ===== */
+.annotate-checkbox-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--color-on-surface-variant);
+  user-select: none;
+}
+
+.annotate-checkbox-wrap input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+/* ===== 响应式（项目面板） ===== */
+@media (max-width: 768px) {
+  .annotate-project-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .annotate-video-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+
+  .annotate-project-view-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .annotate-project-view-actions {
+    flex-direction: column;
+  }
+
+  .annotate-project-view-actions .annotate-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .annotate-device-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .annotate-matrix-grid {
+    max-width: 100%;
+  }
+
+  .annotate-project-import-progress {
+    min-width: calc(100vw - 32px);
+    left: var(--spacing-md);
+    right: var(--spacing-md);
+    transform: none;
+  }
+}
+
+/* ========================================
+   视频预处理（去畸变 / 画质统一 / 分辨率对齐 / 帧率标准化）
+   ======================================== */
+
+/* 预处理配置弹窗 */
+.annotate-process-config {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+/* 预处理弹窗加宽 */
+.annotate-modal-content:has(.annotate-process-config) {
+  max-width: 560px;
+}
+
+.annotate-process-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background: rgba(28, 28, 28, 0.5);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.annotate-process-item-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  width: 100%;
+}
+
+.annotate-process-item-header .material-symbols-outlined {
+  font-size: 20px;
+  color: var(--color-on-surface-variant);
+}
+
+.annotate-process-item-header strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-on-surface);
+}
+
+.annotate-process-item-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  padding-left: 28px;
+  width: 100%;
+}
+
+.annotate-process-hint {
+  font-size: 12px;
+  color: var(--color-on-surface-variant);
+  font-family: 'Consolas', 'Monaco', monospace;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+.annotate-process-warn {
+  color: #ff9800;
+}
+
+.annotate-process-inline-label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: 13px;
+  color: var(--color-on-surface);
+  flex-wrap: wrap;
+}
+
+.annotate-input-sm {
+  padding: 4px 8px;
+  font-size: 13px;
+}
+
+.annotate-process-range {
+  width: 120px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+/* 预处理进度浮层 */
+.annotate-process-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: annotate-modal-in 0.2s ease;
+}
+
+.annotate-process-progress-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 440px;
+  margin: var(--spacing-md);
+  background: var(--color-surface-container-low);
+  border: 1px solid rgba(0, 255, 163, 0.2);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+  padding: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.annotate-process-progress-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  width: 100%;
+}
+
+.annotate-process-progress-header .material-symbols-outlined {
+  font-size: 22px;
+  color: var(--color-primary);
+  animation: aix-process-spin 1.5s linear infinite;
+}
+
+@keyframes aix-process-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.annotate-process-progress-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-on-surface);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 进度条 */
+.annotate-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.annotate-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-fixed) 100%);
+  transition: width 0.3s ease;
+  width: 0%;
+}
+
+.annotate-progress-info {
+  font-size: 14px;
+  color: var(--color-on-surface-variant);
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-body);
+}
+
+.annotate-process-progress-status {
+  font-size: 12px;
+  color: var(--color-on-surface-variant);
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-height: 16px;
+}
+
+/* 预处理标签 */
+.annotate-video-tag-processed {
+  background: rgba(76, 175, 80, 0.15);
+  color: #4caf50;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+/* 开关样式 */
+.annotate-switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.annotate-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.annotate-switch-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 22px;
+  transition: 0.3s;
+}
+
+.annotate-switch-slider:before {
+  content: "";
+  position: absolute;
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: 0.3s;
+}
+
+.annotate-switch input:checked + .annotate-switch-slider {
+  background: var(--color-primary);
+}
+
+.annotate-switch input:checked + .annotate-switch-slider:before {
+  transform: translateX(18px);
+}
+
+/* 响应式：预处理配置在小屏上垂直布局 */
+@media (max-width: 600px) {
+  .annotate-process-item {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .annotate-process-item-header {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .annotate-process-item-body {
+    width: 100%;
+  }
+
+  .annotate-process-inline-label {
+    flex-wrap: wrap;
   }
 }
 
