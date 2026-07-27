@@ -401,6 +401,7 @@
     "err_create_url": "Failed to create video URL: ",
     "err_no_video_element": "Video element not found",
     "err_load_failed": "Failed to load video: ",
+    "zoom_hint": "Wheel zoom · Middle-drag pan · Double-click reset",
     "batch_nav_prev": "Prev",
     "batch_nav_next": "Next",
     "batch_nav_finish": "Finish",

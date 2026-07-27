@@ -27,7 +27,16 @@
   var canvas, ctx, video;
   var videoOriginalWidth = 0, videoOriginalHeight = 0;
   var canvasDisplayWidth = 0, canvasDisplayHeight = 0;
-  var scale = 1;  // canvas显示尺寸 / 视频原始尺寸
+  // 视频在 object-fit:contain 下的实际显示区域（含偏移）
+  // canvas 的 CSS 位置/尺寸将匹配此区域，确保标注层与视频画面完全对齐
+  var displayOffsetX = 0, displayOffsetY = 0;
+  var displayWidth = 0, displayHeight = 0;
+  var scale = 1;  // 视频实际显示尺寸 / 视频原始尺寸（已修正黑边）
+  // 缩放与平移（标注画布查看模式）
+  // zoomLevel=1 原始大小；>1 放大；<1 缩小
+  // panX/panY 为 CSS 像素平移量（相对未缩放时的显示位置）
+  var zoomLevel = 1;
+  var panX = 0, panY = 0;
   var isInitialized = false;
   var resizeObserver = null;
 
@@ -178,6 +187,30 @@
         } catch (e) {
           log('ERROR', 'init: register onTabChange failed: ' + (e.message || e));
         }
+        try {
+          A.onStepEnter = function (step) {
+            try {
+              // 进入步骤 3（标注）时显示缩放控件，其他步骤隐藏
+              var zc = document.getElementById('annotateZoomControls');
+              if (zc) {
+                if (step === 3) {
+                  zc.removeAttribute('hidden');
+                } else {
+                  zc.setAttribute('hidden', '');
+                }
+              }
+              // 进入步骤 3 时重置缩放（新视频/重新进入标注时）
+              if (step === 3) {
+                resetZoom();
+              }
+            } catch (e) {
+              log('ERROR', 'onStepEnter handler failed: ' + (e.message || e));
+            }
+          };
+          log('INIT', 'Registered AIX_ANNOTATE.onStepEnter');
+        } catch (e) {
+          log('ERROR', 'init: register onStepEnter failed: ' + (e.message || e));
+        }
       }
 
       // 监听 video 事件触发 render
@@ -270,6 +303,9 @@
       // 绑定鼠标交互事件
       bindMouseEvents();
 
+      // 绑定缩放控件事件
+      bindZoomControls();
+
       // 初始尺寸同步
       resizeCanvas();
 
@@ -303,9 +339,9 @@
   }
 
   // ===== 同步 canvas 尺寸 =====
-  // canvas.width/height = video.videoWidth/Height（保证绘图清晰）
-  // canvas.style.width/height = video.clientWidth/Height（保证显示对齐）
-  // scale = video.clientWidth / video.videoWidth
+  // 计算 video 在 object-fit:contain 下的实际显示矩形（含黑边偏移）
+  // 将 canvas 的 CSS 位置/尺寸设为视频实际显示区域，确保标注层与视频画面完全对齐
+  // canvas.width/height = video.videoWidth/Height（绘图缓冲区=视频原始尺寸，1:1 绘图坐标）
   function resizeCanvas() {
     try {
       if (!canvas || !video) {
@@ -319,9 +355,7 @@
       var ch = video.clientHeight || 0;
 
       if (vw <= 0 || vh <= 0) {
-        // 视频元数据未加载，使用回退尺寸（避免 NaN）
         log('WARN', 'resizeCanvas: video metadata not ready (videoWidth=' + vw + ' videoHeight=' + vh + ')');
-        // 仍然记录显示尺寸
         canvasDisplayWidth = cw;
         canvasDisplayHeight = ch;
         scale = 1;
@@ -329,11 +363,31 @@
       }
 
       if (cw <= 0 || ch <= 0) {
-        // 视频元素未渲染（可能未进入步骤 3），跳过但记录原始尺寸
         videoOriginalWidth = vw;
         videoOriginalHeight = vh;
         log('WARN', 'resizeCanvas: video client size is 0 (not visible yet)');
         return;
+      }
+
+      // 计算 object-fit:contain 的实际显示矩形
+      // 视频保持宽高比，在容器内居中，可能产生黑边（letterbox/pillarbox）
+      var videoRatio = vw / vh;
+      var containerRatio = cw / ch;
+      // 检测视频原始尺寸变化（切换视频时重置缩放）
+      var videoChanged = (vw !== videoOriginalWidth || vh !== videoOriginalHeight);
+      var dispW, dispH, offX, offY;
+      if (videoRatio > containerRatio) {
+        // 视频更宽：上下有黑边
+        dispW = cw;
+        dispH = cw / videoRatio;
+        offX = 0;
+        offY = (ch - dispH) / 2;
+      } else {
+        // 视频更高：左右有黑边
+        dispH = ch;
+        dispW = ch * videoRatio;
+        offX = (cw - dispW) / 2;
+        offY = 0;
       }
 
       // 设置 canvas 绘图缓冲区为视频原始尺寸（1:1 绘图坐标）
@@ -345,21 +399,39 @@
         return;
       }
 
-      // 设置 canvas 显示尺寸为 video 客户端尺寸（CSS 像素）
+      // 设置 canvas CSS 位置/尺寸匹配视频实际显示区域（消除黑边导致的对齐偏差）
       try {
-        canvas.style.width = cw + 'px';
-        canvas.style.height = ch + 'px';
+        canvas.style.left = offX + 'px';
+        canvas.style.top = offY + 'px';
+        canvas.style.width = dispW + 'px';
+        canvas.style.height = dispH + 'px';
       } catch (e) {
-        log('WARN', 'resizeCanvas: set canvas.style.width/height failed: ' + (e.message || e));
+        log('WARN', 'resizeCanvas: set canvas.style failed: ' + (e.message || e));
       }
 
       videoOriginalWidth = vw;
       videoOriginalHeight = vh;
       canvasDisplayWidth = cw;
       canvasDisplayHeight = ch;
-      scale = cw / vw;
+      displayOffsetX = offX;
+      displayOffsetY = offY;
+      displayWidth = dispW;
+      displayHeight = dispH;
+      scale = dispW / vw;  // 修正后的 scale（实际显示宽 / 视频原始宽）
 
-      log('SCALE', 'video=' + vw + 'x' + vh + ' display=' + cw + 'x' + ch + ' scale=' + scale.toFixed(4));
+      // 视频切换时重置缩放和平移（新视频不应继承旧视频的缩放状态）
+      if (videoChanged) {
+        zoomLevel = 1;
+        panX = 0;
+        panY = 0;
+      }
+      // 应用 transform（确保 transform 始终同步）
+      applyTransform();
+
+      log('SCALE', 'video=' + vw + 'x' + vh + ' container=' + cw + 'x' + ch +
+        ' display=' + dispW.toFixed(0) + 'x' + dispH.toFixed(0) +
+        ' offset=(' + offX.toFixed(0) + ',' + offY.toFixed(0) + ')' +
+        ' scale=' + scale.toFixed(4));
     } catch (e) {
       log('ERROR', 'resizeCanvas failed: ' + (e.message || e));
     }
@@ -556,10 +628,11 @@
       if (!rect || rect.width <= 0 || rect.height <= 0) {
         return { x: 0, y: 0 };
       }
-      var cx = sx - rect.left;  // canvas 显示坐标（CSS 像素）
+      var cx = sx - rect.left;  // canvas 显示坐标（CSS 像素，已含 transform 偏移）
       var cy = sy - rect.top;
-      // 除以 scale 得到视频原始坐标
-      var s = (scale > 0) ? scale : 1;
+      // 除以 scale*zoomLevel 得到视频原始坐标
+      // getBoundingClientRect 返回 transform 后的尺寸，rect.width = displayWidth * zoomLevel
+      var s = (scale > 0 && zoomLevel > 0) ? (scale * zoomLevel) : 1;
       var vx = cx / s;
       var vy = cy / s;
       // 边界裁剪（避免拖到 canvas 外产生异常坐标）
@@ -571,6 +644,37 @@
     } catch (e) {
       log('ERROR', 'screenToVideoCoords failed: ' + (e.message || e));
       return { x: 0, y: 0 };
+    }
+  }
+
+  // ===== 应用缩放/平移变换到 video 和 canvas =====
+  // transform-origin: 0 0（video 和 canvas 必须一致，否则缩放后不对齐）
+  var _zoomDisplayEl = null;  // 缓存 DOM 引用避免重复查找
+  function applyTransform() {
+    try {
+      var tf = 'translate(' + panX + 'px, ' + panY + 'px) scale(' + zoomLevel + ')';
+      if (video) video.style.transform = tf;
+      if (canvas) canvas.style.transform = tf;
+      // 更新缩放百分比显示（缓存引用）
+      if (!_zoomDisplayEl) _zoomDisplayEl = document.getElementById('annotateZoomLevel');
+      if (_zoomDisplayEl) {
+        _zoomDisplayEl.textContent = Math.round(zoomLevel * 100) + '%';
+      }
+    } catch (e) {
+      log('ERROR', 'applyTransform failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 重置缩放和平移 =====
+  function resetZoom() {
+    try {
+      zoomLevel = 1;
+      panX = 0;
+      panY = 0;
+      applyTransform();
+      log('ZOOM', 'reset to 100%');
+    } catch (e) {
+      log('ERROR', 'resetZoom failed: ' + (e.message || e));
     }
   }
 
@@ -725,6 +829,17 @@
       canvas.addEventListener('mousedown', function (e) {
         try {
           if (!isInitialized) return;
+          // 中键（button 1）：进入平移模式（缩放后拖拽画布）
+          if (e.button === 1) {
+            e.preventDefault();
+            interactionState.mode = 'panning';
+            interactionState.startX = e.clientX;
+            interactionState.startY = e.clientY;
+            canvas.style.cursor = 'grabbing';
+            _attachWindowMouseListeners();  // 绑定 window 监听，鼠标移出 canvas 也能继续
+            log('ZOOM', 'panning start at (' + e.clientX + ',' + e.clientY + ')');
+            return;
+          }
           // 仅响应左键
           if (e.button !== 0) return;
           // 阶段 9：预览模式下不响应鼠标事件（避免误触发标注）
@@ -749,6 +864,9 @@
           interactionState._hitType = null;
 
           log('MOUSE', 'down at video(' + coords.x.toFixed(1) + ', ' + coords.y.toFixed(1) + ') tab=' + tab);
+
+          // 绑定 window 级 mousemove/mouseup，确保鼠标移出 canvas（如黑边区域）也能继续操作
+          _attachWindowMouseListeners();
 
           // keypoints 模式：点击添加关键点 或 命中已有 keypoint 进入 moving
           if (tab === 'keypoints') {
@@ -812,11 +930,31 @@
         }
       });
 
-      // mousemove：根据模式更新状态
-      canvas.addEventListener('mousemove', function (e) {
+      // mousemove/mouseup 处理函数（提取为命名函数，便于在 window 上绑定/解绑）
+      // 绑定到 window 而非 canvas，确保鼠标移出 canvas（如黑边区域）也能继续操作
+      var _moveRafPending = false;
+      function _handleMouseMove(e) {
         try {
           if (!isInitialized) return;
           if (interactionState.mode === 'idle') return;
+
+          // 平移模式：更新 panX/panY（rAF 节流避免高频重排掉帧）
+          if (interactionState.mode === 'panning') {
+            var pdx = e.clientX - interactionState.startX;
+            var pdy = e.clientY - interactionState.startY;
+            panX += pdx;
+            panY += pdy;
+            interactionState.startX = e.clientX;
+            interactionState.startY = e.clientY;
+            if (!_moveRafPending) {
+              _moveRafPending = true;
+              requestAnimationFrame(function () {
+                _moveRafPending = false;
+                try { applyTransform(); } catch (e) { log('ERROR', 'rAF applyTransform failed: ' + (e.message || e)); }
+              });
+            }
+            return;
+          }
 
           var coords = screenToVideoCoords(e.clientX, e.clientY);
           interactionState.currentX = coords.x;
@@ -841,33 +979,128 @@
             applyResizeToSelected(coords.x, coords.y, interactionState.resizeHandle);
           }
 
-          render();
+          // rAF 节流：一帧内只重绘一次
+          if (!_moveRafPending) {
+            _moveRafPending = true;
+            requestAnimationFrame(function () {
+              _moveRafPending = false;
+              try { render(); } catch (e) { log('ERROR', 'rAF render failed: ' + (e.message || e)); }
+            });
+          }
         } catch (err) {
           log('ERROR', 'mousemove handler failed: ' + (err.message || err));
         }
-      });
+      }
 
-      // mouseup：完成操作
-      canvas.addEventListener('mouseup', function (e) {
+      function _handleMouseUp(e) {
         try {
           if (!isInitialized) return;
+          // 平移模式结束
+          if (interactionState.mode === 'panning') {
+            interactionState.mode = 'idle';
+            canvas.style.cursor = 'crosshair';
+            log('ZOOM', 'panning end');
+            _detachWindowMouseListeners();
+            return;
+          }
           log('MOUSE', 'up mode=' + interactionState.mode);
           finishMouseAction();
+          _detachWindowMouseListeners();
         } catch (err) {
           log('ERROR', 'mouseup handler failed: ' + (err.message || err));
+          _detachWindowMouseListeners();
         }
-      });
+      }
 
-      // mouseleave：等同 mouseup
+      // window 级监听绑定/解绑（mousedown 时绑定，mouseup 时解绑）
+      // 使用 capture 阶段确保优先于其他监听
+      function _attachWindowMouseListeners() {
+        window.addEventListener('mousemove', _handleMouseMove, true);
+        window.addEventListener('mouseup', _handleMouseUp, true);
+      }
+      function _detachWindowMouseListeners() {
+        window.removeEventListener('mousemove', _handleMouseMove, true);
+        window.removeEventListener('mouseup', _handleMouseUp, true);
+      }
+
+      // canvas 仍保留 mousemove/mouseup（用于非操作状态的 hover 等，idle 模式直接 return）
+      canvas.addEventListener('mousemove', _handleMouseMove);
+      canvas.addEventListener('mouseup', _handleMouseUp);
+
+      // mouseleave：不再中断操作（window mouseup 会负责结束）
       canvas.addEventListener('mouseleave', function (e) {
         try {
           if (!isInitialized) return;
-          if (interactionState.mode !== 'idle') {
-            log('MOUSE', 'leave mode=' + interactionState.mode + ' -> finish');
-            finishMouseAction();
-          }
+          // 不再因 mouseleave 中断拉框/移动/调整操作
+          // 鼠标移出 canvas（如黑边区域）时，window 级 mousemove/mouseup 继续工作
         } catch (err) {
           log('ERROR', 'mouseleave handler failed: ' + (err.message || err));
+        }
+      });
+
+      // 滚轮缩放：以鼠标位置为中心缩放
+      canvas.addEventListener('wheel', function (e) {
+        try {
+          if (!isInitialized) return;
+          // 仅在标注步骤（步骤 3）启用缩放
+          var A = getAnnotate();
+          if (!A || !A.state || A.state.currentStep !== 3) return;
+          e.preventDefault();
+          // 缩放因子：滚轮向上放大，向下缩小
+          var delta = e.deltaY > 0 ? 0.9 : 1.1;
+          var newZoom = zoomLevel * delta;
+          // 限制缩放范围：10% ~ 1000%
+          if (newZoom < 0.1) newZoom = 0.1;
+          if (newZoom > 10) newZoom = 10;
+          if (Math.abs(newZoom - zoomLevel) < 0.001) return;
+
+          // 以鼠标位置为中心缩放：
+          // 保持鼠标位置在视频坐标上不变
+          // 缩放前：鼠标在 canvas 显示坐标 = e.clientX - rect.left
+          // 缩放后：该显示坐标对应的视频坐标应不变
+          // => panX 需要调整以保持中心点
+          var rect = canvas.getBoundingClientRect();
+          var mouseDispX = e.clientX - rect.left;  // 相对 transform 后左上角
+          var mouseDispY = e.clientY - rect.top;
+          // 鼠标在视频坐标中的位置（缩放前）
+          var sOld = (scale > 0 && zoomLevel > 0) ? (scale * zoomLevel) : 1;
+          var videoX = mouseDispX / sOld;
+          var videoY = mouseDispY / sOld;
+
+          zoomLevel = newZoom;
+
+          // 缩放后，要让视频坐标 (videoX, videoY) 仍然出现在鼠标位置
+          // 新的显示坐标 = videoX * scale * zoomLevel
+          // panX 调整 = mouseDispX - videoX * scale * zoomLevel ... 但 panX 是相对原位的偏移
+          // 实际：rect.left = offX + panX（offX 是 resizeCanvas 设的 style.left）
+          // mouseDispX = e.clientX - rect.left = e.clientX - offX - panX
+          // 缩放后期望：mouseDispX_new = videoX * scale * newZoom
+          // mouseDispX_new = e.clientX - offX - panX_new
+          // => panX_new = e.clientX - offX - videoX * scale * newZoom
+          // => panX_new = (e.clientX - offX) - videoX * scale * newZoom
+          //   其中 (e.clientX - offX) = mouseDispX + panX（旧）
+          // 所以：panX_new = mouseDispX + panX_old - videoX * scale * newZoom
+          var sNew = (scale > 0 && zoomLevel > 0) ? (scale * zoomLevel) : 1;
+          panX = (mouseDispX + panX) - videoX * sNew;
+          panY = (mouseDispY + panY) - videoY * sNew;
+
+          applyTransform();
+          log('ZOOM', 'wheel zoom=' + zoomLevel.toFixed(3) + ' pan=(' + panX.toFixed(0) + ',' + panY.toFixed(0) + ')');
+        } catch (err) {
+          log('ERROR', 'wheel handler failed: ' + (err.message || err));
+        }
+      }, { passive: false });
+
+      // 双击重置缩放
+      canvas.addEventListener('dblclick', function (e) {
+        try {
+          if (!isInitialized) return;
+          var A = getAnnotate();
+          if (!A || !A.state || A.state.currentStep !== 3) return;
+          e.preventDefault();
+          resetZoom();
+        } catch (err) {
+          log('ERROR', 'dblclick handler failed: ' + (err.message || err));
         }
       });
 
@@ -880,9 +1113,58 @@
         }
       });
 
-      log('INIT', 'Mouse events bound (mousedown/mousemove/mouseup/mouseleave)');
+      log('INIT', 'Mouse events bound (mousedown/mousemove/mouseup/mouseleave/wheel/dblclick)');
     } catch (e) {
       log('ERROR', 'bindMouseEvents failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 按倍数缩放（以画布中心为中心） =====
+  // factor > 1 放大，< 1 缩小
+  function zoomBy(factor) {
+    try {
+      var newZoom = zoomLevel * factor;
+      if (newZoom < 0.1) newZoom = 0.1;
+      if (newZoom > 10) newZoom = 10;
+      if (Math.abs(newZoom - zoomLevel) < 0.001) return;
+
+      // 以画布显示区域中心为缩放中心
+      var rect = canvas.getBoundingClientRect();
+      var centerX = rect.width / 2;
+      var centerY = rect.height / 2;
+      var sOld = (scale > 0 && zoomLevel > 0) ? (scale * zoomLevel) : 1;
+      var videoX = centerX / sOld;
+      var videoY = centerY / sOld;
+
+      zoomLevel = newZoom;
+      var sNew = (scale > 0 && zoomLevel > 0) ? (scale * zoomLevel) : 1;
+      panX = (centerX + panX) - videoX * sNew;
+      panY = (centerY + panY) - videoY * sNew;
+      applyTransform();
+      log('ZOOM', 'zoomBy factor=' + factor + ' zoom=' + zoomLevel.toFixed(3));
+    } catch (e) {
+      log('ERROR', 'zoomBy failed: ' + (e.message || e));
+    }
+  }
+
+  // ===== 绑定缩放控件按钮事件 =====
+  function bindZoomControls() {
+    try {
+      var btnIn = document.getElementById('annotateZoomIn');
+      var btnOut = document.getElementById('annotateZoomOut');
+      var btnReset = document.getElementById('annotateZoomReset');
+      if (btnIn) {
+        btnIn.addEventListener('click', function () { zoomBy(1.2); });
+      }
+      if (btnOut) {
+        btnOut.addEventListener('click', function () { zoomBy(1 / 1.2); });
+      }
+      if (btnReset) {
+        btnReset.addEventListener('click', function () { resetZoom(); });
+      }
+      log('INIT', 'Zoom controls bound');
+    } catch (e) {
+      log('ERROR', 'bindZoomControls failed: ' + (e.message || e));
     }
   }
 

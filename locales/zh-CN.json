@@ -401,6 +401,7 @@
     "err_create_url": "创建视频地址失败：",
     "err_no_video_element": "视频元素未找到",
     "err_load_failed": "加载视频失败：",
+    "zoom_hint": "滚轮缩放 · 中键拖拽 · 双击重置",
     "batch_nav_prev": "上一个",
     "batch_nav_next": "下一个",
     "batch_nav_finish": "完成",

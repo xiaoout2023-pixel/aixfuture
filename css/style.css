@@ -2553,24 +2553,26 @@ select.annotate-input {
   justify-content: center;
 }
 
-.annotate-canvas-area video,
-.annotate-canvas-area canvas {
+.annotate-canvas-area video {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
-}
-
-.annotate-canvas-area video {
   z-index: 1;
+  transform-origin: 0 0;
+  will-change: transform;
 }
 
+/* canvas 位置/尺寸由 JS (resizeCanvas) 精确控制，匹配视频 object-fit:contain 实际显示区域 */
 .annotate-canvas-area canvas {
+  position: absolute;
   z-index: 2;
   pointer-events: auto;
   cursor: crosshair;
+  transform-origin: 0 0;
+  will-change: transform;
 }
 
 .annotate-video {
@@ -2579,6 +2581,71 @@ select.annotate-input {
 
 .annotate-canvas {
   display: block;
+}
+
+/* 缩放控件 */
+.annotate-zoom-controls {
+  position: absolute;
+  bottom: var(--spacing-sm);
+  right: var(--spacing-sm);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+}
+
+.annotate-zoom-controls[hidden] {
+  display: none;
+}
+
+.annotate-zoom-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-on-surface-variant);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.annotate-zoom-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-primary);
+}
+
+.annotate-zoom-btn .material-symbols-outlined {
+  font-size: 16px;
+}
+
+.annotate-zoom-level {
+  min-width: 40px;
+  text-align: center;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-primary);
+  user-select: none;
+}
+
+.annotate-zoom-hint {
+  margin-left: var(--spacing-sm);
+  padding-left: var(--spacing-sm);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--color-outline);
+  font-size: 11px;
+  white-space: nowrap;
 }
 
 .annotate-empty-hint {

@@ -380,6 +380,20 @@
               <span class="material-symbols-outlined">videocam_off</span>
               <p data-i18n="annotate.no_video">未加载视频</p>
             </div>
+            <!-- 缩放控件 -->
+            <div class="annotate-zoom-controls" id="annotateZoomControls" hidden>
+              <button type="button" class="annotate-zoom-btn" id="annotateZoomOut" title="缩小">
+                <span class="material-symbols-outlined">remove</span>
+              </button>
+              <span class="annotate-zoom-level" id="annotateZoomLevel">100%</span>
+              <button type="button" class="annotate-zoom-btn" id="annotateZoomIn" title="放大">
+                <span class="material-symbols-outlined">add</span>
+              </button>
+              <button type="button" class="annotate-zoom-btn" id="annotateZoomReset" title="重置缩放（双击画布也可重置）">
+                <span class="material-symbols-outlined">restart_alt</span>
+              </button>
+              <span class="annotate-zoom-hint" data-i18n="annotate.zoom_hint">滚轮缩放 · 中键拖拽 · 双击重置</span>
+            </div>
           </div>
 
           <!-- 右：工具面板 -->
